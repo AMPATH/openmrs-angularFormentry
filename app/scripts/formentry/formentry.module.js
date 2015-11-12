@@ -9,7 +9,7 @@ requirePaddingNewLinesBeforeLineComments, requireTrailingComma
   'use strict';
 
   angular
-        .module('app.angularFormentry', [
+        .module('openmrs.angularFormentry', [
           'ngMessages',
           'ngResource',
         ]);

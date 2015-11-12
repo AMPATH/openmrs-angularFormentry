@@ -9,7 +9,7 @@ describe('Controller: MainCtrl', function() {
   // load the controller's module
   beforeEach(function() {
       module('angularFormentry');
-      module('app.angularFormentry');
+      module('openmrs.angularFormentry');
     });
 
   var MainCtrl;

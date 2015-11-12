@@ -22,5 +22,12 @@ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106
         'Karma'
       ];
       CreateForm.testForm();
+      var handler = CreateForm.getFieldHandler('obsFieldHandler');
+      console.log('testing array', handler);
+      handler('etsts');
+
+      function otherHandler() {
+        console.log('cheers');
+      }
     }
 })();

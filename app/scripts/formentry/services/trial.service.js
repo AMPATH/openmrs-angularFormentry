@@ -8,14 +8,21 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
   'use strict';
 
   angular
-        .module('app.angularFormentry')
+        .module('openmrs.angularFormentry')
         .factory('CreateForm', CreateForm);
 
   CreateForm.$inject = [];
 
   function CreateForm() {
+    var fieldHandlers = {};
+    //registerCoreFieldHandler
+    fieldHandlers['obsFieldHandler'] = obsFieldHandler;
+    fieldHandlers['encounterFieldHandler'] = encounterFieldHandler;
+    fieldHandlers['obsPersonAttributeFieldHandler'] = obsFieldHandler;
     var service = {
-          testForm: testForm
+          testForm: testForm,
+          registerCustomFieldHandler: registerCustomFieldHandler,
+          getFieldHandler: getFieldHandler
         };
 
     return service;
@@ -23,5 +30,30 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
     function testForm() {
       console.info('this works fine');
     }
+
+    function obsFieldHandler(_field) {
+      console.log('blala');
+    }
+
+    function encounterFieldHandler(_field) {
+      console.log('blala');
+    }
+
+    function obsPersonAttributeFieldHandler(_field) {
+      console.log('blala');
+    }
+
+    function registerCustomFieldHandler(_handlerName, _handlerMethod) {
+      if (typeof _handlerMethod === 'function') {
+        fieldHandlers[_handlerName] = _handlerMethod;
+      } else {
+        console.info('Handler was not registered!!');
+      }
+    }
+
+    function getFieldHandler(_handlerName) {
+      return fieldHandlers[_handlerName];
+    }
+
   }
 })();
