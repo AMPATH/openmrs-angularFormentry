@@ -14,8 +14,8 @@ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106
    */
   angular.module('angularFormentry')
     .controller('MainCtrl', MainCtrl);
-  MainCtrl.$inject = ['$scope', 'CreateForm'];
-  function MainCtrl($scope, CreateForm) {
+  MainCtrl.$inject = ['$scope', 'UtilService', 'FormEntry'];
+  function MainCtrl($scope, UtilService, FormEntry) {
       $scope.awesomeThings = [
         'HTML5 Boilerplate',
         'AngularJS',
