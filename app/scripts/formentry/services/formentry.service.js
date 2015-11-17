@@ -23,22 +23,6 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
     return service;
 
-    function createForm(schema, model, callback) {
-      console.info('this works fine');
-    }
-
-    function obsFieldHandler(_field) {
-      console.log('blala');
-    }
-
-    function encounterFieldHandler(_field) {
-      console.log('blala');
-    }
-
-    function obsPersonAttributeFieldHandler(_field) {
-      console.log('blala');
-    }
-
     function registerCustomFieldHandler(_handlerName, _handlerMethod) {
       if (typeof _handlerMethod === 'function') {
         fieldHandlers[_handlerName] = _handlerMethod;
