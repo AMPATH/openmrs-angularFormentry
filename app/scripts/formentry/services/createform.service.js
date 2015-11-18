@@ -14,13 +14,6 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
   createFormService.$inject = ['$log'];
 
   function createFormService($log) {
-    var fieldHandlers = {};
-
-    //registerCoreFieldHandler
-    fieldHandlers['obsFieldHandler'] = obsFieldHandler;
-    fieldHandlers['encounterFieldHandler'] = encounterFieldHandler;
-    fieldHandlers['obsPersonAttributeFieldHandler'] = obsFieldHandler;
-
     var service = {
       createForm: createForm
     };
@@ -114,12 +107,12 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       $log.log('blala');
     }
 
-    function encounterFieldHandler(_field) {
+    function encounterLocationFieldHandler(_field) {
       $log.log('blala');
     }
 
     function obsPersonAttributeFieldHandler(_field) {
-      console.log('blala');
+      $log.log('blala');
     }
   }
 })();

@@ -25,12 +25,12 @@ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106
     $scope.vm.model = {};
     $scope.vm.submitLabel = 'Save';
 
-    activate();
+    _activate();
     function parseDate(value) {
       return $filter('date')(value || new Date(), 'yyyy-MM-dd HH:mm:ss', '+0300');
     }
 
-    function activate() {
+    function _activate() {
       $scope.vm.tabs = [
         {
           title: 'Tab 1',
