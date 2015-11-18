@@ -1,0 +1,75 @@
+{
+  "name":"",
+  "version":"",
+  "encounterType":"uuid",
+  "form":"uuid",
+  "processor":"ObsFormProcessor|EncounterFormProcessor|personAttributeFormProcessor|default",
+  "pages": [
+    {
+      "label":"Page Name",
+      "sections": [
+        {
+          "label":"Section Name",
+          "questions": [
+            {
+              "type":"obs | obsGroup | encounterType | encounterDatetime | encounterProvider | encounterLocation | personAttribute | obsDrug | conceptSearch | obsProblem | location-attribute",
+              "rendering": "| select | text | date | number | multiCheckbox | radio | ui-select-extended | repeating | group",
+              "concept":"", // but should be only allowable in types of "obs" or "obsGroup"
+              "label":"Text to show to the user on the form",
+              "id":"unique name to be used in validation as placeholder for answer to this question",
+              "required":"boolean, optional",
+              "default":"default value for model", //optional
+              "answers":[
+                {
+                  "label": "displayed",
+                  "value": "value to be populated to form model"
+                }
+              ],
+              "formlyTemplateOptions": {},
+              "questions":[], // Allowed only for types obsGroups
+              "hide": [
+                {
+                  "field":"id of question",
+                  "value": ["array of answers"]
+                }
+              ],
+              "notifications":[ //This triggers an alert to the user based on the expression. Get's evaluated after user selects an answer
+                {
+                  "js_expression":"",
+                  "message":""
+                }
+              ]
+              "validators":[
+                {
+                  "type": "date",
+                  "allowFutureDates": "true | false",
+                },
+                {
+                  "type": "js_expression",
+                  "failsWhenExpression": "javascript expression, functions:'isEmpty,arrayContains', variables:'ids, myValue'"
+                  "message": "error message shown when validation fails"
+                },
+                {
+                  "type":"conditionalRequired",
+                  "referenceQuestionId":"id of another form question",
+                  "referenceQuestionAnswers": ['answer1','answerN']
+                },
+                {
+                  "type":"conditionalAnswered",
+                  "message":"",
+                  "referenceQuestionId":"",
+                  "referenceQuestionAnswers":[]
+                }
+              ],
+              "disableExpression": [
+                {
+                  "disableWhenExpression": "same as js_expression"
+                }
+              ]
+             }
+           ]
+         }
+       ]
+     }
+   ]
+}
