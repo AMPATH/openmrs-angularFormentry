@@ -24,3 +24,4 @@ notifications:
       - http://test1.ampath.or.ke/rebuild.php
     on_failure: never
     on_start: never
+#end of file
