@@ -323,7 +323,7 @@
     function populateModelWithObs(model,payloadObs,questionMap) {
       model.value = payloadObs.value;
       model.obsId = payloadObs.obsId;
-      model.defaultValue = payloadObs.value;
+      model.initialValue = payloadObs.value;
 
       _.each(payloadObs.obsGroup,function(payloadNestedObs) {
         if(model.obsGroup && payloadNestedObs.concept in model.obsGroup) {
@@ -374,7 +374,7 @@
       var form = schemaToFormlyForm(this.schema);
       populateFormWithObs(form,obsRestPayloadRepeatingObsGroup);
       console.log(form);
-
+      window.form = form;
       return form;
     }
 
