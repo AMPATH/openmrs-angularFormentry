@@ -1,6 +1,7 @@
 /node_modules
 /.tmp
 /.sass-cache
+/app/obs.json
 /bower_components
 dist.tar.gz
 # Logs
