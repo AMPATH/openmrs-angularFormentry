@@ -35,7 +35,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       return fieldHandlers[_handlerName];
     }
 
-    function createForm() {
+    function createForm(schema, model, callback) {
       $log.info('successfully called');
     }
 
