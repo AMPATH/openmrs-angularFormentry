@@ -14,20 +14,17 @@ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106
    */
   angular.module('angularFormentry')
     .controller('MainCtrl', MainCtrl);
-  MainCtrl.$inject = ['$scope', 'UtilService', 'FormEntry'];
-  function MainCtrl($scope, UtilService, FormEntry) {
+  MainCtrl.$inject = ['$scope', 'UtilService', 'FormEntry', '$log'];
+  function MainCtrl($scope, UtilService, FormEntry, $log) {
       $scope.awesomeThings = [
         'HTML5 Boilerplate',
         'AngularJS',
         'Karma'
       ];
-      CreateForm.testForm();
-      var handler = CreateForm.getFieldHandler('obsFieldHandler');
-      console.log('testing array', handler);
-      handler('etsts');
+      FormEntry.createForm();
 
       function otherHandler() {
-        console.log('cheers');
+        $log.log('cheers');
       }
     }
 })();

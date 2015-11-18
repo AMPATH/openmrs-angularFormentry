@@ -9,6 +9,7 @@
     <!-- build:css(.) styles/vendor.css -->
     <!-- bower:css -->
     <link rel="stylesheet" href="bower_components/bootstrap/dist/css/bootstrap.css" />
+    <link rel="stylesheet" href="bower_components/angular-ui-select/dist/select.css" />
     <!-- endbower -->
     <!-- endbuild -->
     <!-- build:css(.tmp) styles/main.css -->
@@ -81,17 +82,34 @@
     <script src="bower_components/angular-touch/angular-touch.js"></script>
     <script src="bower_components/bootstrap/dist/js/bootstrap.js"></script>
     <script src="bower_components/angular-ui-router/release/angular-ui-router.js"></script>
+    <script src="bower_components/api-check/dist/api-check.js"></script>
+    <script src="bower_components/angular-formly/dist/formly.js"></script>
+    <script src="bower_components/angular-formly-templates-bootstrap/dist/angular-formly-templates-bootstrap.js"></script>
+    <script src="bower_components/angular-ui-select/dist/select.js"></script>
+    <script src="bower_components/angular-bootstrap/ui-bootstrap-tpls.js"></script>
+    <script src="bower_components/bootstrap-ui-datetime-picker/dist/datetime-picker.min.js"></script>
     <!-- endbower -->
     <!-- endbuild -->
 
 
-        <script src="scripts/app.module.js"></script>
-        <script src="scripts/controllers/main.js"></script>
-        <script src="scripts/controllers/about.js"></script>
-        <!-- Formentry Module files -->
-        <!-- build:js({.tmp,app}) scripts/angularFormentry.js -->
-        <script src="scripts/formentry/formentry.module.js"></script>
-        <script src="scripts/formentry/services/trial.service.js"></script>
-        <!-- endbuild -->
+    <script src="scripts/app.module.js"></script>
+    <script src="scripts/controllers/main.js"></script>
+    <script src="scripts/controllers/about.js"></script>
+    <!-- Formentry Module files -->
+    <!-- build:js({.tmp,app}) scripts/angularFormentry.js -->
+    <script src="scripts/formentry/formentry.module.js"></script>
+    <!-- services -->
+    <script src="scripts/formentry/services/formentry.service.js"></script>
+    <script src="scripts/formentry/services/createform.service.js"></script>
+    <script src="scripts/services/util.service.js"></script>
+
+    <!-- Formly Custom Controls-->
+    <script src="scripts/formentry/custom-formly-controls/datepicker.formly.js"></script>
+    <script src="scripts/formentry/custom-formly-controls/datetimepicker.formly.js"></script>
+    <script src="scripts/formentry/custom-formly-controls/ui-select.formly.js"></script>
+    <script src="scripts/formentry/custom-formly-controls/repeating-section.formly.js"></script>
+    <script src="scripts/formentry/custom-formly-controls/sections.js"></script>
+    <script src="scripts/formentry/custom-formly-controls/concept-search-select.js"></script>
+      <!-- endbuild -->
 </body>
 </html>

@@ -11,9 +11,9 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
         .module('openmrs.angularFormentry')
         .factory('FormEntry', FormEntry);
 
-  FormEntry.$inject = ['createFormService'];
+  FormEntry.$inject = ['createFormService', '$log'];
 
-  function FormEntry(createFormService) {
+  function FormEntry(createFormService, $log) {
 
     var service = {
           createForm: createForm,
@@ -27,12 +27,16 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       if (typeof _handlerMethod === 'function') {
         fieldHandlers[_handlerName] = _handlerMethod;
       } else {
-        console.info('Handler was not registered!!');
+        $log.info('Handler was not registered!!');
       }
     }
 
     function getFieldHandler(_handlerName) {
       return fieldHandlers[_handlerName];
+    }
+
+    function createForm() {
+      $log.info('successfully called');
     }
 
   }

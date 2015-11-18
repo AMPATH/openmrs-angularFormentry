@@ -11,10 +11,16 @@ describe('Controller: AboutCtrl', function() {
 
   var AboutCtrl;
   var scope;
+  var location;
+  var filter;
+  var timeout;
+  var formentry;
 
   // Initialize the controller and a mock scope
-  beforeEach(inject(function($controller, $rootScope) {
+  beforeEach(inject(function($controller, $rootScope, $injector) {
     scope = $rootScope.$new();
+    location = $injector.get($location);
+
     AboutCtrl = $controller('AboutCtrl', {
       $scope: scope
       // place here mocked dependencies
