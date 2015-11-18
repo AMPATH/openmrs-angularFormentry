@@ -222,7 +222,15 @@
         //Not the best solution but a quick attempt to generalize how to get a type and produce a field
         var field = modelTypes[modelType](question,model);
 
-        if("id" in question) questionMap[question.id] = field.model;
+        if("id" in question) {
+          if(question.id in questionMap) {
+            questionMap[question.id].push(field);
+          }
+          else {
+            questionMap[question.id] = [field];
+          }
+
+        }
 
         fields.push(field);
         if("questions" in question) {
@@ -246,7 +254,18 @@
       var modelType = question.modelType;
       //Not the best solution but a quick attempt to generalize how to get a type and produce a formly field
       var field = modelTypes[modelType](question, model);
-      if ("id" in question) questionMap[question.id] = field.model;
+
+      if("id" in question) {
+        if(question.id in questionMap) {
+          questionMap[question.id].push(field);
+        }
+        else {
+          questionMap[question.id] = [field];
+        }
+
+      }
+
+
       var front = _.slice(fields,0,index);
       var back = _.slice(fields,index);
 
