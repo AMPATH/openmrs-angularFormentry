@@ -16,13 +16,17 @@ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106
         .controller('AboutCtrl', AboutCtrl);
 
   AboutCtrl.$inject = ['$location',  '$scope',
-            'FormEntry', '$timeout', '$filter'
-        ];
+    'FormEntry', '$timeout', '$filter',
+    'TestService'
+  ];
 
   function AboutCtrl($location, $scope, FormEntry,
-        $timeout, $filter) {
+        $timeout, $filter,TestService) {
     $scope.vm = {};
-    $scope.vm.model = {};
+    //$scope.vm.model = {};
+    var form = TestService.getCompiledForm();
+    $scope.vm.model = form.compiledSchema[0].compiledPage[0].sectionModel;
+
     $scope.vm.submitLabel = 'Save';
 
     _activate();
@@ -156,6 +160,14 @@ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106
                 }
               }
             ]
+          }
+        },
+        {
+          "title": "Example From JJ",
+          options: {},
+          form: {
+            model: $scope.vm.model,
+            fields: form.compiledSchema[0].compiledPage[0].formlyFields
           }
         }
       ];
