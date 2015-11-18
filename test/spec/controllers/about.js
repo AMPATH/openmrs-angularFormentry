@@ -19,15 +19,28 @@ describe('Controller: AboutCtrl', function() {
   // Initialize the controller and a mock scope
   beforeEach(inject(function($controller, $rootScope, $injector) {
     scope = $rootScope.$new();
-    location = $injector.get($location);
+    location = $injector.get('$location');
+    filter = $injector.get('$filter');
+    formentry = $injector.get('FormEntry');
+    timeout = $injector.get('$timeout');
 
     AboutCtrl = $controller('AboutCtrl', {
-      $scope: scope
+      $location:location,
+      $scope: scope,
+      FormEntry:formentry,
+      $timeout:timeout,
+      $filter:filter
       // place here mocked dependencies
     });
   }));
 
   it('should attach a list of awesomeThings to the scope', function() {
     expect(scope.awesomeThings.length).equal(3);
+  });
+
+  it('should have various scope variables defined', function() {
+    expect(scope.vm).to.be.defined;
+    expect(scope.vm.model).to.be.defined;
+    expect(scope.vm.tabs).to.be.defined;
   });
 });

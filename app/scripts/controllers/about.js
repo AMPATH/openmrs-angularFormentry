@@ -15,11 +15,11 @@ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106
         .module('angularFormentry')
         .controller('AboutCtrl', AboutCtrl);
 
-  AboutCtrl.$inject = ['$location', '$rootScope',  '$scope',
+  AboutCtrl.$inject = ['$location',  '$scope',
             'FormEntry', '$timeout', '$filter'
         ];
 
-  function AboutCtrl($location, $rootScope, $scope, FormEntry,
+  function AboutCtrl($location, $scope, FormEntry,
         $timeout, $filter) {
     $scope.vm = {};
     $scope.vm.model = {};
