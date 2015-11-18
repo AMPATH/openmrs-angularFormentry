@@ -15,14 +15,21 @@ describe('Controller: MainCtrl', function() {
   var MainCtrl;
   var scope;
   var formentry;
+  var utilService;
+  var log;
 
   // Initialize the controller and a mock scope
   beforeEach(inject(function($controller, $rootScope, $injector) {
     scope = $rootScope.$new();
-    formentry = $injector.get('CreateForm');
+    formentry = $injector.get('FormEntry');
+    utilService = $injector.get('UtilService');
+    log = $injector.get('$log');
+
     MainCtrl = $controller('MainCtrl', {
       $scope: scope,
-      CreateForm:formentry
+      UtilService:utilService,
+      FormEntry:formentry,
+      $log:log
       // place here mocked dependencies
     });
   }));
