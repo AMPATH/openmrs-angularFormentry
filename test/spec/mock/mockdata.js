@@ -235,16 +235,28 @@
                       label: 'Visit Date',
                       type: 'encounterDate',
                       required: 'true',
+                      id:'encDate',
+                      questionOptions:{
+                        rendering:'date'
+                      },
                       validators:[{type:'date'}]
                     },
                     {
                       type: 'encounterProvider',
                       label: 'Provider',
+                      id:'provider',
+                      questionOptions:{
+                        rendering:'ui-select-extended'
+                      },
                       required: 'true'
                     },
                     {
                       type: 'encounterLocation',
                       label: 'Facility Name',
+                      id:'location',
+                      questionOptions:{
+                        rendering:'ui-select-extended'
+                      },
                       required: 'true'
                     }
                   ]
@@ -258,20 +270,27 @@
                   label: 'Visit Type',
                   questions: [
                     {
-                      concept: 'a89ff9a6-1350-11df-a1f1-0026b9348838',
                       id:'q7a',
                       label: '7a. Visit Type',
-                      type: 'select',
+                      type: 'obs',
+                      questionOptions:{
+                        concept: 'a89ff9a6-1350-11df-a1f1-0026b9348838',
+                        rendering:'select'
+                      },
                       validators: [],
                       answers:[
-                        {concept: 'a89b6440-1350-11df-a1f1-0026b9348838', label: 'Scheduled visit'},
-                        {concept: 'a89ff816-1350-11df-a1f1-0026b9348838', label: 'Unscheduled Visit Early'},
-                        {concept: 'a89ff8de-1350-11df-a1f1-0026b9348838', label: 'Unscheduled Visit Late'}
+                        {value: 'a89b6440-1350-11df-a1f1-0026b9348838', label: 'Scheduled visit'},
+                        {value: 'a89ff816-1350-11df-a1f1-0026b9348838', label: 'Unscheduled Visit Early'},
+                        {value: 'a89ff8de-1350-11df-a1f1-0026b9348838', label: 'Unscheduled Visit Late'}
                       ]
                     },
                     {
                       concept: 'dc1942b2-5e50-4adc-949d-ad6c905f054e',
-                      type: 'date',
+                      type: 'obs',
+                      questionOptions:{
+                        concept: 'a89ff9a6-1350-11df-a1f1-0026b9348838',
+                        rendering:'date'
+                      },
                       validators: [{type: 'date', allowFutureDates: 'true'}],
                       label: '7b. If Unscheduled, actual scheduled date'
                     },

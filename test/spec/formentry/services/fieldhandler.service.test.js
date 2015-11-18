@@ -9,14 +9,14 @@
       });
 
     var mockData;
-    var fieldHandler;
+    var fhService;
     var functionStub;
     var spy;
     var log;
 
     beforeEach(inject(function($injector) {
       log = $injector.get('$log');
-      fieldHandler = $injector.get('fieldHandlerService');
+      fhService = $injector.get('fieldHandlerService');
       mockData = $injector.get('mockData');
 
       /*
@@ -47,17 +47,50 @@
     //   });
     describe('getFieldHandler Method Unit Tests', function() {
       beforeEach(function() {
-        functionStub = sinon.stub(fieldHandler, 'getFieldHandler');
+        functionStub = sinon.spy(fhService, 'getFieldHandler');
       });
 
       it('should return the fieldHandler Method when getFieldHandler is called',
       function() {
         var handlerName = 'obsDrugFieldHandler';
-        var handlerMethod = fieldHandler.getFieldHandler(handlerName);
-        console.log('testing', fieldHandler);
+        var handlerMethod = fhService.getFieldHandler(handlerName);
 
         expect(functionStub).to.have.been.calledOnce;
+        expect(functionStub.calledWith(handlerName)).to.be.true;
+        expect(functionStub.returned(handlerMethod)).to.be.true;
         expect(handlerMethod).to.be.an('function');
+      });
+
+      it('should return defaultfieldHandler Method when wrong handler is passed',
+      function() {
+        var handlerName = 'obsxFieldHandler';
+        var handlerMethod = fhService.getFieldHandler(handlerName);
+
+        expect(functionStub).to.have.been.calledOnce;
+        expect(functionStub.calledWith(handlerName)).to.be.true;
+        expect(functionStub.returned(handlerMethod)).to.be.true;
+        expect(handlerMethod).to.be.an('function');
+      });
+    });
+
+    describe('obsFieldHandler Method unit Tests', function() {
+      beforeEach(function() {
+        functionStub = sinon.spy(fhService, 'getFieldHandler');
+        var handlerName = 'obsFieldHandler';
+        var handlerMethod = fhService.getFieldHandler(handlerName);
+      });
+
+      it('should be able to create a formly obs field', function() {
+        var mockSchema = mockData.getMockSchema();
+        var mockField = mockSchema.pages[1].sections.questions[0];
+        var field = handlerMethod(mockField);
+        expect(field).to.be.an('object');
+        expect(field).to.have.ownProperty('key');
+        expect(field).to.have.ownProperty('templateOptions');
+        expect(field).to.have.ownProperty('type');
+        expect(field.templateOptions).to.have.ownProperty('type');
+        expect(field.templateOptions).to.have.ownProperty('label');
+        expect(field).to.have.ownProperty('data');
       });
     });
 

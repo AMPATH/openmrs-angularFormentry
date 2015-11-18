@@ -27,6 +27,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
     fieldHandlers['obsProblemFieldHandler'] = obsProblemFieldHandler;
     fieldHandlers['conceptSearchFieldHandler'] = conceptSearchFieldHandler;
     fieldHandlers['locationAttributeFieldHandler'] = locationAttributeFieldHandler;
+    fieldHandlers['defaultFieldHandler'] = defaultFieldHandler;
     var service = {
       getFieldHandler: getFieldHandler,
       registerCustomFieldHandler: registerCustomFieldHandler
@@ -38,7 +39,14 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       $log.info('loading fieldHandler', handlerName);
       $log.info('fieldHandlers', fieldHandlers);
       $log.info('fieldHandlers specific', fieldHandlers[handlerName]);
-      return fieldHandlers[handlerName];
+
+      if (handlerName in fieldHandlers) {
+        return fieldHandlers[handlerName];
+      } else {
+        $log.warn('Failed to get the required field returning defaultFieldHandler');
+        return fieldHandlers['defaultFieldHandler'];
+      }
+
     }
 
     function registerCustomFieldHandler(handlerName, handlerMethod) {
@@ -82,6 +90,10 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
     }
 
     function personAttributeFieldHandler(_field) {
+      $log.info('loading fieldHandler');
+    }
+
+    function defaultFieldHandler(_field) {
       $log.info('loading fieldHandler');
     }
   }
