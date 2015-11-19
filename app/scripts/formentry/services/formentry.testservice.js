@@ -132,7 +132,7 @@
                   "modelType":"obsType",
                   "concept": "a8a003a6-1350-11df-a1f1-0026b9348838",
                   "type": "group_repeating",
-                  "label": "If yes, reason for hospitalization:",
+                  "label": "Was patient hospitalized?",
                   "questions": [
                     {
                       "modelType":"obsType",
@@ -149,6 +149,27 @@
                             "a899b35c-1350-11df-a1f1-0026b9348838"
                           ]
                         }
+                      ]
+                    },
+                    {
+                      "modelType":"obsType",
+                      "concept":"made-up-concept",
+                      "label": "Date of hospitalization",
+                      "type":"input",
+                      "questions": [
+                        {
+                          "modelType":"obsType",
+                          "concept":"made-up-concept-2",
+                          "label": "Start Date",
+                          "type":"input"
+                        },
+                        {
+                          "modelType":"obsType",
+                          "concept":"made-up-concept-3",
+                          "label": "End Date",
+                          "type":"input"
+                        }
+
                       ]
                     }
                   ]
@@ -189,6 +210,7 @@
       var field = {key:key};
 //      var m = {concept:question.concept,schemaQuestion: question, formlyField:field,value:""};
       var m = {concept:question.concept,schemaQuestion: question, value:""};
+//      var m = {concept:question.concept,value:""};
       field.templateOptions = {
         type: 'text',
         label: question.label,
@@ -329,9 +351,34 @@
       [
         {concept:"a8b02524-1350-11df-a1f1-0026b9348838",value:"value1",obsId:"1"},
         {concept:"a8b02524-1350-11df-a1f1-0026b9348838",value:"a repeat",obsId:"5"},
-        {concept:"a8a003a6-1350-11df-a1f1-0026b9348838",obsId:"2","obsGroup": [{obsId:"3","concept":"a8a07a48-1350-11df-a1f1-0026b9348838","value":"value3"}]},
+        {concept:"a8a003a6-1350-11df-a1f1-0026b9348838",obsId:"2",
+          "obsGroup": [
+            {obsId:"3","concept":"a8a07a48-1350-11df-a1f1-0026b9348838","value":"value3"},
+            {obsId:"53","concept":"a8a07a48-1350-11df-a1f1-0026b9348838","value":"hello erick"}
+          ]
+        },
         {concept:"a8a003a6-1350-11df-a1f1-0026b9348838",obsId:"10","obsGroup": [{obsId:"11","concept":"a8a07a48-1350-11df-a1f1-0026b9348838","value":"value43"}]}
       ];
+
+    function isEmpty(value) {
+      return (value === null || value === undefined || value === "");
+    }
+
+    function getFormlyFieldByModelKey(key,value,formlyFields,mustBeEmpty) {
+      var field,f;
+      var index = 0;
+      for(var i=0; i< formlyFields.length;i++) {
+        f = formlyFields[i];
+
+        if(f.model[key] === value) {
+          if ((mustBeEmpty && isEmpty(f.model.initialValue)) || mustBeEmpty === false) {
+            field = f;
+            index = i;
+          }
+        }
+      }
+      return {"field":field,"index":index};
+    }
 
 
 //A question may only be asked once per section. It may be allowed to have multiple answers.
@@ -339,81 +386,67 @@
 //OpenMRS does not support ordering to the way these questions are answered. i.e. if there are multiple obs with the same concept,
 //you can not know by looking at the database the order of these obs's.
 //returns true if found and populated
-    function populateModelWithObs(model,payloadObs,questionMap) {
-      model.value = payloadObs.value;
-      model.obsId = payloadObs.obsId;
-      model.initialValue = payloadObs.value;
 
-      _.each(payloadObs.obsGroup,function(payloadNestedObs) {
-        if(model.obsGroup && payloadNestedObs.concept in model.obsGroup) {
-          if(model.obsGroup[payloadNestedObs.concept][0].obsId === undefined ) {
-            populateModelWithObs(model.obsGroup[payloadNestedObs.concept][0],payloadNestedObs,questionMap);
-          }
-          else if(allowsRepeating(model.obsGroup[payloadNestedObs.concept][0].schemaQuestion)) {
-            var fields = [];
-            //build new formly field
-            questionsToFormlyFields([model.obsGroup[payloadNestedObs.concept][0].schemaQuestion],fields,model.obsGroup,questionMap);
 
-            populateModelWithObs(model.obsGroup[payloadNestedObs.concept], payloadNestedObs,questionMap);
-          }
-
-        }
+    function addObsToFormlyField(obs,field,questionMap) {
+      field.model.value = obs.value;
+      field.model.obsId = obs.obsId;
+      field.model.initialValue = obs.value;
+      _.each(obs.obsGroup,function(o) {
+        addObsToSection(o,field.data.fields,field.model.obsGroup,questionMap);
       });
     }
 
-    function populateFormWithObs(form,restObs) {
+
+    function addObsToSection(o,formlyFields,sectionModel,questionMap) {
+      var field;
+      var questionModel = sectionModel[o.concept];
+      var schemaQuestion = questionModel[0].schemaQuestion;
+
+      if(questionModel[0].obsId === undefined ) {
+        field = getFormlyFieldByModelKey("concept",o.concept,formlyFields,true).field;
+      }
+      else if(allowsRepeating(schemaQuestion)) {
+        var index = 1 + getFormlyFieldByModelKey("concept", o.concept,formlyFields,true).index;
+        insertIntoFormlyFields(index,schemaQuestion,formlyFields,sectionModel,questionMap);
+        field = formlyFields[index];
+      }
+
+      if(field) {
+        addObsToFormlyField(o, field, questionMap);
+        return true;
+      }
+      else {
+        return false;
+      }
+    }
+
+
+    function addExistingObsSetToForm(form,restObs) {
+      var found;
       _.each(restObs,function(o) {
-          _.each(form.compiledSchema,function(page) {
-            _.each(page.compiledPage,function(section) {
-              _.each(section.sectionModel,function(questionModel) {
-                  if(o.concept === questionModel[0].concept) {
-                    if(questionModel[0].obsId === undefined ) {
-                      populateModelWithObs(questionModel[0],o,form.questionMap);
-                    }
-                    else if(allowsRepeating(questionModel[0].schemaQuestion)) {
-                      var index;
-                      for(var i=0; i<section.formlyFields.length;i++) {
-                        if (section.formlyFields[i].model.concept === questionModel[0].concept) {
-                          index = i+1;
-                        }
-                      }
-                      insertIntoFormlyFields(index,questionModel[0].schemaQuestion,section.formlyFields,section.sectionModel,form.questionMap);
-                      populateModelWithObs(section.formlyFields[index].model,o,form.questionMap);
-                    }
-                  }
-                }
-              );
+        _.each(form.compiledSchema, function (page) {
+          _.each(page.compiledPage, function (section) {
+            _.each(section.sectionModel, function (questionModel) {
+              if (o.concept === questionModel[0].concept) {
+                found = addObsToSection(o,section.formlyFields, section.sectionModel,form.questionMap);
+              }
             });
           });
-        }
-      );
+        });
+      });
     }
+
     function getCompiledForm() {
 
       var form = schemaToFormlyForm(this.schema);
-      populateFormWithObs(form,obsRestPayloadRepeatingObsGroup);
+      addExistingObsSetToForm(form,obsRestPayloadRepeatingObsGroup);
       console.log(form);
       window.form = form;
       return form;
     }
 
 
-//populateFormWithObs(form,obsRestPayload);
-//populateFormWithObs(form,obsRestPayloadRepeatingObs);
-
-
     return service;
   }
 })();
-
-/*
-$scope.vm.model = form.compiledSchema[0].compiledPage[0].sectionModel;
-{
-  title: 'Tab 2',
-    form: {
- options: {},
-  model: $scope.vm.model,
-    fields:form.compiledSchema[0].compiledPage[0].formlyFields
-}
-}
-*/
