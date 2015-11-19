@@ -13,14 +13,14 @@ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106
    */
   angular
         .module('angularFormentry')
-        .controller('AboutCtrl', AboutCtrl);
+        .controller('RecursiveTestCtrl', RecursiveTestCtrl);
 
-  AboutCtrl.$inject = ['$location',  '$scope',
+  RecursiveTestCtrl.$inject = ['$location',  '$scope',
     'FormEntry', '$timeout', '$filter',
     'TestService'
   ];
 
-  function AboutCtrl($location, $scope, FormEntry,
+  function RecursiveTestCtrl($location, $scope, FormEntry,
         $timeout, $filter,TestService) {
     $scope.vm = {};
     //$scope.vm.model = {};

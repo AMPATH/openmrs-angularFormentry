@@ -28,9 +28,15 @@ angular
             templateUrl: 'views/main.html',
             controller: 'MainCtrl'
           })
-          .state('about', {
-            url: '/about',
-            templateUrl: 'views/about.html',
-            controller: 'AboutCtrl'
-          });
-    });
+        .state('about', {
+          url: '/about',
+          templateUrl: 'views/about.html',
+          controller: 'AboutCtrl'
+        })
+        .state('recursive-test', {
+          url: '/recursive-test',
+          templateUrl: 'views/recursive-test.html',
+          controller: 'RecursiveTestCtrl'
+        });
+
+  });
