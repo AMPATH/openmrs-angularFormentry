@@ -267,8 +267,17 @@
 
     }
 
-//Use this function to insert a question into an existing set of fields.
-//Presently, this will place a question with the same concept uuid
+    /*
+     This function allows you to clone a question schema and insert it into the fields array
+     at a specific index.
+     index: the location in the fields array at which point this field is to be inserted
+     question : the json schema of this particular question
+     fields : the array of formly fields into which this new field will be inserted
+     model : this model maps to the same level as fields. In other words, it should be the
+             the model which contains the models for each of the fields. More specifically
+             it is NOT the model for a specific field.
+     questionMap : a hash linking user specified id's (from the schema) to formly fields
+     */
     function insertIntoFormlyFields(index,question,fields,model,questionMap) {
 
       if(index === undefined || index === null) index = fields.length - 1;
