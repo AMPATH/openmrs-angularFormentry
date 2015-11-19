@@ -30,6 +30,7 @@
     var _ = window._;
     var service = {
       "getCompiledForm" : getCompiledForm,
+      "toFormlySections": toFormlySections
     };
 
 
@@ -62,6 +63,9 @@
                   "label": "Patient covered by NHIF:",
                   "modelType":"obsType",
                   "type": "select",
+                  "questionOptions":{
+                    "repeating":true
+                  },
                   "answers": [
                     {
                       "concept": "8b715fed-97f6-4e38-8f6a-c167a42f8923",
@@ -133,6 +137,9 @@
                   "concept": "a8a003a6-1350-11df-a1f1-0026b9348838",
                   "type": "group_repeating",
                   "label": "Was patient hospitalized?",
+                  "questionOptions": {
+                    "repeating":true
+                  },
                   "questions": [
                     {
                       "modelType":"obsType",
@@ -175,6 +182,56 @@
                   ]
                 }
 
+              ]
+            },
+            {
+              "label":"Test Section",
+              "questions": [
+                {
+                  "modelType": "obsType",
+                  "concept": "a8a003a6-1350-11df-a1f1-0026b9348838",
+                  "type": "group_repeating",
+                  "label": "Was patient hospitalized?",
+                  "questions": [
+                    {
+                      "modelType": "obsType",
+                      "concept": "a8a07a48-1350-11df-a1f1-0026b9348838",
+                      "label": "Reason for hospitalization",
+                      "type": "problem",
+                      "id": "hospitalizationReason",
+                      "validators": [
+                        {
+                          "type": "conditionalAnswered",
+                          "message": "Providing diagnosis but didn't answer that patient was hospitalized in question 11a",
+                          "referenceQuestionId": "wasHospitalized",
+                          "referenceQuestionAnswers": [
+                            "a899b35c-1350-11df-a1f1-0026b9348838"
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "modelType": "obsType",
+                      "concept": "made-up-concept",
+                      "label": "Date of hospitalization",
+                      "type": "input",
+                      "questions": [
+                        {
+                          "modelType": "obsType",
+                          "concept": "made-up-concept-2",
+                          "label": "Start Date",
+                          "type": "input"
+                        },
+                        {
+                          "modelType": "obsType",
+                          "concept": "made-up-concept-3",
+                          "label": "End Date",
+                          "type": "input"
+                        }
+                      ]
+                    }
+                  ]
+                }
               ]
             }
           ]
@@ -337,7 +394,7 @@
 
 //uses question.type to determine if this can be asked more than once.
     function allowsRepeating(question) {
-      return true;
+      return (question.questionOptions !== undefined && question.questionOptions.repeating);
     }
 
 
@@ -421,6 +478,7 @@
         field = formlyFields[index];
       }
 
+      //console.log("found field:",field);
       if(field) {
         addObsToFormlyField(o, field, questionMap);
         return true;
@@ -431,7 +489,7 @@
     }
 
 
-    function addExistingObsSetToForm(form,restObs) {
+    function addExistingObsSetToFormOld(form,restObs) {
       var found;
       _.each(restObs,function(o) {
         _.each(form.compiledSchema, function (page) {
@@ -439,11 +497,55 @@
             _.each(section.sectionModel, function (questionModel) {
               if (o.concept === questionModel[0].concept) {
                 found = addObsToSection(o,section.formlyFields, section.sectionModel,form.questionMap);
+                console.log("found ", questionModel[0].schemaQuestion.label);
               }
+              return found;
             });
           });
         });
       });
+    }
+
+    function addExistingObsSetToForm(form,restObs) {
+      var found,pageResult,sectionResult,curPage, curSection,page, section;
+      _.each(restObs,function(o) {
+        found = false;
+        curPage = 0;
+        while (!found && curPage < form.compiledSchema.length) {
+          page = form.compiledSchema[curPage];
+          curSection = 0;
+          while (!found && curSection < page.compiledPage.length) {
+            section = page.compiledPage[curSection];
+            _.find(section.sectionModel, function (questionModel) {
+              if (o.concept === questionModel[0].concept) {
+                found = addObsToSection(o, section.formlyFields, section.sectionModel, form.questionMap);
+              }
+              return found;
+            });
+            curSection += 1;
+          }
+          curPage += 1
+        }
+      });
+    }
+
+    function toFormlySections(compiledPage) {
+      var fields = [];
+      var field;
+      _.each(compiledPage,function(section){
+        field = {
+          key: section.section.label,
+          type: 'section',
+          templateOptions: {
+            label: section.section.label
+          },
+          data: {fields: section.formlyFields}
+        };
+
+        fields.push(field);
+      });
+      return fields;
+
     }
 
     function getCompiledForm() {

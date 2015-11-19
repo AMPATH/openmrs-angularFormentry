@@ -25,7 +25,17 @@ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106
     $scope.vm = {};
     //$scope.vm.model = {};
     var form = TestService.getCompiledForm();
-    $scope.vm.model = form.compiledSchema[0].compiledPage[0].sectionModel;
+
+    $scope.vm.model = {};
+
+    //adding in the mdoels to the "central" model. Not necessary for formly to work, but convenient for viewing
+    //model on html page
+    _.each(form.compiledSchema,function(page){
+      _.each(page.compiledPage,function(section) {
+        $scope.vm.model[section.section.label] = section.sectionModel
+      });
+    });
+
 
     $scope.vm.submitLabel = 'Save';
 
@@ -167,7 +177,7 @@ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106
           options: {},
           form: {
             model: $scope.vm.model,
-            fields: form.compiledSchema[0].compiledPage[0].formlyFields
+            fields: TestService.toFormlySections(form.compiledSchema[0].compiledPage)
           }
         }
       ];
