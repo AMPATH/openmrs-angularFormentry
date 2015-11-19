@@ -18,7 +18,8 @@ angular
     'ngSanitize',
     'ngTouch',
     'ui.router',
-    'openmrs.angularFormentry'
+    'openmrs.angularFormentry',
+    'ui.ace'
   ])
   .config(function($stateProvider) {
       $stateProvider

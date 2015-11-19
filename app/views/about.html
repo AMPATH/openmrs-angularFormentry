@@ -20,7 +20,22 @@
 
      </form>
      <hr />
-     <h2>Model Value</h2>
+
+
+  <div ui-ace="{mode:'javascript'}" ng-model="schema"></div>
+  <button type="button" class="btn btn-sm btn-danger" ng-click="renderForm()">Render Schema</button>
+
+  <hr>
+  <div ui-ace="{mode:'json'}" ng-model="payload"></div>
+  <button type="button" class="btn btn-sm btn-danger" ng-click="renderForm()">Update Payload</button>
+
+
+
+
+
+
+  <h2>Model Value</h2>
+
   <pre>{{vm.model | json}}</pre>
      <!-- <h2>Tabs <small>(note, functions are not shown)</small></h2>
      <pre>{{vm.originalTabs | json}}</pre>

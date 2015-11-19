@@ -27,6 +27,45 @@ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106
     var form = TestService.getCompiledForm();
 
     $scope.vm.model = {};
+    $scope.schema = angular.toJson(TestService.schema,true);
+    console.log(TestService);
+    $scope.payload = angular.toJson(TestService.payload,true);
+
+    $scope.renderForm = function() {
+      var schema = angular.fromJson($scope.schema);
+      var payload = angular.fromJson($scope.payload);
+      $scope.vm.tabs = [];
+      $scope.vm.model = {};
+
+      form = TestService.getCompiledForm(schema,payload);
+
+      _.each(form.compiledSchema,function(page){
+        console.log(page.title,page);
+        $scope.vm.tabs.push(
+          {
+            "title": page.page.label,
+            form: {
+              options: {},
+              model: $scope.vm.model,
+              fields: TestService.toFormlySections(page.compiledPage)
+            }
+          }
+        );
+        _.each(page.compiledPage,function(section) {
+          console.log(section);
+          $scope.vm.model[section.section.label] = section.sectionModel
+        });
+
+      })
+
+
+    }
+
+    $scope.updatePayload = function() {
+
+
+    }
+
 
     //adding in the mdoels to the "central" model. Not necessary for formly to work, but convenient for viewing
     //model on html page
@@ -174,8 +213,8 @@ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106
         },
         {
           "title": "Example From JJ",
-          options: {},
           form: {
+            options: {},
             model: $scope.vm.model,
             fields: TestService.toFormlySections(form.compiledSchema[0].compiledPage)
           }

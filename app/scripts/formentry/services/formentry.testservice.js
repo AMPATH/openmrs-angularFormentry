@@ -426,6 +426,8 @@
         {concept:"a8a003a6-1350-11df-a1f1-0026b9348838",obsId:"10","obsGroup": [{obsId:"11","concept":"a8a07a48-1350-11df-a1f1-0026b9348838","value":"value43"}]}
       ];
 
+    service.payload = obsRestPayloadRepeatingObsGroup;
+
     function isEmpty(value) {
       return (value === null || value === undefined || value === "");
     }
@@ -548,10 +550,12 @@
 
     }
 
-    function getCompiledForm() {
-
+    function getCompiledForm(schema,payload) {
+      if(schema) this.schema = schema;
+      if(payload) this.payload = payload;
       var form = schemaToFormlyForm(this.schema);
-      addExistingObsSetToForm(form,obsRestPayloadRepeatingObsGroup);
+      addExistingObsSetToForm(form,this.payload);
+
       console.log(form);
       window.form = form;
       return form;
