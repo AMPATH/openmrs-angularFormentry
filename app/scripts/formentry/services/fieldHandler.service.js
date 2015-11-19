@@ -39,7 +39,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       if (handlerName in fieldHandlers) {
         return fieldHandlers[handlerName];
       } else {
-        $log.warn('Failed to get the required field returning defaultFieldHandler');
+        $log.warn('Failed to get the required fieldHandler, returning defaultFieldHandler');
         return fieldHandlers['defaultFieldHandler'];
       }
     }
@@ -85,7 +85,27 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
     }
 
     function defaultFieldHandler(_field) {
-      $log.info('loading fieldHandler');
+      $log.info('loading default fieldHandler');
+      var field = {};
+      field = _createFormlyFieldHelper(_field, obsId);
+      var fieldArray = [];
+      var obsDateField;
+      if (_field.questionOptions.showDate === 'true') {
+        obsDateField = angular.copy(field);
+        _handleShowDate(obsDateField);
+        fieldArray.push(field);
+        fieldArray.push(obsDateField);
+        return fieldArray;
+      } else {
+        return field;
+      }
+    }
+
+    function obsFieldHandler(_field) {
+      $log.info('loading obs fieldHandler');
+      var obsField = {};
+      obsField = _createObsFormlyField(_field);
+      return obsField;
     }
 
     function createFieldKey(_field, _id)
@@ -95,16 +115,10 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       var id = _id + 1;
       if (_field.type === 'obs') {
         fKey = _field.questionOptions.concept;
-        key = 'obs' + id + fKey.replace(/-/gi, 'n'); // $$ Inserts a "$".
+        key = 'obs' + id + '_' + fKey.replace(/-/gi, 'n'); // $$ Inserts a "$".
       }
 
       return key;
-    }
-
-    function obsFieldHandler(_field) {
-      var obsField = {};
-      obsField = _createObsFormlyField(_field);
-      return obsField;
     }
 
     function _handleExpressionProperties(_field, _required, _disabled, _listener)
@@ -154,13 +168,18 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       var answerList = [];
       answerList.push({name:'', value:undefined});
       //get the anserq options for radio/select options/multicheckbox
-      _.each(_answers, function(answer) {
-        var item = {
-          name:answer.label,
-          value:answer.concept
-        };
-        answerList.push(item);
-      });
+      if (angular.isArray(_answers)) {
+        _.each(_answers, function(answer) {
+          var item = {
+            name:answer.label,
+            value:answer.concept
+          };
+          answerList.push(item);
+        });
+      } else {
+        $log.error('Error: Expected ' + _answers + ' to be an Array but got: ',
+        typeof _answers);
+      }
 
       field['templateOptions']['options'] = answerList;
     }
@@ -184,7 +203,26 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       };
     }
 
-    function _obsFieldHandlerHelper(_field, _obsId) {
+    function _handleShowDate(_field) {
+      var field = _field || {};
+      var key = field.key;
+      field.key = key.replace(/obs/gi, 'obsDate');
+      field.type = 'datepicker';
+      field.templateOptions['datepickerPopup'] = 'dd-MMMM-yyyy';
+      field.templateOptions['label'] = 'Date';
+      field.expressionProperties = {
+        'templateOptions.required': function($viewValue, $modelValue, scope, element) {
+          var value = $viewValue || $modelValue;
+          var fkey = selField.key;
+          return scope.model[fkey] !== undefined && scope.model[fkey] !== null && scope.model[fkey] !== '';
+        }
+      };
+      field.validators = {
+        dateValidator: '' //FormValidator.getDateValidatorObject(curField.validators[0]) //this  will require refactoring as we move forward
+      };
+    }
+
+    function _createFormlyFieldHelper(_field, _obsId) {
       var obsField = {};
       obsField = {
         key: createFieldKey(_field, _obsId),
@@ -206,7 +244,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
     function _createObsFormlyField(_obsField) {
       var obsField = {};
-      obsField = _obsFieldHandlerHelper(_obsField, obsId);
+      obsField = _createFormlyFieldHelper(_obsField, obsId);
       if (_obsField.questionOptions.rendering === 'date') {
         obsField['type'] = 'datepicker';
         obsField['templateOptions']['datepickerPopup'] = 'dd-MMMM-yyyy';
@@ -219,11 +257,21 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       } else if ((_obsField.questionOptions.rendering === 'radio') ||
       (_obsField.questionOptions.rendering === 'select') ||
       (_obsField.questionOptions.rendering === 'multiCheckbox')) {
-        _handleFieldAnswers(obsField, _obsField.answers);
+        _handleFieldAnswers(obsField, _obsField.questionOptions.answers);
         obsField['type'] = _obsField.questionOptions.rendering;
       }
-      // console.log('Obs field', obsField);
-      return obsField;
+
+      var fieldArray = [];
+      var obsDateField;
+      if (_obsField.questionOptions.showDate === 'true') {
+        obsDateField = angular.copy(obsField);
+        _handleShowDate(obsDateField);
+        fieldArray.push(obsField);
+        fieldArray.push(obsDateField);
+        return fieldArray;
+      } else {
+        return obsField;
+      }
     }
 
   }
