@@ -12,20 +12,22 @@
           "label":"Section Name",
           "questions": [
             {
-              "type":"obs | obsGroup | encounterType | encounterDatetime | encounterProvider | encounterLocation | personAttribute | obsDrug | conceptSearch | obsProblem | location-attribute",
-              "rendering": "| select | text | date | number | multiCheckbox | radio | ui-select-extended | repeating | group",
-              "concept":"", // but should be only allowable in types of "obs" or "obsGroup"
+              "type":"obs | obsGroup | encounterType | encounterDatetime | encounterProvider | encounterLocation | personAttribute | location-attribute",
+              "questionOptions: {
+                "concept":"", // but should be only allowable in types of obs or obsGroup
+                "rendering": "| select | text | date | number | multiCheckbox | radio | ui-select-extended | repeating | group",
+                "answerList":"| obsDrug | conceptSearch | obsProblem ", //ignore answers if provided
+                "answers":[
+                  {
+                    "label": "displayed",
+                    "value": "value to be populated to form model"
+                  }
+                ],
+              }
               "label":"Text to show to the user on the form",
               "id":"unique name to be used in validation as placeholder for answer to this question",
               "required":"boolean, optional",
-              "default":"default value for model", //optional
-              "answers":[
-                {
-                  "label": "displayed",
-                  "value": "value to be populated to form model"
-                }
-              ],
-              "formlyTemplateOptions": {},
+              "default":"default value for model", //optional              
               "questions":[], // Allowed only for types obsGroups
               "hide": [
                 {
