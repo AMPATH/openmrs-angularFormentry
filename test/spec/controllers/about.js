@@ -15,7 +15,7 @@ describe('Controller: AboutCtrl', function() {
   var filter;
   var timeout;
   var formentry;
-  var stub;
+  var spyMethod;
 
   // Initialize the controller and a mock scope
   beforeEach(inject(function($controller, $rootScope, $injector) {
@@ -44,5 +44,10 @@ describe('Controller: AboutCtrl', function() {
     expect(scope.vm.model).to.be.defined;
     expect(scope.vm.tabs).to.be.defined;
   });
+
+  // it('should call the activate Method', function() {
+  //   spyMethod = sinon.spy(AboutCtrl, '_activate');
+  //   expect(spyMethod).to.have.been.calledOnce;
+  // });
 
 });

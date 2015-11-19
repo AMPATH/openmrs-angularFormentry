@@ -43,6 +43,7 @@ module.exports = function(config) {
       'bower_components/bootstrap-ui-datetime-picker/dist/datetime-picker.min.js',
       'bower_components/lodash/lodash.js',
       'bower_components/angular-mocks/angular-mocks.js',
+      'bower_components/chai/chai.js',
       // endbower
       'app/scripts/**/*.module.js',
       'app/scripts/**/*.js',
@@ -80,6 +81,7 @@ module.exports = function(config) {
         //"karma-chrome-launcher",
           'karma-mocha-reporter',
           'karma-sinon',
+          'karma-sinon-chai',
           'karma-mocha',
           'karma-chai'
         ],

@@ -27,6 +27,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
     fieldHandlers['obsProblemFieldHandler'] = obsProblemFieldHandler;
     fieldHandlers['conceptSearchFieldHandler'] = conceptSearchFieldHandler;
     fieldHandlers['locationAttributeFieldHandler'] = locationAttributeFieldHandler;
+    fieldHandlers['defaultFieldHandler'] = defaultFieldHandler;
     var service = {
       getFieldHandler: getFieldHandler,
       registerCustomFieldHandler: registerCustomFieldHandler
@@ -35,20 +36,16 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
     return service;
 
     function getFieldHandler(handlerName) {
-      $log.info('loading fieldHandler', handlerName);
-      $log.info('fieldHandlers', fieldHandlers);
-      $log.info('fieldHandlers specific', fieldHandlers[handlerName]);
-      return fieldHandlers[handlerName] || fieldHandlers['default'];
+      if (handlerName in fieldHandlers) {
+        return fieldHandlers[handlerName];
+      } else {
+        $log.warn('Failed to get the required field returning defaultFieldHandler');
+        return fieldHandlers['defaultFieldHandler'];
+      }
     }
 
     function registerCustomFieldHandler(handlerName, handlerMethod) {
       fieldHandlers[handlerName] = handlerMethod;
-    }
-
-    function obsFieldHandler(_field) {
-      var obsField = {};
-      obsField = createFormlyField(_field);
-      return obsField;
     }
 
     function encounterTypeFieldHandler(_field) {
@@ -87,45 +84,52 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       $log.info('loading fieldHandler');
     }
 
-    function createObsFormlyField(_obsField) {
-      //console.log(_obsField)
-      obsId = obsId + 1;
-      var defaultValue_;
-      if (_obsField.default !== undefined) {
-        defaultValue_ = _obsField.default;
+    function defaultFieldHandler(_field) {
+      $log.info('loading fieldHandler');
+    }
+
+    function createFieldKey(_field, _id)
+    {
+      var key;
+      var fKey;
+      var id = _id + 1;
+      if (_field.type === 'obs') {
+        fKey = _field.questionOptions.concept;
+        key = 'obs' + id + fKey.replace(/-/gi, 'n'); // $$ Inserts a "$".
       }
 
-      var hideExpression_;
-      var disableExpression_ = '';
+      return key;
+    }
 
-      var id_;
-      if (_obsField.id !== undefined) {
-        id_ = _obsField.id;
-      }
-
-      if (_obsField.hide !== undefined) {
-        hideExpression_ = '';
-      } else {
-        hideExpression_ = '';
-      }
-
-      if (_obsField.disable !== undefined) {
-        disableExpression_ = '';
-      }
-
-      if (_obsField.disableExpression !== undefined) {
-        disableExpression_ = '';
-      }
-
+    function obsFieldHandler(_field) {
       var obsField = {};
-      // if (validateFieldFormat(_obsField) !== true) {
-      //   console.log('Something Went Wrong While creating this field', _obsField);
-      // }
-      //console.log('validators', _obsField);
-      var validators;
-      if (_obsField.showDate === undefined) //load if the field has no this property (this obs datatime)
-          validators = _obsField.validators;
+      obsField = _createObsFormlyField(_field);
+      return obsField;
+    }
 
+    function _handleExpressionProperties(_field, _required, _disabled, _listener)
+    {
+      var field = _field || {};
+      var required = _required || 'false';
+      var disabled = _disabled || '';
+      var listener = _listener || '';
+      field['expressionProperties'] = {
+        'templateOptions.required':required,
+        'templateOptions.disabled':disabled,
+        'templateOptions.hasListeners':listener
+      };
+    }
+
+    function _handleDefaultValue(_field, _defaultValue)
+    {
+      var field = _field || {};
+      var defaultVal = _defaultValue || '';
+      field['defaultValue'] = defaultVal;
+    }
+
+    function _handleValidators(_field, _validators)
+    {
+      var field = _field || {};
       //set the validator to default validator
       var defaultValidator = {
         expression: function(viewValue, modelValue, scope) {
@@ -134,225 +138,93 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
         message: ''
       };
-      var compiledValidators = {};
+      var compiledValidators = _validators || defaultValidator;
+      field['validators'] = compiledValidators;
+    }
 
+    function _handleHide(_field, _hide)
+    {
+      var field = _field || {};
+      var hide = hide || '';
+      field['hideExpression'] = hide;
+    }
+
+    function _handleFieldAnswers(_field, _answers) {
+      var field = _field || {};
+      var answerList = [];
+      answerList.push({name:'', value:undefined});
+      //get the anserq options for radio/select options/multicheckbox
+      _.each(_answers, function(answer) {
+        var item = {
+          name:answer.label,
+          value:answer.concept
+        };
+        answerList.push(item);
+      });
+
+      field['templateOptions']['options'] = answerList;
+    }
+
+    function _handleFieldUiSelect(_field, _answers) {
+      var field = _field || {};
+      var answerList = [];
+      answerList.push({name:'', value:undefined});
+      //get the anserq options for radio/select options/multicheckbox
+      _.each(_answers, function(answer) {
+        var item = {
+          name:answer.label,
+          value:answer.concept
+        };
+        answerList.push(item);
+      });
+
+      field['templateOptions'] = {
+        type: 'text',
+        options:answerList
+      };
+    }
+
+    function _obsFieldHandlerHelper(_field, _obsId) {
+      var obsField = {};
+      obsField = {
+        key: createFieldKey(_field, _obsId),
+        data: {concept:_field.questionOptions.concept,
+          id:_field.id},
+        type: 'input',
+        templateOptions: {
+          type: 'text',
+          label: _field.label
+        }
+      };
+
+      _handleExpressionProperties(obsField, _field.required, _field.disable);
+      _handleDefaultValue(obsField, _field.default);
+      _handleHide(obsField, _field.hide);
+      _handleValidators(obsField, _field.validators);
+      return obsField;
+    }
+
+    function _createObsFormlyField(_obsField) {
+      var obsField = {};
+      obsField = _obsFieldHandlerHelper(_obsField, obsId);
       if (_obsField.questionOptions.rendering === 'date') {
-        var required = 'false';
+        obsField['type'] = 'datepicker';
+        obsField['templateOptions']['datepickerPopup'] = 'dd-MMMM-yyyy';
 
-        obsField = {
-          key: 'obs' + obsId + '_' + createFieldKey(_obsField.questionOptions.concept),
-          type: 'datepicker',
-          data: {concept:_obsField.questionOptions.concept,
-            id:id_},
-          defaultValue: defaultValue_,
-          templateOptions: {
-            type: 'text',
-            label: _obsField.label,
-            datepickerPopup: 'dd-MMMM-yyyy'
-          },
-          expressionProperties: {
-            'templateOptions.disabled': disableExpression_,
-            'templateOptions.required': required,
-            'templateOptions.hasListeners': ''
-          },
-          hideExpression:hideExpression_,
-          validators: compiledValidators
-        };
-      } else if (_obsField.questionOptions.rendering === 'text') {
-        var required = 'false';
-        if (_obsField.required !== undefined) required = _obsField.required;
-        obsField = {
-          key: 'obs' + obsId + '_' + createFieldKey(_obsField.questionOptions.concept),
-          type: 'input',
-          defaultValue: defaultValue_,
-          data: {concept:_obsField.questionOptions.concept,
-            id:id_},
-          templateOptions: {
-            type: _obsField.questionOptions.rendering,
-            label: _obsField.label
-          },
-          expressionProperties: {
-            'templateOptions.disabled': disableExpression_,
-            'templateOptions.required': required,
-            'templateOptions.hasListeners': ''
-          },
-          hideExpression:hideExpression_,
-          validators: compiledValidators
-        };
-      } else if (_obsField.questionOptions.rendering === 'number')
-      {
-        var required = 'false';
-        if (_obsField.required !== undefined) required = _obsField.required;
+      } else if (_obsField.questionOptions.rendering === 'number') {
+        obsField['templateOptions']['type'] = _obsField.questionOptions.rendering;
+        obsField['templateOptions']['min'] = _obsField.questionOptions.min;
+        obsField['templateOptions']['max'] = _obsField.questionOptions.max;
 
-        obsField = {
-          key: 'obs' + obsId + '_' + createFieldKey(_obsField.questionOptions.concept),
-          type: 'input',
-          defaultValue: defaultValue_,
-          data: {concept:_obsField.questionOptions.concept,
-            id:id_},
-          templateOptions: {
-            type: _obsField.questionOptions.rendering,
-            label: _obsField.label,
-            min:_obsField.min,
-            max:_obsField.max
-          },
-          expressionProperties: {
-            'templateOptions.disabled': disableExpression_,
-            'templateOptions.required': required,
-            'templateOptions.hasListeners': ''
-          },
-          hideExpression:hideExpression_,
-          validators: compiledValidators
-        };
       } else if ((_obsField.questionOptions.rendering === 'radio') ||
       (_obsField.questionOptions.rendering === 'select') ||
       (_obsField.questionOptions.rendering === 'multiCheckbox')) {
-        var opts = [];
-        //Adding unselect option
-        if (_obsField.questionOptions.rendering !== 'multiCheckbox')
-          opts.push({name:'', value:undefined});
-        //get the radio/select options/multicheckbox
-        //console.log(_obsField);
-        _.each(_obsField.answers, function(answer) {
-          // body...
-          var item = {
-            name:answer.label,
-            value:answer.concept
-          };
-          opts.push(item);
-        });
-
-        var required = 'false';
-        if (_obsField.required !== undefined) required = _obsField.required;
-
-        obsField = {
-          key: 'obs' + obsId + '_' + createFieldKey(_obsField.questionOptions.concept),
-          type: _obsField.questionOptions.rendering,
-          defaultValue: defaultValue_,
-          data: {concept:_obsField.questionOptions.concept,
-            id:id_},
-          templateOptions: {
-            type: 'text',
-            label: _obsField.label,
-            options:opts
-          },
-          expressionProperties: {
-            'templateOptions.disabled': disableExpression_,
-            'templateOptions.required': required,
-            'templateOptions.hasListeners': ''
-          },
-          hideExpression:hideExpression_,
-          validators: compiledValidators
-        };
-      } else if (_obsField.questionOptions.rendering === 'problem') {
-        obsField = {
-          key: 'obs' + obsId + '_' +
-           createFieldKey(_obsField.questionOptions.concept),
-          defaultValue: defaultValue_,
-          type: 'ui-select-extended',
-          data: {concept:_obsField.questionOptions.concept,
-            id:id_},
-          templateOptions: {
-            type: 'text',
-            label: _obsField.label,
-            valueProp: 'uuId',
-            labelProp:'display',
-            deferredFilterFunction: '',
-            getSelectedObjectFunction: '',
-            options:[]
-          },
-          expressionProperties: {
-            'templateOptions.disabled': disableExpression_,
-            'templateOptions.required': required,
-            'templateOptions.hasListeners': ''
-          },
-          hideExpression:hideExpression_,
-          validators: compiledValidators
-        };
-      } else if (_obsField.questionOptions.rendering === 'drug') {
-        var required = 'false';
-        if (_obsField.required !== undefined) required = _obsField.required;
-        obsField = {
-          key: 'obs' + obsId + '_' +
-          createFieldKey(_obsField.questionOptions.concept),
-          type: 'ui-select-extended',
-          defaultValue: defaultValue_,
-          data: {concept:_obsField.questionOptions.concept,
-            id:id_},
-          templateOptions: {
-            type: 'text',
-            label: _obsField.label,
-            valueProp: 'uuId',
-            labelProp:'display',
-            deferredFilterFunction: '',
-            getSelectedObjectFunction: '',
-            options:[]
-          },
-          expressionProperties: {
-            'templateOptions.disabled': disableExpression_,
-            'templateOptions.required': required,
-            'templateOptions.hasListeners': ''
-          },
-          validators: compiledValidators
-        };
-      } else if (_obsField.questionOptions.rendering === 'select-concept-answers') {
-        var required = 'false';
-        if (_obsField.required !== undefined) required = _obsField.required;
-        obsField = {
-          key: 'obs' + obsId + '_' + createFieldKey(_obsField.questionOptions.concept),
-          defaultValue: defaultValue_,
-          type: 'concept-search-select',
-          data: {concept:_obsField.questionOptions.concept,
-            id:id_},
-          templateOptions: {
-            type: 'text',
-            label: _obsField.label,
-            options:[],
-            displayMember:'label',
-            valueMember:'concept',
-            questionConceptUuid:_obsField.questionOptions.concept,
-            fetchOptionsFunction:''
-          },
-          expressionProperties: {
-            'templateOptions.disabled': disableExpression_,
-            'templateOptions.required': required,
-            'templateOptions.hasListeners': ''
-          },
-          hideExpression:hideExpression_,
-          validators: compiledValidators
-        };
-      } else if (_obsField.questionOptions.rendering === 'location-attribute') {
-        var required = 'false';
-        if (_obsField.required !== undefined) required = _obsField.required;
-        obsField = {
-          key: 'personAttribute' + obsId + '_' + createFieldKey(_obsField.attributeType),
-          type: 'ui-select-extended',
-          defaultValue: defaultValue_,
-          data: {attributeType:_obsField.attributeType,
-          id:id_},
-          templateOptions: {
-          type: 'text',
-          label: _obsField.label,
-          valueProp: 'uuId',
-          labelProp:'display',
-          deferredFilterFunction: '',
-          getSelectedObjectFunction: '',
-          options:[]
-        },
-          expressionProperties: {
-            'templateOptions.disabled': disableExpression_,
-            'templateOptions.required': required
-          },
-          validators: compiledValidators
-        };
+        _handleFieldAnswers(obsField, _obsField.answers);
+        obsField['type'] = _obsField.questionOptions.rendering;
       }
       // console.log('Obs field', obsField);
       return obsField;
     }
 
-    function createFieldKey(key)
-    {
-      return key.replace(/-/gi, 'n'); // $$ Inserts a "$".
-    }
   }
 })();

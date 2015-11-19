@@ -34,7 +34,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
     function createForm(schema, model, callback) {
       var testMethod = fieldHandlerService.getFieldHandler('obsFieldHandler');
       $log.info('successfully called', testMethod);
-      testMethod('22');
+      // testMethod('22');
     }
 
   }
