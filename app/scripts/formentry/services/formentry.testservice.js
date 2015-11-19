@@ -486,27 +486,11 @@
         return true;
       }
       else {
+        $log.debug("NO FIELD FOUND FOR OBS: ",o);
         return false;
       }
     }
 
-
-    function addExistingObsSetToFormOld(form,restObs) {
-      var found;
-      _.each(restObs,function(o) {
-        _.each(form.compiledSchema, function (page) {
-          _.each(page.compiledPage, function (section) {
-            _.each(section.sectionModel, function (questionModel) {
-              if (o.concept === questionModel[0].concept) {
-                found = addObsToSection(o,section.formlyFields, section.sectionModel,form.questionMap);
-                console.log("found ", questionModel[0].schemaQuestion.label);
-              }
-              return found;
-            });
-          });
-        });
-      });
-    }
 
     function addExistingObsSetToForm(form,restObs) {
       var found,pageResult,sectionResult,curPage, curSection,page, section;
@@ -554,6 +538,7 @@
       if(schema) this.schema = schema;
       if(payload) this.payload = payload;
       var form = schemaToFormlyForm(this.schema);
+      console.log(payload);
       addExistingObsSetToForm(form,this.payload);
 
       console.log(form);

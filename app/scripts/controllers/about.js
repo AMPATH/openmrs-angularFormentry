@@ -34,13 +34,13 @@ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106
     $scope.renderForm = function() {
       var schema = angular.fromJson($scope.schema);
       var payload = angular.fromJson($scope.payload);
+      console.log(payload);
       $scope.vm.tabs = [];
       $scope.vm.model = {};
 
       form = TestService.getCompiledForm(schema,payload);
 
       _.each(form.compiledSchema,function(page){
-        console.log(page.title,page);
         $scope.vm.tabs.push(
           {
             "title": page.page.label,
@@ -52,7 +52,6 @@ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106
           }
         );
         _.each(page.compiledPage,function(section) {
-          console.log(section);
           $scope.vm.model[section.section.label] = section.sectionModel
         });
 
