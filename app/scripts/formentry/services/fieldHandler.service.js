@@ -88,9 +88,17 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       $log.info('loading fieldHandler');
     }
 
-    function createFieldKey(key)
+    function createFieldKey(_field, _id)
     {
-      return key.replace(/-/gi, 'n'); // $$ Inserts a "$".
+      var key;
+      var fKey;
+      var id = _id + 1;
+      if (_field.type === 'obs') {
+        fKey = _field.questionOptions.concept;
+        key = 'obs' + id + fKey.replace(/-/gi, 'n'); // $$ Inserts a "$".
+      }
+
+      return key;
     }
 
     function obsFieldHandler(_field) {
@@ -99,14 +107,16 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       return obsField;
     }
 
-    function _handleRequired(_field, _required)
+    function _handleExpressionProperties(_field, _required, _disabled, _listener)
     {
       var field = _field || {};
       var required = _required || 'false';
-      field = {
-        expressionProperties:{
-          'templateOptions.required': required
-        }
+      var disabled = _disabled || '';
+      var listener = _listener || '';
+      field['expressionProperties'] = {
+        'templateOptions.required':required,
+        'templateOptions.disabled':disabled,
+        'templateOptions.hasListeners':listener
       };
     }
 
@@ -114,31 +124,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
     {
       var field = _field || {};
       var defaultVal = _defaultValue || '';
-      field = {
-        defaultValue:defaultVal
-      };
-    }
-
-    function _handleDisabled(_field, _disabled)
-    {
-      var field = _field || {};
-      var disabled = _disabled || '';
-      field = {
-        expressionProperties:{
-          'templateOptions.disabled': disabled
-        }
-      };
-    }
-
-    function _handleListeners(_field, _listener)
-    {
-      var field = _field || {};
-      var listener = _listener || '';
-      field = {
-        expressionProperties:{
-          'templateOptions.hasListeners': listener
-        }
-      };
+      field['defaultValue'] = defaultVal;
     }
 
     function _handleValidators(_field, _validators)
@@ -153,18 +139,14 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
         message: ''
       };
       var compiledValidators = _validators || defaultValidator;
-      field = {
-        validators:compiledValidators
-      };
+      field['validators'] = compiledValidators;
     }
 
     function _handleHide(_field, _hide)
     {
       var field = _field || {};
       var hide = hide || '';
-      field = {
-        hideExpression:hide
-      };
+      field['hideExpression'] = hide;
     }
 
     function _handleFieldAnswers(_field, _answers) {
@@ -180,58 +162,65 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
         answerList.push(item);
       });
 
-      field = {
-        templateOptions: {
-          type: 'text',
-          options:answerList
-        }
+      field['templateOptions']['options'] = answerList;
+    }
+
+    function _handleFieldUiSelect(_field, _answers) {
+      var field = _field || {};
+      var answerList = [];
+      answerList.push({name:'', value:undefined});
+      //get the anserq options for radio/select options/multicheckbox
+      _.each(_answers, function(answer) {
+        var item = {
+          name:answer.label,
+          value:answer.concept
+        };
+        answerList.push(item);
+      });
+
+      field['templateOptions'] = {
+        type: 'text',
+        options:answerList
       };
     }
 
-    function _obsFieldHandlerHelper(_field, obsId) {
+    function _obsFieldHandlerHelper(_field, _obsId) {
       var obsField = {};
       obsField = {
-        key: 'obs' + obsId + '_' + createFieldKey(_field.questionOptions.concept),
+        key: createFieldKey(_field, _obsId),
         data: {concept:_field.questionOptions.concept,
           id:_field.id},
         type: 'input',
         templateOptions: {
           type: 'text',
-          label: _field.label,
+          label: _field.label
         }
       };
-      _handleRequired(obsField, _field.required);
+
+      _handleExpressionProperties(obsField, _field.required, _field.disable);
       _handleDefaultValue(obsField, _field.default);
       _handleHide(obsField, _field.hide);
-      _handleDisabled(obsField, _field.disable);
       _handleValidators(obsField, _field.validators);
       return obsField;
     }
 
     function _createObsFormlyField(_obsField) {
-      //console.log(_obsField)
-      obsId = obsId + 1;
       var obsField = {};
       obsField = _obsFieldHandlerHelper(_obsField, obsId);
       if (_obsField.questionOptions.rendering === 'date') {
-        obsField = {
-          type:'datepicker',
-          templateOptions: {
-            datepickerPopup: 'dd-MMMM-yyyy'
-          }
-        };
+        obsField['type'] = 'datepicker';
+        obsField['templateOptions']['datepickerPopup'] = 'dd-MMMM-yyyy';
+
       } else if (_obsField.questionOptions.rendering === 'number') {
-        obsField = {
-          templateOptions: {
-            type: _obsField.questionOptions.rendering,
-            min:_obsField.min,
-            max:_obsField.max
-          }
-        };
+        obsField['templateOptions']['type'] = _obsField.questionOptions.rendering;
+        obsField['templateOptions']['min'] = _obsField.questionOptions.min;
+        obsField['templateOptions']['max'] = _obsField.questionOptions.max;
+
       } else if ((_obsField.questionOptions.rendering === 'radio') ||
       (_obsField.questionOptions.rendering === 'select') ||
       (_obsField.questionOptions.rendering === 'multiCheckbox')) {
         _handleFieldAnswers(obsField, _obsField.answers);
+        obsField['type'] = _obsField.questionOptions.rendering;
       }
       // console.log('Obs field', obsField);
       return obsField;

@@ -273,6 +273,7 @@
                       id:'q7a',
                       label: '7a. Visit Type',
                       type: 'obs',
+                      required:'true',
                       questionOptions:{
                         concept: 'a89ff9a6-1350-11df-a1f1-0026b9348838',
                         rendering:'select'
@@ -285,14 +286,33 @@
                       ]
                     },
                     {
-                      concept: 'dc1942b2-5e50-4adc-949d-ad6c905f054e',
                       type: 'obs',
                       questionOptions:{
-                        concept: 'a89ff9a6-1350-11df-a1f1-0026b9348838',
+                        concept: 'dc1942b2-5e50-4adc-949d-ad6c905f054e',
                         rendering:'date'
                       },
                       validators: [{type: 'date', allowFutureDates: 'true'}],
                       label: '7b. If Unscheduled, actual scheduled date'
+                    },
+                    {
+                      label: 'tabs/day',
+                      questionOptions:{
+                        concept: 'dc1942b2-5e50-4adc-949d-ad6c905f054e',
+                        rendering:'number',
+                        max: 30,
+                        min: 0
+                      },
+                      type: 'obs',
+                      hide: [
+                        {
+                          field: 'tb_current',
+                          value: [
+                            'a899f51a-1350-11df-a1f1-0026b9348838',
+                            'a897d1a4-1350-11df-a1f1-0026b9348838',
+                            'a8a382ba-1350-11df-a1f1-0026b9348838'
+                          ]
+                        }
+                      ]
                     },
                     {
                       attributeType: '7ef225db-94db-4e40-9dd8-fb121d9dc370',

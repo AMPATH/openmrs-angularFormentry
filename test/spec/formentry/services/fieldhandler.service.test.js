@@ -58,7 +58,7 @@
         expect(functionStub).to.have.been.calledOnce;
         expect(functionStub.calledWith(handlerName)).to.be.true;
         expect(functionStub.returned(handlerMethod)).to.be.true;
-        expect(handlerMethod).to.be.an('function');
+        expect(handlerMethod).to.be.a('function');
       });
 
       it('should return defaultfieldHandler Method when wrong handler is passed',
@@ -69,21 +69,25 @@
         expect(functionStub).to.have.been.calledOnce;
         expect(functionStub.calledWith(handlerName)).to.be.true;
         expect(functionStub.returned(handlerMethod)).to.be.true;
-        expect(handlerMethod).to.be.an('function');
+        expect(handlerMethod).to.be.a('function');
       });
     });
 
     describe('obsFieldHandler Method unit Tests', function() {
+      var handlerMethod;
+      var mockSchema;
       beforeEach(function() {
         functionStub = sinon.spy(fhService, 'getFieldHandler');
         var handlerName = 'obsFieldHandler';
-        var handlerMethod = fhService.getFieldHandler(handlerName);
+        handlerMethod = fhService.getFieldHandler(handlerName);
+        mockSchema = mockData.getMockSchema();
       });
 
-      it('should be able to create a formly obs field', function() {
-        var mockSchema = mockData.getMockSchema();
-        var mockField = mockSchema.pages[1].sections.questions[0];
+      it('should be able to create a formly obs field with required properties',
+      function() {
+        var mockField = mockSchema.pages[1].sections[0].questions[0];
         var field = handlerMethod(mockField);
+        // console.log('field', field);
         expect(field).to.be.an('object');
         expect(field).to.have.ownProperty('key');
         expect(field).to.have.ownProperty('templateOptions');
@@ -91,6 +95,50 @@
         expect(field.templateOptions).to.have.ownProperty('type');
         expect(field.templateOptions).to.have.ownProperty('label');
         expect(field).to.have.ownProperty('data');
+        expect(field).to.have.ownProperty('validators');
+        expect(field).to.have.ownProperty('expressionProperties');
+        expect(field).to.have.ownProperty('hideExpression');
+      });
+
+      it('should be able to create obs field based on schema definition',
+      function() {
+        var mockField = mockSchema.pages[1].sections[0].questions[0];
+        var field = handlerMethod(mockField);
+        expect(field.key).to.match(/^obs/);
+        expect(field.key).to.have.string('a89ff9a6');
+        expect(field.data.id).to.eql('q7a');
+        expect(field.templateOptions).to.have.property('options');
+        expect(field.type).to.eql('select');
+        expect(field.templateOptions.label).to.eql('7a. Visit Type');
+      });
+
+      it('should be able to add an Expression Property to a field', function() {
+        var mockField = mockSchema.pages[1].sections[0].questions[0];
+        var field = handlerMethod(mockField);
+        expect(field.expressionProperties).to.have.any.keys('templateOptions.required');
+        expect(field.expressionProperties).to.have.contain
+        .keys('templateOptions.required', 'templateOptions.disabled',
+        'templateOptions.hasListeners');
+      });
+
+      it('should be set the right formly type for a field based on rendering options',
+      function() {
+        var mockField = mockSchema.pages[1].sections[0].questions[1];
+        var field = handlerMethod(mockField);
+        expect(field).to.have.deep.property('type', 'datepicker');
+        expect(field).to.have.deep.property('templateOptions.label',
+        '7b. If Unscheduled, actual scheduled date');
+        expect(field).to.have.property('templateOptions').that.is.an('object');
+      });
+
+      it('should create a formly field of type number with min and max options',
+      function() {
+        var mockField = mockSchema.pages[1].sections[0].questions[2];
+        var field = handlerMethod(mockField);
+        expect(field).to.have.deep.property('templateOptions.min', 0);
+        expect(field).to.have.deep.property('templateOptions.max', 30);
+        expect(field).to.have.deep.property('templateOptions.type', 'number');
+        expect(field).to.have.deep.property('templateOptions.label', 'tabs/day');
       });
     });
 
