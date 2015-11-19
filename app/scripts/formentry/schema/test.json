@@ -1,13 +1,10 @@
 {
-  "name":"",
-  "version":"",
-  "encounterType":"uuid",
-  "form":"uuid",
-  "processor":"ObsFormProcessor|EncounterFormProcessor|personAttributeFormProcessor|default",
-  "pages": [
-    {
-      "label":"Page Name",
-      "sections": [
+"name":"",
+        "version":"",
+        "encounterType":"uuid",
+        "form":"uuid",
+        "processor":"ObsFormProcessor|EncounterFormProcessor|personAttributeFormProcessor|default",
+        "pages": [
         {
           "label":"Section Name",
           "questions": [

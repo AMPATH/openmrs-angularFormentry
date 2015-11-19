@@ -9210,7 +9210,7 @@ return jQuery;
 }));
 
 /**
- * @license AngularJS v1.4.7
+ * @license AngularJS v1.4.8
  * (c) 2010-2015 Google, Inc. http://angularjs.org
  * License: MIT
  */
@@ -9268,7 +9268,7 @@ function minErr(module, ErrorConstructor) {
       return match;
     });
 
-    message += '\nhttp://errors.angularjs.org/1.4.7/' +
+    message += '\nhttp://errors.angularjs.org/1.4.8/' +
       (module ? module + '/' : '') + code;
 
     for (i = SKIP_INDEXES, paramPrefix = '?'; i < templateArgs.length; i++, paramPrefix = '&') {
@@ -9478,20 +9478,24 @@ msie = document.documentMode;
  *                   String ...)
  */
 function isArrayLike(obj) {
-  if (obj == null || isWindow(obj)) {
-    return false;
-  }
+
+  // `null`, `undefined` and `window` are not array-like
+  if (obj == null || isWindow(obj)) return false;
+
+  // arrays, strings and jQuery/jqLite objects are array like
+  // * jqLite is either the jQuery or jqLite constructor function
+  // * we have to check the existance of jqLite first as this method is called
+  //   via the forEach method when constructing the jqLite object in the first place
+  if (isArray(obj) || isString(obj) || (jqLite && obj instanceof jqLite)) return true;
 
   // Support: iOS 8.2 (not reproducible in simulator)
   // "length" in obj used to prevent JIT error (gh-11508)
   var length = "length" in Object(obj) && obj.length;
 
-  if (obj.nodeType === NODE_TYPE_ELEMENT && length) {
-    return true;
-  }
-
-  return isString(obj) || isArray(obj) || length === 0 ||
-         typeof length === 'number' && length > 0 && (length - 1) in obj;
+  // NodeList objects (with `item` method) and
+  // other objects with suitable length characteristics are array-like
+  return isNumber(length) &&
+    (length >= 0 && (length - 1) in obj || typeof obj.item == 'function');
 }
 
 /**
@@ -9636,6 +9640,10 @@ function baseExtend(dst, objs, deep) {
           dst[key] = new Date(src.valueOf());
         } else if (isRegExp(src)) {
           dst[key] = new RegExp(src);
+        } else if (src.nodeName) {
+          dst[key] = src.cloneNode(true);
+        } else if (isElement(src)) {
+          dst[key] = src.clone();
         } else {
           if (!isObject(dst[key])) dst[key] = isArray(src) ? [] : {};
           baseExtend(dst[key], [src], true);
@@ -9751,7 +9759,7 @@ identity.$inject = [];
 function valueFn(value) {return function() {return value;};}
 
 function hasCustomToString(obj) {
-  return isFunction(obj.toString) && obj.toString !== Object.prototype.toString;
+  return isFunction(obj.toString) && obj.toString !== toString;
 }
 
 
@@ -9950,9 +9958,9 @@ function isPromiseLike(obj) {
 }
 
 
-var TYPED_ARRAY_REGEXP = /^\[object (Uint8(Clamped)?)|(Uint16)|(Uint32)|(Int8)|(Int16)|(Int32)|(Float(32)|(64))Array\]$/;
+var TYPED_ARRAY_REGEXP = /^\[object (?:Uint8|Uint8Clamped|Uint16|Uint32|Int8|Int16|Int32|Float32|Float64)Array\]$/;
 function isTypedArray(value) {
-  return TYPED_ARRAY_REGEXP.test(toString.call(value));
+  return value && isNumber(value.length) && TYPED_ARRAY_REGEXP.test(toString.call(value));
 }
 
 
@@ -10074,100 +10082,111 @@ function arrayRemove(array, value) {
  </file>
  </example>
  */
-function copy(source, destination, stackSource, stackDest) {
-  if (isWindow(source) || isScope(source)) {
-    throw ngMinErr('cpws',
-      "Can't copy! Making copies of Window or Scope instances is not supported.");
-  }
-  if (isTypedArray(destination)) {
-    throw ngMinErr('cpta',
-      "Can't copy! TypedArray destination cannot be mutated.");
-  }
+function copy(source, destination) {
+  var stackSource = [];
+  var stackDest = [];
 
-  if (!destination) {
-    destination = source;
-    if (isObject(source)) {
-      var index;
-      if (stackSource && (index = stackSource.indexOf(source)) !== -1) {
-        return stackDest[index];
-      }
-
-      // TypedArray, Date and RegExp have specific copy functionality and must be
-      // pushed onto the stack before returning.
-      // Array and other objects create the base object and recurse to copy child
-      // objects. The array/object will be pushed onto the stack when recursed.
-      if (isArray(source)) {
-        return copy(source, [], stackSource, stackDest);
-      } else if (isTypedArray(source)) {
-        destination = new source.constructor(source);
-      } else if (isDate(source)) {
-        destination = new Date(source.getTime());
-      } else if (isRegExp(source)) {
-        destination = new RegExp(source.source, source.toString().match(/[^\/]*$/)[0]);
-        destination.lastIndex = source.lastIndex;
-      } else if (isFunction(source.cloneNode)) {
-          destination = source.cloneNode(true);
-      } else {
-        var emptyObject = Object.create(getPrototypeOf(source));
-        return copy(source, emptyObject, stackSource, stackDest);
-      }
-
-      if (stackDest) {
-        stackSource.push(source);
-        stackDest.push(destination);
-      }
+  if (destination) {
+    if (isTypedArray(destination)) {
+      throw ngMinErr('cpta', "Can't copy! TypedArray destination cannot be mutated.");
     }
-  } else {
-    if (source === destination) throw ngMinErr('cpi',
-      "Can't copy! Source and destination are identical.");
-
-    stackSource = stackSource || [];
-    stackDest = stackDest || [];
-
-    if (isObject(source)) {
-      stackSource.push(source);
-      stackDest.push(destination);
+    if (source === destination) {
+      throw ngMinErr('cpi', "Can't copy! Source and destination are identical.");
     }
 
+    // Empty the destination object
+    if (isArray(destination)) {
+      destination.length = 0;
+    } else {
+      forEach(destination, function(value, key) {
+        if (key !== '$$hashKey') {
+          delete destination[key];
+        }
+      });
+    }
+
+    stackSource.push(source);
+    stackDest.push(destination);
+    return copyRecurse(source, destination);
+  }
+
+  return copyElement(source);
+
+  function copyRecurse(source, destination) {
+    var h = destination.$$hashKey;
     var result, key;
     if (isArray(source)) {
-      destination.length = 0;
-      for (var i = 0; i < source.length; i++) {
-        destination.push(copy(source[i], null, stackSource, stackDest));
+      for (var i = 0, ii = source.length; i < ii; i++) {
+        destination.push(copyElement(source[i]));
+      }
+    } else if (isBlankObject(source)) {
+      // createMap() fast path --- Safe to avoid hasOwnProperty check because prototype chain is empty
+      for (key in source) {
+        destination[key] = copyElement(source[key]);
+      }
+    } else if (source && typeof source.hasOwnProperty === 'function') {
+      // Slow path, which must rely on hasOwnProperty
+      for (key in source) {
+        if (source.hasOwnProperty(key)) {
+          destination[key] = copyElement(source[key]);
+        }
       }
     } else {
-      var h = destination.$$hashKey;
-      if (isArray(destination)) {
-        destination.length = 0;
-      } else {
-        forEach(destination, function(value, key) {
-          delete destination[key];
-        });
-      }
-      if (isBlankObject(source)) {
-        // createMap() fast path --- Safe to avoid hasOwnProperty check because prototype chain is empty
-        for (key in source) {
-          destination[key] = copy(source[key], null, stackSource, stackDest);
-        }
-      } else if (source && typeof source.hasOwnProperty === 'function') {
-        // Slow path, which must rely on hasOwnProperty
-        for (key in source) {
-          if (source.hasOwnProperty(key)) {
-            destination[key] = copy(source[key], null, stackSource, stackDest);
-          }
-        }
-      } else {
-        // Slowest path --- hasOwnProperty can't be called as a method
-        for (key in source) {
-          if (hasOwnProperty.call(source, key)) {
-            destination[key] = copy(source[key], null, stackSource, stackDest);
-          }
+      // Slowest path --- hasOwnProperty can't be called as a method
+      for (key in source) {
+        if (hasOwnProperty.call(source, key)) {
+          destination[key] = copyElement(source[key]);
         }
       }
-      setHashKey(destination,h);
     }
+    setHashKey(destination, h);
+    return destination;
   }
-  return destination;
+
+  function copyElement(source) {
+    // Simple values
+    if (!isObject(source)) {
+      return source;
+    }
+
+    // Already copied values
+    var index = stackSource.indexOf(source);
+    if (index !== -1) {
+      return stackDest[index];
+    }
+
+    if (isWindow(source) || isScope(source)) {
+      throw ngMinErr('cpws',
+        "Can't copy! Making copies of Window or Scope instances is not supported.");
+    }
+
+    var needsRecurse = false;
+    var destination;
+
+    if (isArray(source)) {
+      destination = [];
+      needsRecurse = true;
+    } else if (isTypedArray(source)) {
+      destination = new source.constructor(source);
+    } else if (isDate(source)) {
+      destination = new Date(source.getTime());
+    } else if (isRegExp(source)) {
+      destination = new RegExp(source.source, source.toString().match(/[^\/]*$/)[0]);
+      destination.lastIndex = source.lastIndex;
+    } else if (isFunction(source.cloneNode)) {
+        destination = source.cloneNode(true);
+    } else {
+      destination = Object.create(getPrototypeOf(source));
+      needsRecurse = true;
+    }
+
+    stackSource.push(source);
+    stackDest.push(destination);
+
+    return needsRecurse
+      ? copyRecurse(source, destination)
+      : destination;
+  }
 }
 
 /**
@@ -11291,7 +11310,7 @@ function setupModuleLoader(window) {
            * @param {string} name constant name
            * @param {*} object Constant value.
            * @description
-           * Because the constant are fixed, they get applied before other provide methods.
+           * Because the constants are fixed, they get applied before other provide methods.
            * See {@link auto.$provide#constant $provide.constant()}.
            */
           constant: invokeLater('$provide', 'constant', 'unshift'),
@@ -11590,11 +11609,11 @@ function toDebugString(obj) {
  * - `codeName` – `{string}` – Code name of the release, such as "jiggling-armfat".
  */
 var version = {
-  full: '1.4.7',    // all of these placeholder strings will be replaced by grunt's
+  full: '1.4.8',    // all of these placeholder strings will be replaced by grunt's
   major: 1,    // package task
   minor: 4,
-  dot: 7,
-  codeName: 'dark-luminescence'
+  dot: 8,
+  codeName: 'ice-manipulation'
 };
 
 
@@ -11976,6 +11995,14 @@ function jqLiteParseHTML(html, context) {
   return [];
 }
 
+
+// IE9-11 has no method "contains" in SVG element and in Node.prototype. Bug #10259.
+var jqLiteContains = Node.prototype.contains || function(arg) {
+  // jshint bitwise: false
+  return !!(this.compareDocumentPosition(arg) & 16);
+  // jshint bitwise: true
+};
+
 /////////////////////////////////////////////
 function JQLite(element) {
   if (element instanceof JQLite) {
@@ -12034,17 +12061,23 @@ function jqLiteOff(element, type, fn, unsupported) {
       delete events[type];
     }
   } else {
-    forEach(type.split(' '), function(type) {
-      if (isDefined(fn)) {
-        var listenerFns = events[type];
-        arrayRemove(listenerFns || [], fn);
-        if (listenerFns && listenerFns.length > 0) {
-          return;
-        }
-      }
 
-      removeEventListenerFn(element, type, handle);
-      delete events[type];
+    var removeHandler = function(type) {
+      var listenerFns = events[type];
+      if (isDefined(fn)) {
+        arrayRemove(listenerFns || [], fn);
+      }
+      if (!(isDefined(fn) && listenerFns && listenerFns.length > 0)) {
+        removeEventListenerFn(element, type, handle);
+        delete events[type];
+      }
+    };
+
+    forEach(type.split(' '), function(type) {
+      removeHandler(type);
+      if (MOUSE_EVENT_MAP[type]) {
+        removeHandler(MOUSE_EVENT_MAP[type]);
+      }
     });
   }
 }
@@ -12499,6 +12532,9 @@ function createEventHandler(element, events) {
       return event.immediatePropagationStopped === true;
     };
 
+    // Some events have special handlers that wrap the real handler
+    var handlerWrapper = eventFns.specialHandlerWrapper || defaultHandlerWrapper;
+
     // Copy event handlers in case event handlers array is modified during execution.
     if ((eventFnsLength > 1)) {
       eventFns = shallowCopy(eventFns);
@@ -12506,7 +12542,7 @@ function createEventHandler(element, events) {
 
     for (var i = 0; i < eventFnsLength; i++) {
       if (!event.isImmediatePropagationStopped()) {
-        eventFns[i].call(element, event);
+        handlerWrapper(element, event, eventFns[i]);
       }
     }
   };
@@ -12515,6 +12551,22 @@ function createEventHandler(element, events) {
   //       events on `element`
   eventHandler.elem = element;
   return eventHandler;
+}
+
+function defaultHandlerWrapper(element, event, handler) {
+  handler.call(element, event);
+}
+
+function specialMouseHandlerWrapper(target, event, handler) {
+  // Refer to jQuery's implementation of mouseenter & mouseleave
+  // Read about mouseenter and mouseleave:
+  // http://www.quirksmode.org/js/events_mouse.html#link8
+  var related = event.relatedTarget;
+  // For mousenter/leave call the handler if related is outside the target.
+  // NB: No relatedTarget if the mouse left/entered the browser window
+  if (!related || (related !== target && !jqLiteContains.call(target, related))) {
+    handler.call(target, event);
+  }
 }
 
 //////////////////////////////////////////
@@ -12545,35 +12597,28 @@ forEach({
     var types = type.indexOf(' ') >= 0 ? type.split(' ') : [type];
     var i = types.length;
 
-    while (i--) {
-      type = types[i];
+    var addHandler = function(type, specialHandlerWrapper, noEventListener) {
       var eventFns = events[type];
 
       if (!eventFns) {
-        events[type] = [];
-
-        if (type === 'mouseenter' || type === 'mouseleave') {
-          // Refer to jQuery's implementation of mouseenter & mouseleave
-          // Read about mouseenter and mouseleave:
-          // http://www.quirksmode.org/js/events_mouse.html#link8
-
-          jqLiteOn(element, MOUSE_EVENT_MAP[type], function(event) {
-            var target = this, related = event.relatedTarget;
-            // For mousenter/leave call the handler if related is outside the target.
-            // NB: No relatedTarget if the mouse left/entered the browser window
-            if (!related || (related !== target && !target.contains(related))) {
-              handle(event, type);
-            }
-          });
-
-        } else {
-          if (type !== '$destroy') {
-            addEventListenerFn(element, type, handle);
-          }
+        eventFns = events[type] = [];
+        eventFns.specialHandlerWrapper = specialHandlerWrapper;
+        if (type !== '$destroy' && !noEventListener) {
+          addEventListenerFn(element, type, handle);
         }
-        eventFns = events[type];
       }
+
       eventFns.push(fn);
+    };
+
+    while (i--) {
+      type = types[i];
+      if (MOUSE_EVENT_MAP[type]) {
+        addHandler(MOUSE_EVENT_MAP[type], specialMouseHandlerWrapper);
+        addHandler(type, undefined, true);
+      } else {
+        addHandler(type);
+      }
     }
   },
 
@@ -13754,7 +13799,7 @@ function $AnchorScrollProvider() {
    * When called, it scrolls to the element related to the specified `hash` or (if omitted) to the
    * current value of {@link ng.$location#hash $location.hash()}, according to the rules specified
    * in the
-   * [HTML5 spec](http://dev.w3.org/html5/spec/Overview.html#the-indicated-part-of-the-document).
+   * [HTML5 spec](http://www.w3.org/html/wg/drafts/html/master/browsers.html#the-indicated-part-of-the-document).
    *
    * It also watches the {@link ng.$location#hash $location.hash()} and automatically scrolls to
    * match any anchor whenever it changes. This can be disabled by calling
@@ -14269,7 +14314,7 @@ var $AnimateProvider = ['$provide', function($provide) {
      * when an animation is detected (and animations are enabled), $animate will do the heavy lifting
      * to ensure that animation runs with the triggered DOM operation.
      *
-     * By default $animate doesn't trigger an animations. This is because the `ngAnimate` module isn't
+     * By default $animate doesn't trigger any animations. This is because the `ngAnimate` module isn't
      * included and only when it is active then the animation hooks that `$animate` triggers will be
      * functional. Once active then all structural `ng-` directives will trigger animations as they perform
      * their DOM-related operations (enter, leave and move). Other directives such as `ngClass`,
@@ -15121,9 +15166,9 @@ function $CacheFactoryProvider() {
 
       var size = 0,
           stats = extend({}, options, {id: cacheId}),
-          data = {},
+          data = createMap(),
           capacity = (options && options.capacity) || Number.MAX_VALUE,
-          lruHash = {},
+          lruHash = createMap(),
           freshEnd = null,
           staleEnd = null;
 
@@ -15251,6 +15296,8 @@ function $CacheFactoryProvider() {
             delete lruHash[key];
           }
 
+          if (!(key in data)) return;
+
           delete data[key];
           size--;
         },
@@ -15265,9 +15312,9 @@ function $CacheFactoryProvider() {
          * Clears the cache object of any entries.
          */
         removeAll: function() {
-          data = {};
+          data = createMap();
           size = 0;
-          lruHash = {};
+          lruHash = createMap();
           freshEnd = staleEnd = null;
         },
 
@@ -16668,6 +16715,7 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
               return template.replace(/\{\{/g, startSymbol).replace(/}}/g, endSymbol);
         },
         NG_ATTR_BINDING = /^ngAttr[A-Z]/;
+    var MULTI_ELEMENT_DIR_RE = /^(.+)Start$/;
 
     compile.$$addBindingInfo = debugInfoEnabled ? function $$addBindingInfo($element, binding) {
       var bindings = $element.data('$binding') || [];
@@ -16719,6 +16767,14 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
       var namespace = null;
       return function publicLinkFn(scope, cloneConnectFn, options) {
         assertArg(scope, 'scope');
+
+        if (previousCompileContext && previousCompileContext.needsNewScope) {
+          // A parent directive did a replace and a directive on this element asked
+          // for transclusion, which caused us to lose a layer of element on which
+          // we could hold the new transclusion scope, so we will create it manually
+          // here.
+          scope = scope.$parent.$new();
+        }
 
         options = options || {};
         var parentBoundTranscludeFn = options.parentBoundTranscludeFn,
@@ -16865,11 +16921,6 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
             if (nodeLinkFn.scope) {
               childScope = scope.$new();
               compile.$$addScopeInfo(jqLite(node), childScope);
-              var destroyBindings = nodeLinkFn.$$destroyBindings;
-              if (destroyBindings) {
-                nodeLinkFn.$$destroyBindings = null;
-                childScope.$on('$destroyed', destroyBindings);
-              }
             } else {
               childScope = scope;
             }
@@ -16888,8 +16939,7 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
               childBoundTranscludeFn = null;
             }
 
-            nodeLinkFn(childLinkFn, childScope, node, $rootElement, childBoundTranscludeFn,
-                       nodeLinkFn);
+            nodeLinkFn(childLinkFn, childScope, node, $rootElement, childBoundTranscludeFn);
 
           } else if (childLinkFn) {
             childLinkFn(scope, node.childNodes, undefined, parentBoundTranscludeFn);
@@ -16958,13 +17008,11 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
                 });
             }
 
-            var directiveNName = ngAttrName.replace(/(Start|End)$/, '');
-            if (directiveIsMultiElement(directiveNName)) {
-              if (ngAttrName === directiveNName + 'Start') {
-                attrStartName = name;
-                attrEndName = name.substr(0, name.length - 5) + 'end';
-                name = name.substr(0, name.length - 6);
-              }
+            var multiElementMatch = ngAttrName.match(MULTI_ELEMENT_DIR_RE);
+            if (multiElementMatch && directiveIsMultiElement(multiElementMatch[1])) {
+              attrStartName = name;
+              attrEndName = name.substr(0, name.length - 5) + 'end';
+              name = name.substr(0, name.length - 6);
             }
 
             nName = directiveNormalize(name.toLowerCase());
@@ -17203,7 +17251,8 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
           } else {
             $template = jqLite(jqLiteClone(compileNode)).contents();
             $compileNode.empty(); // clear contents
-            childTranscludeFn = compile($template, transcludeFn);
+            childTranscludeFn = compile($template, transcludeFn, undefined,
+                undefined, { needsNewScope: directive.$$isolateScope || directive.$$newScope});
           }
         }
 
@@ -17245,8 +17294,11 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
             var templateDirectives = collectDirectives(compileNode, [], newTemplateAttrs);
             var unprocessedDirectives = directives.splice(i + 1, directives.length - (i + 1));
 
-            if (newIsolateScopeDirective) {
-              markDirectivesAsIsolate(templateDirectives);
+            if (newIsolateScopeDirective || newScopeDirective) {
+              // The original directive caused the current element to be replaced but this element
+              // also needs to have a new scope, so we need to tell the template directives
+              // that they would need to get their scope from further up, if they require transclusion
+              markDirectiveScope(templateDirectives, newIsolateScopeDirective, newScopeDirective);
             }
             directives = directives.concat(templateDirectives).concat(unprocessedDirectives);
             mergeTemplateAttributes(templateAttrs, newTemplateAttrs);
@@ -17399,10 +17451,9 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
         return elementControllers;
       }
 
-      function nodeLinkFn(childLinkFn, scope, linkNode, $rootElement, boundTranscludeFn,
-                          thisLinkFn) {
-        var i, ii, linkFn, controller, isolateScope, elementControllers, transcludeFn, $element,
-            attrs;
+      function nodeLinkFn(childLinkFn, scope, linkNode, $rootElement, boundTranscludeFn) {
+        var linkFn, isolateScope, controllerScope, elementControllers, transcludeFn, $element,
+            attrs, removeScopeBindingWatches, removeControllerBindingWatches;
 
         if (compileNode === linkNode) {
           attrs = templateAttrs;
@@ -17412,8 +17463,11 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
           attrs = new Attributes($element, templateAttrs);
         }
 
+        controllerScope = scope;
         if (newIsolateScopeDirective) {
           isolateScope = scope.$new(true);
+        } else if (newScopeDirective) {
+          controllerScope = scope.$parent;
         }
 
         if (boundTranscludeFn) {
@@ -17434,42 +17488,34 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
           compile.$$addScopeClass($element, true);
           isolateScope.$$isolateBindings =
               newIsolateScopeDirective.$$isolateBindings;
-          initializeDirectiveBindings(scope, attrs, isolateScope,
-                                      isolateScope.$$isolateBindings,
-                                      newIsolateScopeDirective, isolateScope);
-        }
-        if (elementControllers) {
-          // Initialize bindToController bindings for new/isolate scopes
-          var scopeDirective = newIsolateScopeDirective || newScopeDirective;
-          var bindings;
-          var controllerForBindings;
-          if (scopeDirective && elementControllers[scopeDirective.name]) {
-            bindings = scopeDirective.$$bindings.bindToController;
-            controller = elementControllers[scopeDirective.name];
-
-            if (controller && controller.identifier && bindings) {
-              controllerForBindings = controller;
-              thisLinkFn.$$destroyBindings =
-                  initializeDirectiveBindings(scope, attrs, controller.instance,
-                                              bindings, scopeDirective);
-            }
+          removeScopeBindingWatches = initializeDirectiveBindings(scope, attrs, isolateScope,
+                                        isolateScope.$$isolateBindings,
+                                        newIsolateScopeDirective);
+          if (removeScopeBindingWatches) {
+            isolateScope.$on('$destroy', removeScopeBindingWatches);
           }
-          for (i in elementControllers) {
-            controller = elementControllers[i];
-            var controllerResult = controller();
+        }
 
-            if (controllerResult !== controller.instance) {
-              // If the controller constructor has a return value, overwrite the instance
-              // from setupControllers and update the element data
-              controller.instance = controllerResult;
-              $element.data('$' + i + 'Controller', controllerResult);
-              if (controller === controllerForBindings) {
-                // Remove and re-install bindToController bindings
-                thisLinkFn.$$destroyBindings();
-                thisLinkFn.$$destroyBindings =
-                  initializeDirectiveBindings(scope, attrs, controllerResult, bindings, scopeDirective);
-              }
-            }
+        // Initialize bindToController bindings
+        for (var name in elementControllers) {
+          var controllerDirective = controllerDirectives[name];
+          var controller = elementControllers[name];
+          var bindings = controllerDirective.$$bindings.bindToController;
+
+          if (controller.identifier && bindings) {
+            removeControllerBindingWatches =
+              initializeDirectiveBindings(controllerScope, attrs, controller.instance, bindings, controllerDirective);
+          }
+
+          var controllerResult = controller();
+          if (controllerResult !== controller.instance) {
+            // If the controller constructor has a return value, overwrite the instance
+            // from setupControllers
+            controller.instance = controllerResult;
+            $element.data('$' + controllerDirective.name + 'Controller', controllerResult);
+            removeControllerBindingWatches && removeControllerBindingWatches();
+            removeControllerBindingWatches =
+              initializeDirectiveBindings(controllerScope, attrs, controller.instance, bindings, controllerDirective);
           }
         }
 
@@ -17529,10 +17575,15 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
       }
     }
 
-    function markDirectivesAsIsolate(directives) {
-      // mark all directives as needing isolate scope.
+    // Depending upon the context in which a directive finds itself it might need to have a new isolated
+    // or child scope created. For instance:
+    // * if the directive has been pulled into a template because another directive with a higher priority
+    // asked for element transclusion
+    // * if the directive itself asks for transclusion but it is at the root of a template and the original
+    // element was replaced. See https://github.com/angular/angular.js/issues/12936
+    function markDirectiveScope(directives, isolateScope, newScope) {
       for (var j = 0, jj = directives.length; j < jj; j++) {
-        directives[j] = inherit(directives[j], {$$isolateScope: true});
+        directives[j] = inherit(directives[j], {$$isolateScope: isolateScope, $$newScope: newScope});
       }
     }
 
@@ -17679,7 +17730,9 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
             var templateDirectives = collectDirectives(compileNode, [], tempTemplateAttrs);
 
             if (isObject(origAsyncDirective.scope)) {
-              markDirectivesAsIsolate(templateDirectives);
+              // the original directive that caused the template to be loaded async required
+              // an isolate scope
+              markDirectiveScope(templateDirectives, true);
             }
             directives = templateDirectives.concat(directives);
             mergeTemplateAttributes(tAttrs, tempTemplateAttrs);
@@ -17728,7 +17781,7 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
               childBoundTranscludeFn = boundTranscludeFn;
             }
             afterTemplateNodeLinkFn(afterTemplateChildLinkFn, scope, linkNode, $rootElement,
-              childBoundTranscludeFn, afterTemplateNodeLinkFn);
+              childBoundTranscludeFn);
           }
           linkQueue = null;
         });
@@ -17745,8 +17798,7 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
           if (afterTemplateNodeLinkFn.transcludeOnThisElement) {
             childBoundTranscludeFn = createBoundTranscludeFn(scope, afterTemplateNodeLinkFn.transclude, boundTranscludeFn);
           }
-          afterTemplateNodeLinkFn(afterTemplateChildLinkFn, scope, node, rootElement, childBoundTranscludeFn,
-                                  afterTemplateNodeLinkFn);
+          afterTemplateNodeLinkFn(afterTemplateChildLinkFn, scope, node, rootElement, childBoundTranscludeFn);
         }
       };
     }
@@ -17958,7 +18010,7 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
         // Copy over user data (that includes Angular's $scope etc.). Don't copy private
         // data here because there's no public interface in jQuery to do that and copying over
         // event listeners (which is the main use of private data) wouldn't work anyway.
-        jqLite(newNode).data(jqLite(firstElementToRemove).data());
+        jqLite.data(newNode, jqLite.data(firstElementToRemove));
 
         // Remove data of the replaced element. We cannot just call .remove()
         // on the element it since that would deallocate scope that is needed
@@ -18006,9 +18058,8 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
 
     // Set up $watches for isolate scope and controller bindings. This process
     // only occurs for isolate scopes and new scopes with controllerAs.
-    function initializeDirectiveBindings(scope, attrs, destination, bindings,
-                                         directive, newScope) {
-      var onNewScopeDestroyed;
+    function initializeDirectiveBindings(scope, attrs, destination, bindings, directive) {
+      var removeWatchCollection = [];
       forEach(bindings, function(definition, scopeName) {
         var attrName = definition.attrName,
         optional = definition.optional,
@@ -18070,14 +18121,13 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
               return lastValue = parentValue;
             };
             parentValueWatch.$stateful = true;
-            var unwatch;
+            var removeWatch;
             if (definition.collection) {
-              unwatch = scope.$watchCollection(attrs[attrName], parentValueWatch);
+              removeWatch = scope.$watchCollection(attrs[attrName], parentValueWatch);
             } else {
-              unwatch = scope.$watch($parse(attrs[attrName], parentValueWatch), null, parentGet.literal);
+              removeWatch = scope.$watch($parse(attrs[attrName], parentValueWatch), null, parentGet.literal);
             }
-            onNewScopeDestroyed = (onNewScopeDestroyed || []);
-            onNewScopeDestroyed.push(unwatch);
+            removeWatchCollection.push(removeWatch);
             break;
 
           case '&':
@@ -18093,16 +18143,12 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
             break;
         }
       });
-      var destroyBindings = onNewScopeDestroyed ? function destroyBindings() {
-        for (var i = 0, ii = onNewScopeDestroyed.length; i < ii; ++i) {
-          onNewScopeDestroyed[i]();
+
+      return removeWatchCollection.length && function removeWatches() {
+        for (var i = 0, ii = removeWatchCollection.length; i < ii; ++i) {
+          removeWatchCollection[i]();
         }
-      } : noop;
-      if (newScope && destroyBindings !== noop) {
-        newScope.$on('$destroy', destroyBindings);
-        return noop;
-      }
-      return destroyBindings;
+      };
     }
   }];
 }
@@ -18827,9 +18873,9 @@ function $HttpProvider() {
    * Configure `$http` service to return promises without the shorthand methods `success` and `error`.
    * This should be used to make sure that applications work without these methods.
    *
-   * Defaults to false. If no value is specified, returns the current configured value.
+   * Defaults to true. If no value is specified, returns the current configured value.
    *
-   * @param {boolean=} value If true, `$http` will return a normal promise without the `success` and `error` methods.
+   * @param {boolean=} value If true, `$http` will return a promise with the deprecated legacy `success` and `error` methods.
    *
    * @returns {boolean|Object} If a value is specified, returns the $httpProvider for chaining.
    *    otherwise, returns the current configured value.
@@ -19481,11 +19527,8 @@ function $HttpProvider() {
       function transformResponse(response) {
         // make a copy since the response must be cacheable
         var resp = extend({}, response);
-        if (!response.data) {
-          resp.data = response.data;
-        } else {
-          resp.data = transformData(response.data, response.headers, response.status, config.transformResponse);
-        }
+        resp.data = transformData(response.data, response.headers, response.status,
+                                  config.transformResponse);
         return (isSuccess(response.status))
           ? resp
           : $q.reject(resp);
@@ -21119,9 +21162,9 @@ var locationPrototype = {
    * @description
    * This method is getter / setter.
    *
-   * Return hash fragment when called without any parameter.
+   * Returns the hash fragment when called without any parameters.
    *
-   * Change hash fragment when called with parameter and return `$location`.
+   * Changes the hash fragment when called with a parameter and returns `$location`.
    *
    *
    * ```js
@@ -21142,8 +21185,8 @@ var locationPrototype = {
    * @name $location#replace
    *
    * @description
-   * If called, all changes to $location during current `$digest` will be replacing current history
-   * record, instead of adding new one.
+   * If called, all changes to $location during the current `$digest` will replace the current history
+   * record, instead of adding a new one.
    */
   replace: function() {
     this.$$replace = true;
@@ -21463,7 +21506,7 @@ function $LocationProvider() {
         var oldUrl = $location.absUrl();
         var oldState = $location.$$state;
         var defaultPrevented;
-
+        newUrl = trimEmptyHash(newUrl);
         $location.$$parse(newUrl);
         $location.$$state = newState;
 
@@ -23604,13 +23647,14 @@ function $ParseProvider() {
     function addInterceptor(parsedExpression, interceptorFn) {
       if (!interceptorFn) return parsedExpression;
       var watchDelegate = parsedExpression.$$watchDelegate;
+      var useInputs = false;
 
       var regularWatch =
           watchDelegate !== oneTimeLiteralWatchDelegate &&
           watchDelegate !== oneTimeWatchDelegate;
 
       var fn = regularWatch ? function regularInterceptedExpression(scope, locals, assign, inputs) {
-        var value = parsedExpression(scope, locals, assign, inputs);
+        var value = useInputs && inputs ? inputs[0] : parsedExpression(scope, locals, assign, inputs);
         return interceptorFn(value, scope, locals);
       } : function oneTimeInterceptedExpression(scope, locals, assign, inputs) {
         var value = parsedExpression(scope, locals, assign, inputs);
@@ -23628,6 +23672,7 @@ function $ParseProvider() {
         // If there is an interceptor, but no watchDelegate then treat the interceptor like
         // we treat filters - it is assumed to be a pure function unless flagged with $stateful
         fn.$$watchDelegate = inputsWatchDelegate;
+        useInputs = !parsedExpression.inputs;
         fn.inputs = parsedExpression.inputs ? parsedExpression.inputs : [parsedExpression];
       }
 
@@ -23688,6 +23733,8 @@ function $ParseProvider() {
  * ```
  *
  * Note: progress/notify callbacks are not currently supported via the ES6-style interface.
+ *
+ * Note: unlike ES6 behaviour, an exception thrown in the constructor function will NOT implicitly reject the promise.
  *
  * However, the more traditional CommonJS-style usage is still available, and documented below.
  *
@@ -24273,15 +24320,15 @@ function $$RAFProvider() { //rAF
  *     exposed as $$____ properties
  *
  * Loop operations are optimized by using while(count--) { ... }
- *   - this means that in order to keep the same order of execution as addition we have to add
+ *   - This means that in order to keep the same order of execution as addition we have to add
  *     items to the array at the beginning (unshift) instead of at the end (push)
  *
  * Child scopes are created and removed often
- *   - Using an array would be slow since inserts in middle are expensive so we use linked list
+ *   - Using an array would be slow since inserts in the middle are expensive; so we use linked lists
  *
- * There are few watches then a lot of observers. This is why you don't want the observer to be
- * implemented in the same way as watch. Watch requires return of initialization function which
- * are expensive to construct.
+ * There are fewer watches than observers. This is why you don't want the observer to be implemented
+ * in the same way as watch. Watch requires return of the initialization function which is expensive
+ * to construct.
  */
 
 
@@ -24323,7 +24370,7 @@ function $$RAFProvider() { //rAF
  * Every application has a single root {@link ng.$rootScope.Scope scope}.
  * All other scopes are descendant scopes of the root scope. Scopes provide separation
  * between the model and the view, via a mechanism for watching the model for changes.
- * They also provide an event emission/broadcast and subscription facility. See the
+ * They also provide event emission/broadcast and subscription facility. See the
  * {@link guide/scope developer guide on scopes}.
  */
 function $RootScopeProvider() {
@@ -24358,6 +24405,29 @@ function $RootScopeProvider() {
 
     function destroyChildScope($event) {
         $event.currentScope.$$destroyed = true;
+    }
+
+    function cleanUpScope($scope) {
+
+      if (msie === 9) {
+        // There is a memory leak in IE9 if all child scopes are not disconnected
+        // completely when a scope is destroyed. So this code will recurse up through
+        // all this scopes children
+        //
+        // See issue https://github.com/angular/angular.js/issues/10706
+        $scope.$$childHead && cleanUpScope($scope.$$childHead);
+        $scope.$$nextSibling && cleanUpScope($scope.$$nextSibling);
+      }
+
+      // The code below works around IE9 and V8's memory leaks
+      //
+      // See:
+      // - https://code.google.com/p/v8/issues/detail?id=2073#c26
+      // - https://github.com/angular/angular.js/issues/6794#issuecomment-38648909
+      // - https://github.com/angular/angular.js/issues/1313#issuecomment-10378451
+
+      $scope.$parent = $scope.$$nextSibling = $scope.$$prevSibling = $scope.$$childHead =
+          $scope.$$childTail = $scope.$root = $scope.$$watchers = null;
     }
 
     /**
@@ -25156,16 +25226,9 @@ function $RootScopeProvider() {
         this.$on = this.$watch = this.$watchGroup = function() { return noop; };
         this.$$listeners = {};
 
-        // All of the code below is bogus code that works around V8's memory leak via optimized code
-        // and inline caches.
-        //
-        // see:
-        // - https://code.google.com/p/v8/issues/detail?id=2073#c26
-        // - https://github.com/angular/angular.js/issues/6794#issuecomment-38648909
-        // - https://github.com/angular/angular.js/issues/1313#issuecomment-10378451
-
-        this.$parent = this.$$nextSibling = this.$$prevSibling = this.$$childHead =
-            this.$$childTail = this.$root = this.$$watchers = null;
+        // Disconnect the next sibling to prevent `cleanUpScope` destroying those too
+        this.$$nextSibling = null;
+        cleanUpScope(this);
       },
 
       /**
@@ -26161,7 +26224,7 @@ function $SceDelegateProvider() {
  * By default, Angular only loads templates from the same domain and protocol as the application
  * document.  This is done by calling {@link ng.$sce#getTrustedResourceUrl
  * $sce.getTrustedResourceUrl} on the template URL.  To load templates from other domains and/or
- * protocols, you may either either {@link ng.$sceDelegateProvider#resourceUrlWhitelist whitelist
+ * protocols, you may either {@link ng.$sceDelegateProvider#resourceUrlWhitelist whitelist
  * them} or {@link ng.$sce#trustAsResourceUrl wrap it} into a trusted value.
  *
  * *Please note*:
@@ -28412,7 +28475,7 @@ function limitToFilter() {
     if (!isArray(input) && !isString(input)) return input;
 
     begin = (!begin || isNaN(begin)) ? 0 : toInt(begin);
-    begin = (begin < 0 && begin >= -input.length) ? input.length + begin : begin;
+    begin = (begin < 0) ? Math.max(0, input.length + begin) : begin;
 
     if (limit >= 0) {
       return input.slice(begin, begin + limit);
@@ -29772,7 +29835,8 @@ var ngFormDirective = formDirectiveFactory(true);
 
 // Regex code is obtained from SO: https://stackoverflow.com/questions/3143070/javascript-regex-iso-datetime#answer-3143231
 var ISO_DATE_REGEXP = /\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d\.\d+([+-][0-2]\d:[0-5]\d|Z)/;
-var URL_REGEXP = /^(ftp|http|https):\/\/(\w+:{0,1}\w*@)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-\/]))?$/;
+// See valid URLs in RFC3987 (http://tools.ietf.org/html/rfc3987)
+var URL_REGEXP = /^[A-Za-z][A-Za-z\d.+-]*:\/*(?:\w+(?::\w+)?@)?[^\s/]+(?::\d+)?(?:\/[\w#!:.?+=&%@\-/]*)?$/;
 var EMAIL_REGEXP = /^[a-z0-9!#$%&'*+\/=?^_`{|}~.-]+@[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*$/i;
 var NUMBER_REGEXP = /^\s*(\-|\+)?(\d+|(\d*(\.\d*)))([eE][+-]?\d+)?\s*$/;
 var DATE_REGEXP = /^(\d{4})-(\d{2})-(\d{2})$/;
@@ -33338,7 +33402,13 @@ var ngIfDirective = ['$animate', function($animate) {
  * @param {string} ngInclude|src angular expression evaluating to URL. If the source is a string constant,
  *                 make sure you wrap it in **single** quotes, e.g. `src="'myPartialTemplate.html'"`.
  * @param {string=} onload Expression to evaluate when a new partial is loaded.
- *
+ *                  <div class="alert alert-warning">
+ *                  **Note:** When using onload on SVG elements in IE11, the browser will try to call
+ *                  a function with the name on the window element, which will usually throw a
+ *                  "function is undefined" error. To fix this, you can instead use `data-onload` or a
+ *                  different form that {@link guide/directive#normalization matches} `onload`.
+ *                  </div>
+   *
  * @param {string=} autoscroll Whether `ngInclude` should call {@link ng.$anchorScroll
  *                  $anchorScroll} to scroll the viewport after the content is loaded.
  *
@@ -34931,12 +35001,13 @@ var DEFAULT_REGEXP = /(\s+|^)default(\s+|$)/;
           </label><br />
         </form>
         <pre>user.name = <span ng-bind="user.name"></span></pre>
+        <pre>user.data = <span ng-bind="user.data"></span></pre>
       </div>
     </file>
     <file name="app.js">
       angular.module('optionsExample', [])
         .controller('ExampleController', ['$scope', function($scope) {
-          $scope.user = { name: 'say', data: '' };
+          $scope.user = { name: 'John', data: '' };
 
           $scope.cancel = function(e) {
             if (e.keyCode == 27) {
@@ -34951,20 +35022,20 @@ var DEFAULT_REGEXP = /(\s+|^)default(\s+|$)/;
       var other = element(by.model('user.data'));
 
       it('should allow custom events', function() {
-        input.sendKeys(' hello');
+        input.sendKeys(' Doe');
         input.click();
-        expect(model.getText()).toEqual('say');
+        expect(model.getText()).toEqual('John');
         other.click();
-        expect(model.getText()).toEqual('say hello');
+        expect(model.getText()).toEqual('John Doe');
       });
 
       it('should $rollbackViewValue when model changes', function() {
-        input.sendKeys(' hello');
-        expect(input.getAttribute('value')).toEqual('say hello');
+        input.sendKeys(' Doe');
+        expect(input.getAttribute('value')).toEqual('John Doe');
         input.sendKeys(protractor.Key.ESCAPE);
-        expect(input.getAttribute('value')).toEqual('say');
+        expect(input.getAttribute('value')).toEqual('John');
         other.click();
-        expect(model.getText()).toEqual('say');
+        expect(model.getText()).toEqual('John');
       });
     </file>
   </example>
@@ -34990,7 +35061,7 @@ var DEFAULT_REGEXP = /(\s+|^)default(\s+|$)/;
     <file name="app.js">
       angular.module('optionsExample', [])
         .controller('ExampleController', ['$scope', function($scope) {
-          $scope.user = { name: 'say' };
+          $scope.user = { name: 'Igor' };
         }]);
     </file>
   </example>
@@ -35223,19 +35294,27 @@ var ngOptionsMinErr = minErr('ngOptions');
  *
  * ## Complex Models (objects or collections)
  *
- * **Note:** By default, `ngModel` watches the model by reference, not value. This is important when
- * binding any input directive to a model that is an object or a collection.
+ * By default, `ngModel` watches the model by reference, not value. This is important to know when
+ * binding the select to a model that is an object or a collection.
  *
- * Since this is a common situation for `ngOptions` the directive additionally watches the model using
- * `$watchCollection` when the select has the `multiple` attribute or when there is a `track by` clause in
- * the options expression. This allows ngOptions to trigger a re-rendering of the options even if the actual
- * object/collection has not changed identity but only a property on the object or an item in the collection
- * changes.
+ * One issue occurs if you want to preselect an option. For example, if you set
+ * the model to an object that is equal to an object in your collection, `ngOptions` won't be able to set the selection,
+ * because the objects are not identical. So by default, you should always reference the item in your collection
+ * for preselections, e.g.: `$scope.selected = $scope.collection[3]`.
+ *
+ * Another solution is to use a `track by` clause, because then `ngOptions` will track the identity
+ * of the item not by reference, but by the result of the `track by` expression. For example, if your
+ * collection items have an id property, you would `track by item.id`.
+ *
+ * A different issue with objects or collections is that ngModel won't detect if an object property or
+ * a collection item changes. For that reason, `ngOptions` additionally watches the model using
+ * `$watchCollection`, when the expression contains a `track by` clause or the the select has the `multiple` attribute.
+ * This allows ngOptions to trigger a re-rendering of the options even if the actual object/collection
+ * has not changed identity, but only a property on the object or an item in the collection changes.
  *
  * Note that `$watchCollection` does a shallow comparison of the properties of the object (or the items in the collection
- * if the model is an array). This means that changing a property deeper inside the object/collection that the
- * first level will not trigger a re-rendering.
- *
+ * if the model is an array). This means that changing a property deeper than the first level inside the
+ * object/collection will not trigger a re-rendering.
  *
  * ## `select` **`as`**
  *
@@ -35248,17 +35327,13 @@ var ngOptionsMinErr = minErr('ngOptions');
  * ### `select` **`as`** and **`track by`**
  *
  * <div class="alert alert-warning">
- * Do not use `select` **`as`** and **`track by`** in the same expression. They are not designed to work together.
+ * Be careful when using `select` **`as`** and **`track by`** in the same expression.
  * </div>
  *
- * Consider the following example:
- *
- * ```html
- * <select ng-options="item.subItem as item.label for item in values track by item.id" ng-model="selected"></select>
- * ```
+ * Given this array of items on the $scope:
  *
  * ```js
- * $scope.values = [{
+ * $scope.items = [{
  *   id: 1,
  *   label: 'aLabel',
  *   subItem: { name: 'aSubItem' }
@@ -35267,20 +35342,33 @@ var ngOptionsMinErr = minErr('ngOptions');
  *   label: 'bLabel',
  *   subItem: { name: 'bSubItem' }
  * }];
- *
- * $scope.selected = { name: 'aSubItem' };
  * ```
  *
- * With the purpose of preserving the selection, the **`track by`** expression is always applied to the element
- * of the data source (to `item` in this example). To calculate whether an element is selected, we do the
- * following:
+ * This will work:
  *
- * 1. Apply **`track by`** to the elements in the array. In the example: `[1, 2]`
- * 2. Apply **`track by`** to the already selected value in `ngModel`.
- *    In the example: this is not possible as **`track by`** refers to `item.id`, but the selected
- *    value from `ngModel` is `{name: 'aSubItem'}`, so the **`track by`** expression is applied to
- *    a wrong object, the selected element can't be found, `<select>` is always reset to the "not
- *    selected" option.
+ * ```html
+ * <select ng-options="item as item.label for item in items track by item.id" ng-model="selected"></select>
+ * ```
+ * ```js
+ * $scope.selected = $scope.items[0];
+ * ```
+ *
+ * but this will not work:
+ *
+ * ```html
+ * <select ng-options="item.subItem as item.label for item in items track by item.id" ng-model="selected"></select>
+ * ```
+ * ```js
+ * $scope.selected = $scope.items[0].subItem;
+ * ```
+ *
+ * In both examples, the **`track by`** expression is applied successfully to each `item` in the
+ * `items` array. Because the selected option has been set programmatically in the controller, the
+ * **`track by`** expression is also applied to the `ngModel` value. In the first example, the
+ * `ngModel` value is `items[0]` and the **`track by`** expression evaluates to `items[0].id` with
+ * no issue. In the second example, the `ngModel` value is `items[0].subItem` and the **`track by`**
+ * expression evaluates to `items[0].subItem.id` (which is undefined). As a result, the model value
+ * is not matched against any `<option>` and the `<select>` appears as having no selected value.
  *
  *
  * @param {string} ngModel Assignable angular expression to data-bind to.
@@ -35582,11 +35670,8 @@ var ngOptionsDirective = ['$compile', '$parse', function($compile, $parse) {
   var optionTemplate = document.createElement('option'),
       optGroupTemplate = document.createElement('optgroup');
 
-  return {
-    restrict: 'A',
-    terminal: true,
-    require: ['select', '?ngModel'],
-    link: function(scope, selectElement, attr, ctrls) {
+
+    function ngOptionsPostLink(scope, selectElement, attr, ctrls) {
 
       // if ngModel is not defined, we don't need to do anything
       var ngModelCtrl = ctrls[1];
@@ -35640,7 +35725,6 @@ var ngOptionsDirective = ['$compile', '$parse', function($compile, $parse) {
       var removeUnknownOption = function() {
         unknownOption.remove();
       };
-
 
       // Update the controller methods for multiple selectable options
       if (!multiple) {
@@ -35816,13 +35900,15 @@ var ngOptionsDirective = ['$compile', '$parse', function($compile, $parse) {
         var emptyOption_ = emptyOption && emptyOption[0];
         var unknownOption_ = unknownOption && unknownOption[0];
 
+        // We cannot rely on the extracted empty option being the same as the compiled empty option,
+        // because the compiled empty option might have been replaced by a comment because
+        // it had an "element" transclusion directive on it (such as ngIf)
         if (emptyOption_ || unknownOption_) {
           while (current &&
                 (current === emptyOption_ ||
                 current === unknownOption_ ||
-                emptyOption_ && emptyOption_.nodeType === NODE_TYPE_COMMENT)) {
-            // Empty options might have directives that transclude
-            // and insert comments (e.g. ngIf)
+                current.nodeType === NODE_TYPE_COMMENT ||
+                current.value === '')) {
             current = current.nextSibling;
           }
         }
@@ -35919,7 +36005,20 @@ var ngOptionsDirective = ['$compile', '$parse', function($compile, $parse) {
         }
 
       }
+  }
 
+  return {
+    restrict: 'A',
+    terminal: true,
+    require: ['select', '?ngModel'],
+    link: {
+      pre: function ngOptionsPreLink(scope, selectElement, attr, ctrls) {
+        // Deactivate the SelectController.register method to prevent
+        // option directives from accidentally registering themselves
+        // (and unwanted $destroy handlers etc.)
+        ctrls[0].registerOption = noop;
+      },
+      post: ngOptionsPostLink
     }
   };
 }];
@@ -36206,7 +36305,7 @@ var ngPluralizeDirective = ['$locale', '$interpolate', '$log', function($locale,
  * Version 1.4 removed the alphabetic sorting. We now rely on the order returned by the browser
  * when running `for key in myObj`. It seems that browsers generally follow the strategy of providing
  * keys in the order in which they were defined, although there are exceptions when keys are deleted
- * and reinstated. See https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/delete#Cross-browser_issues
+ * and reinstated. See the [MDN page on `delete` for more info](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/delete#Cross-browser_notes).
  *
  * If this is not desired, the recommended workaround is to convert your object into an array
  * that is sorted into the order that you prefer before providing it to `ngRepeat`.  You could
@@ -36216,15 +36315,21 @@ var ngPluralizeDirective = ['$locale', '$interpolate', '$log', function($locale,
  *
  * # Tracking and Duplicates
  *
- * When the contents of the collection change, `ngRepeat` makes the corresponding changes to the DOM:
+ * `ngRepeat` uses {@link $rootScope.Scope#$watchCollection $watchCollection} to detect changes in
+ * the collection. When a change happens, ngRepeat then makes the corresponding changes to the DOM:
  *
  * * When an item is added, a new instance of the template is added to the DOM.
  * * When an item is removed, its template instance is removed from the DOM.
  * * When items are reordered, their respective templates are reordered in the DOM.
  *
- * By default, `ngRepeat` does not allow duplicate items in arrays. This is because when
- * there are duplicates, it is not possible to maintain a one-to-one mapping between collection
- * items and DOM elements.
+ * To minimize creation of DOM elements, `ngRepeat` uses a function
+ * to "keep track" of all items in the collection and their corresponding DOM elements.
+ * For example, if an item is added to the collection, ngRepeat will know that all other items
+ * already have DOM elements, and will not re-render them.
+ *
+ * The default tracking function (which tracks items by their identity) does not allow
+ * duplicate items in arrays. This is because when there are duplicates, it is not possible
+ * to maintain a one-to-one mapping between collection items and DOM elements.
  *
  * If you do need to repeat duplicate items, you can substitute the default tracking behavior
  * with your own using the `track by` expression.
@@ -36237,7 +36342,7 @@ var ngPluralizeDirective = ['$locale', '$interpolate', '$log', function($locale,
  *    </div>
  * ```
  *
- * You may use arbitrary expressions in `track by`, including references to custom functions
+ * You may also use arbitrary expressions in `track by`, including references to custom functions
  * on the scope:
  * ```html
  *    <div ng-repeat="n in [42, 42, 43, 43] track by myTrackingFunction(n)">
@@ -36245,10 +36350,14 @@ var ngPluralizeDirective = ['$locale', '$interpolate', '$log', function($locale,
  *    </div>
  * ```
  *
- * If you are working with objects that have an identifier property, you can track
+ * <div class="alert alert-success">
+ * If you are working with objects that have an identifier property, you should track
  * by the identifier instead of the whole object. Should you reload your data later, `ngRepeat`
  * will not have to rebuild the DOM elements for items it has already rendered, even if the
- * JavaScript objects in the collection have been substituted for new ones:
+ * JavaScript objects in the collection have been substituted for new ones. For large collections,
+ * this signifincantly improves rendering performance. If you don't have a unique identifier,
+ * `track by $index` can also provide a performance boost.
+ * </div>
  * ```html
  *    <div ng-repeat="model in collection track by model.id">
  *      {{model.name}}
@@ -37406,6 +37515,15 @@ var scriptDirective = ['$templateCache', function($templateCache) {
 
 var noopNgModelController = { $setViewValue: noop, $render: noop };
 
+function chromeHack(optionElement) {
+  // Workaround for https://code.google.com/p/chromium/issues/detail?id=381459
+  // Adding an <option selected="selected"> element to a <select required="required"> should
+  // automatically select the new element
+  if (optionElement[0].hasAttribute('selected')) {
+    optionElement[0].selected = true;
+  }
+}
+
 /**
  * @ngdoc type
  * @name  select.SelectController
@@ -37481,6 +37599,8 @@ var SelectController =
     }
     var count = optionsMap.get(value) || 0;
     optionsMap.put(value, count + 1);
+    self.ngModelCtrl.$render();
+    chromeHack(element);
   };
 
   // Tell the select control that an option, with the given value, has been removed
@@ -37501,6 +37621,39 @@ var SelectController =
   // Check whether the select control has an option matching the given value
   self.hasOption = function(value) {
     return !!optionsMap.get(value);
+  };
+
+
+  self.registerOption = function(optionScope, optionElement, optionAttrs, interpolateValueFn, interpolateTextFn) {
+
+    if (interpolateValueFn) {
+      // The value attribute is interpolated
+      var oldVal;
+      optionAttrs.$observe('value', function valueAttributeObserveAction(newVal) {
+        if (isDefined(oldVal)) {
+          self.removeOption(oldVal);
+        }
+        oldVal = newVal;
+        self.addOption(newVal, optionElement);
+      });
+    } else if (interpolateTextFn) {
+      // The text content is interpolated
+      optionScope.$watch(interpolateTextFn, function interpolateWatchAction(newVal, oldVal) {
+        optionAttrs.$set('value', newVal);
+        if (oldVal !== newVal) {
+          self.removeOption(oldVal);
+        }
+        self.addOption(newVal, optionElement);
+      });
+    } else {
+      // The value attribute is static
+      self.addOption(optionAttrs.value, optionElement);
+    }
+
+    optionElement.on('$destroy', function() {
+      self.removeOption(optionAttrs.value);
+      self.ngModelCtrl.$render();
+    });
   };
 }];
 
@@ -37547,6 +37700,8 @@ var SelectController =
  *
  * @param {string} ngModel Assignable angular expression to data-bind to.
  * @param {string=} name Property name of the form under which the control is published.
+ * @param {string=} multiple Allows multiple options to be selected. The selected values will be
+ *     bound to the model as an array.
  * @param {string=} required Sets `required` validation error key if the value is not entered.
  * @param {string=} ngRequired Adds required attribute and required validation constraint to
  * the element when the ngRequired expression evaluates to true. Use ngRequired instead of required
@@ -37712,7 +37867,13 @@ var selectDirective = function() {
     restrict: 'E',
     require: ['select', '?ngModel'],
     controller: SelectController,
-    link: function(scope, element, attr, ctrls) {
+    priority: 1,
+    link: {
+      pre: selectPreLink
+    }
+  };
+
+  function selectPreLink(scope, element, attr, ctrls) {
 
       // if ngModel is not defined, we don't need to do anything
       var ngModelCtrl = ctrls[1];
@@ -37782,7 +37943,6 @@ var selectDirective = function() {
 
       }
     }
-  };
 };
 
 
@@ -37790,16 +37950,6 @@ var selectDirective = function() {
 // of dynamically created (and destroyed) option elements to their containing select
 // directive via its controller.
 var optionDirective = ['$interpolate', function($interpolate) {
-
-  function chromeHack(optionElement) {
-    // Workaround for https://code.google.com/p/chromium/issues/detail?id=381459
-    // Adding an <option selected="selected"> element to a <select required="required"> should
-    // automatically select the new element
-    if (optionElement[0].hasAttribute('selected')) {
-      optionElement[0].selected = true;
-    }
-  }
-
   return {
     restrict: 'E',
     priority: 100,
@@ -37807,12 +37957,12 @@ var optionDirective = ['$interpolate', function($interpolate) {
 
       if (isDefined(attr.value)) {
         // If the value attribute is defined, check if it contains an interpolation
-        var valueInterpolated = $interpolate(attr.value, true);
+        var interpolateValueFn = $interpolate(attr.value, true);
       } else {
         // If the value attribute is not defined then we fall back to the
         // text content of the option element, which may be interpolated
-        var interpolateFn = $interpolate(element.text(), true);
-        if (!interpolateFn) {
+        var interpolateTextFn = $interpolate(element.text(), true);
+        if (!interpolateTextFn) {
           attr.$set('value', element.text());
         }
       }
@@ -37826,44 +37976,8 @@ var optionDirective = ['$interpolate', function($interpolate) {
             selectCtrl = parent.data(selectCtrlName) ||
               parent.parent().data(selectCtrlName); // in case we are in optgroup
 
-        function addOption(optionValue) {
-          selectCtrl.addOption(optionValue, element);
-          selectCtrl.ngModelCtrl.$render();
-          chromeHack(element);
-        }
-
-        // Only update trigger option updates if this is an option within a `select`
-        // that also has `ngModel` attached
-        if (selectCtrl && selectCtrl.ngModelCtrl) {
-
-          if (valueInterpolated) {
-            // The value attribute is interpolated
-            var oldVal;
-            attr.$observe('value', function valueAttributeObserveAction(newVal) {
-              if (isDefined(oldVal)) {
-                selectCtrl.removeOption(oldVal);
-              }
-              oldVal = newVal;
-              addOption(newVal);
-            });
-          } else if (interpolateFn) {
-            // The text content is interpolated
-            scope.$watch(interpolateFn, function interpolateWatchAction(newVal, oldVal) {
-              attr.$set('value', newVal);
-              if (oldVal !== newVal) {
-                selectCtrl.removeOption(oldVal);
-              }
-              addOption(newVal);
-            });
-          } else {
-            // The value attribute is static
-            addOption(attr.value);
-          }
-
-          element.on('$destroy', function() {
-            selectCtrl.removeOption(attr.value);
-            selectCtrl.ngModelCtrl.$render();
-          });
+        if (selectCtrl) {
+          selectCtrl.registerOption(scope, element, attr, interpolateValueFn, interpolateTextFn);
         }
       };
     }
@@ -38114,7 +38228,7 @@ $provide.value("$locale", {
 
 !window.angular.$$csp().noInlineStyle && window.angular.element(document.head).prepend('<style type="text/css">@charset "UTF-8";[ng\\:cloak],[ng-cloak],[data-ng-cloak],[x-ng-cloak],.ng-cloak,.x-ng-cloak,.ng-hide:not(.ng-hide-animate){display:none !important;}ng\\:form{display:block;}.ng-animate-shim{visibility:hidden;}.ng-anchor{position:absolute;}</style>');
 /**
- * @license AngularJS v1.4.7
+ * @license AngularJS v1.4.8
  * (c) 2010-2015 Google, Inc. http://angularjs.org
  * License: MIT
  */
@@ -38737,6 +38851,8 @@ var ANIMATE_TIMER_KEY = '$$animateCss';
  *
  * * `event` - The DOM event (e.g. enter, leave, move). When used, a generated CSS class of `ng-EVENT` and `ng-EVENT-active` will be applied
  * to the element during the animation. Multiple events can be provided when spaces are used as a separator. (Note that this will not perform any DOM operation.)
+ * * `structural` - Indicates that the `ng-` prefix will be added to the event class. Setting to `false` or omitting will turn `ng-EVENT` and
+ * `ng-EVENT-active` in `EVENT` and `EVENT-active`. Unused if `event` is omitted.
  * * `easing` - The CSS easing value that will be applied to the transition or keyframe animation (or both).
  * * `transitionStyle` - The raw CSS transition style that will be used (e.g. `1s linear all`).
  * * `keyframeStyle` - The raw CSS keyframe animation style that will be used (e.g. `1s my_animation linear`).
@@ -40248,14 +40364,17 @@ var $$AnimateQueueProvider = ['$animateProvider', function($animateProvider) {
       return mergeAnimationOptions(element, options, {});
     }
 
-    function findCallbacks(element, event) {
+    function findCallbacks(parent, element, event) {
       var targetNode = getDomNode(element);
+      var targetParentNode = getDomNode(parent);
 
       var matches = [];
       var entries = callbackRegistry[event];
       if (entries) {
         forEach(entries, function(entry) {
           if (entry.node.contains(targetNode)) {
+            matches.push(entry.callback);
+          } else if (event === 'leave' && entry.node.contains(targetParentNode)) {
             matches.push(entry.callback);
           }
         });
@@ -40582,7 +40701,7 @@ var $$AnimateQueueProvider = ['$animateProvider', function($animateProvider) {
 
       function notifyProgress(runner, event, phase, data) {
         runInNextPostDigestOrNow(function() {
-          var callbacks = findCallbacks(element, event);
+          var callbacks = findCallbacks(parent, element, event);
           if (callbacks.length) {
             // do not optimize this call here to RAF because
             // we don't know how heavy the callback code here will
@@ -41573,7 +41692,7 @@ var $$AnimationProvider = ['$animateProvider', function($animateProvider) {
  *       jQuery(element).fadeOut(1000, doneFn);
  *     }
  *   }
- * }]
+ * }]);
  * ```
  *
  * The nice thing about JS-based animations is that we can inject other services and make use of advanced animation libraries such as
@@ -41604,7 +41723,7 @@ var $$AnimationProvider = ['$animateProvider', function($animateProvider) {
  *       // do some cool animation and call the doneFn
  *     }
  *   }
- * }]
+ * }]);
  * ```
  *
  * ## CSS + JS Animations Together
@@ -41626,7 +41745,7 @@ var $$AnimationProvider = ['$animateProvider', function($animateProvider) {
  *       jQuery(element).slideIn(1000, doneFn);
  *     }
  *   }
- * }]
+ * }]);
  * ```
  *
  * ```css
@@ -41646,16 +41765,15 @@ var $$AnimationProvider = ['$animateProvider', function($animateProvider) {
  * ```js
  * myModule.animation('.slide', ['$animateCss', function($animateCss) {
  *   return {
- *     enter: function(element, doneFn) {
+ *     enter: function(element) {
 *        // this will trigger `.slide.ng-enter` and `.slide.ng-enter-active`.
- *       var runner = $animateCss(element, {
+ *       return $animateCss(element, {
  *         event: 'enter',
  *         structural: true
- *       }).start();
-*        runner.done(doneFn);
+ *       });
  *     }
  *   }
- * }]
+ * }]);
  * ```
  *
  * The nice thing here is that we can save bandwidth by sticking to our CSS-based animation code and we don't need to rely on a 3rd-party animation framework.
@@ -41667,19 +41785,17 @@ var $$AnimationProvider = ['$animateProvider', function($animateProvider) {
  * ```js
  * myModule.animation('.slide', ['$animateCss', function($animateCss) {
  *   return {
- *     enter: function(element, doneFn) {
- *       var runner = $animateCss(element, {
+ *     enter: function(element) {
+ *       return $animateCss(element, {
  *         event: 'enter',
  *         structural: true,
  *         addClass: 'maroon-setting',
  *         from: { height:0 },
  *         to: { height: 200 }
- *       }).start();
- *
- *       runner.done(doneFn);
+ *       });
  *     }
  *   }
- * }]
+ * }]);
  * ```
  *
  * Now we can fill in the rest via our transition CSS code:
@@ -42043,329 +42159,7 @@ angular.module('ngAnimate', [])
 })(window, window.angular);
 
 /**
- * @license AngularJS v1.4.7
- * (c) 2010-2015 Google, Inc. http://angularjs.org
- * License: MIT
- */
-(function(window, angular, undefined) {'use strict';
-
-/**
- * @ngdoc module
- * @name ngCookies
- * @description
- *
- * # ngCookies
- *
- * The `ngCookies` module provides a convenient wrapper for reading and writing browser cookies.
- *
- *
- * <div doc-module-components="ngCookies"></div>
- *
- * See {@link ngCookies.$cookies `$cookies`} for usage.
- */
-
-
-angular.module('ngCookies', ['ng']).
-  /**
-   * @ngdoc provider
-   * @name $cookiesProvider
-   * @description
-   * Use `$cookiesProvider` to change the default behavior of the {@link ngCookies.$cookies $cookies} service.
-   * */
-   provider('$cookies', [function $CookiesProvider() {
-    /**
-     * @ngdoc property
-     * @name $cookiesProvider#defaults
-     * @description
-     *
-     * Object containing default options to pass when setting cookies.
-     *
-     * The object may have following properties:
-     *
-     * - **path** - `{string}` - The cookie will be available only for this path and its
-     *   sub-paths. By default, this would be the URL that appears in your base tag.
-     * - **domain** - `{string}` - The cookie will be available only for this domain and
-     *   its sub-domains. For obvious security reasons the user agent will not accept the
-     *   cookie if the current domain is not a sub domain or equals to the requested domain.
-     * - **expires** - `{string|Date}` - String of the form "Wdy, DD Mon YYYY HH:MM:SS GMT"
-     *   or a Date object indicating the exact date/time this cookie will expire.
-     * - **secure** - `{boolean}` - The cookie will be available only in secured connection.
-     *
-     * Note: by default the address that appears in your `<base>` tag will be used as path.
-     * This is important so that cookies will be visible for all routes in case html5mode is enabled
-     *
-     **/
-    var defaults = this.defaults = {};
-
-    function calcOptions(options) {
-      return options ? angular.extend({}, defaults, options) : defaults;
-    }
-
-    /**
-     * @ngdoc service
-     * @name $cookies
-     *
-     * @description
-     * Provides read/write access to browser's cookies.
-     *
-     * <div class="alert alert-info">
-     * Up until Angular 1.3, `$cookies` exposed properties that represented the
-     * current browser cookie values. In version 1.4, this behavior has changed, and
-     * `$cookies` now provides a standard api of getters, setters etc.
-     * </div>
-     *
-     * Requires the {@link ngCookies `ngCookies`} module to be installed.
-     *
-     * @example
-     *
-     * ```js
-     * angular.module('cookiesExample', ['ngCookies'])
-     *   .controller('ExampleController', ['$cookies', function($cookies) {
-     *     // Retrieving a cookie
-     *     var favoriteCookie = $cookies.get('myFavorite');
-     *     // Setting a cookie
-     *     $cookies.put('myFavorite', 'oatmeal');
-     *   }]);
-     * ```
-     */
-    this.$get = ['$$cookieReader', '$$cookieWriter', function($$cookieReader, $$cookieWriter) {
-      return {
-        /**
-         * @ngdoc method
-         * @name $cookies#get
-         *
-         * @description
-         * Returns the value of given cookie key
-         *
-         * @param {string} key Id to use for lookup.
-         * @returns {string} Raw cookie value.
-         */
-        get: function(key) {
-          return $$cookieReader()[key];
-        },
-
-        /**
-         * @ngdoc method
-         * @name $cookies#getObject
-         *
-         * @description
-         * Returns the deserialized value of given cookie key
-         *
-         * @param {string} key Id to use for lookup.
-         * @returns {Object} Deserialized cookie value.
-         */
-        getObject: function(key) {
-          var value = this.get(key);
-          return value ? angular.fromJson(value) : value;
-        },
-
-        /**
-         * @ngdoc method
-         * @name $cookies#getAll
-         *
-         * @description
-         * Returns a key value object with all the cookies
-         *
-         * @returns {Object} All cookies
-         */
-        getAll: function() {
-          return $$cookieReader();
-        },
-
-        /**
-         * @ngdoc method
-         * @name $cookies#put
-         *
-         * @description
-         * Sets a value for given cookie key
-         *
-         * @param {string} key Id for the `value`.
-         * @param {string} value Raw value to be stored.
-         * @param {Object=} options Options object.
-         *    See {@link ngCookies.$cookiesProvider#defaults $cookiesProvider.defaults}
-         */
-        put: function(key, value, options) {
-          $$cookieWriter(key, value, calcOptions(options));
-        },
-
-        /**
-         * @ngdoc method
-         * @name $cookies#putObject
-         *
-         * @description
-         * Serializes and sets a value for given cookie key
-         *
-         * @param {string} key Id for the `value`.
-         * @param {Object} value Value to be stored.
-         * @param {Object=} options Options object.
-         *    See {@link ngCookies.$cookiesProvider#defaults $cookiesProvider.defaults}
-         */
-        putObject: function(key, value, options) {
-          this.put(key, angular.toJson(value), options);
-        },
-
-        /**
-         * @ngdoc method
-         * @name $cookies#remove
-         *
-         * @description
-         * Remove given cookie
-         *
-         * @param {string} key Id of the key-value pair to delete.
-         * @param {Object=} options Options object.
-         *    See {@link ngCookies.$cookiesProvider#defaults $cookiesProvider.defaults}
-         */
-        remove: function(key, options) {
-          $$cookieWriter(key, undefined, calcOptions(options));
-        }
-      };
-    }];
-  }]);
-
-angular.module('ngCookies').
-/**
- * @ngdoc service
- * @name $cookieStore
- * @deprecated
- * @requires $cookies
- *
- * @description
- * Provides a key-value (string-object) storage, that is backed by session cookies.
- * Objects put or retrieved from this storage are automatically serialized or
- * deserialized by angular's toJson/fromJson.
- *
- * Requires the {@link ngCookies `ngCookies`} module to be installed.
- *
- * <div class="alert alert-danger">
- * **Note:** The $cookieStore service is **deprecated**.
- * Please use the {@link ngCookies.$cookies `$cookies`} service instead.
- * </div>
- *
- * @example
- *
- * ```js
- * angular.module('cookieStoreExample', ['ngCookies'])
- *   .controller('ExampleController', ['$cookieStore', function($cookieStore) {
- *     // Put cookie
- *     $cookieStore.put('myFavorite','oatmeal');
- *     // Get cookie
- *     var favoriteCookie = $cookieStore.get('myFavorite');
- *     // Removing a cookie
- *     $cookieStore.remove('myFavorite');
- *   }]);
- * ```
- */
- factory('$cookieStore', ['$cookies', function($cookies) {
-
-    return {
-      /**
-       * @ngdoc method
-       * @name $cookieStore#get
-       *
-       * @description
-       * Returns the value of given cookie key
-       *
-       * @param {string} key Id to use for lookup.
-       * @returns {Object} Deserialized cookie value, undefined if the cookie does not exist.
-       */
-      get: function(key) {
-        return $cookies.getObject(key);
-      },
-
-      /**
-       * @ngdoc method
-       * @name $cookieStore#put
-       *
-       * @description
-       * Sets a value for given cookie key
-       *
-       * @param {string} key Id for the `value`.
-       * @param {Object} value Value to be stored.
-       */
-      put: function(key, value) {
-        $cookies.putObject(key, value);
-      },
-
-      /**
-       * @ngdoc method
-       * @name $cookieStore#remove
-       *
-       * @description
-       * Remove given cookie
-       *
-       * @param {string} key Id of the key-value pair to delete.
-       */
-      remove: function(key) {
-        $cookies.remove(key);
-      }
-    };
-
-  }]);
-
-/**
- * @name $$cookieWriter
- * @requires $document
- *
- * @description
- * This is a private service for writing cookies
- *
- * @param {string} name Cookie name
- * @param {string=} value Cookie value (if undefined, cookie will be deleted)
- * @param {Object=} options Object with options that need to be stored for the cookie.
- */
-function $$CookieWriter($document, $log, $browser) {
-  var cookiePath = $browser.baseHref();
-  var rawDocument = $document[0];
-
-  function buildCookieString(name, value, options) {
-    var path, expires;
-    options = options || {};
-    expires = options.expires;
-    path = angular.isDefined(options.path) ? options.path : cookiePath;
-    if (angular.isUndefined(value)) {
-      expires = 'Thu, 01 Jan 1970 00:00:00 GMT';
-      value = '';
-    }
-    if (angular.isString(expires)) {
-      expires = new Date(expires);
-    }
-
-    var str = encodeURIComponent(name) + '=' + encodeURIComponent(value);
-    str += path ? ';path=' + path : '';
-    str += options.domain ? ';domain=' + options.domain : '';
-    str += expires ? ';expires=' + expires.toUTCString() : '';
-    str += options.secure ? ';secure' : '';
-
-    // per http://www.ietf.org/rfc/rfc2109.txt browser must allow at minimum:
-    // - 300 cookies
-    // - 20 cookies per unique domain
-    // - 4096 bytes per cookie
-    var cookieLength = str.length + 1;
-    if (cookieLength > 4096) {
-      $log.warn("Cookie '" + name +
-        "' possibly not set or overflowed because it was too large (" +
-        cookieLength + " > 4096 bytes)!");
-    }
-
-    return str;
-  }
-
-  return function(name, value, options) {
-    rawDocument.cookie = buildCookieString(name, value, options);
-  };
-}
-
-$$CookieWriter.$inject = ['$document', '$log', '$browser'];
-
-angular.module('ngCookies').provider('$$cookieWriter', function $$CookieWriterProvider() {
-  this.$get = $$CookieWriter;
-});
-
-
-})(window, window.angular);
-
-/**
- * @license AngularJS v1.4.7
+ * @license AngularJS v1.4.8
  * (c) 2010-2015 Google, Inc. http://angularjs.org
  * License: MIT
  */
@@ -43051,7 +42845,7 @@ function ngMessageDirectiveFactory(restrict) {
 })(window, window.angular);
 
 /**
- * @license AngularJS v1.4.7
+ * @license AngularJS v1.4.8
  * (c) 2010-2015 Google, Inc. http://angularjs.org
  * License: MIT
  */
@@ -43625,8 +43419,17 @@ angular.module('ngResource', ['ng']).
               undefined;
 
             forEach(action, function(value, key) {
-              if (key != 'params' && key != 'isArray' && key != 'interceptor') {
-                httpConfig[key] = copy(value);
+              switch (key) {
+                default:
+                  httpConfig[key] = copy(value);
+                  break;
+                case 'params':
+                case 'isArray':
+                case 'interceptor':
+                  break;
+                case 'timeout':
+                  httpConfig[key] = value;
+                  break;
               }
             });
 
@@ -43727,999 +43530,7 @@ angular.module('ngResource', ['ng']).
 })(window, window.angular);
 
 /**
- * @license AngularJS v1.4.7
- * (c) 2010-2015 Google, Inc. http://angularjs.org
- * License: MIT
- */
-(function(window, angular, undefined) {'use strict';
-
-/**
- * @ngdoc module
- * @name ngRoute
- * @description
- *
- * # ngRoute
- *
- * The `ngRoute` module provides routing and deeplinking services and directives for angular apps.
- *
- * ## Example
- * See {@link ngRoute.$route#example $route} for an example of configuring and using `ngRoute`.
- *
- *
- * <div doc-module-components="ngRoute"></div>
- */
- /* global -ngRouteModule */
-var ngRouteModule = angular.module('ngRoute', ['ng']).
-                        provider('$route', $RouteProvider),
-    $routeMinErr = angular.$$minErr('ngRoute');
-
-/**
- * @ngdoc provider
- * @name $routeProvider
- *
- * @description
- *
- * Used for configuring routes.
- *
- * ## Example
- * See {@link ngRoute.$route#example $route} for an example of configuring and using `ngRoute`.
- *
- * ## Dependencies
- * Requires the {@link ngRoute `ngRoute`} module to be installed.
- */
-function $RouteProvider() {
-  function inherit(parent, extra) {
-    return angular.extend(Object.create(parent), extra);
-  }
-
-  var routes = {};
-
-  /**
-   * @ngdoc method
-   * @name $routeProvider#when
-   *
-   * @param {string} path Route path (matched against `$location.path`). If `$location.path`
-   *    contains redundant trailing slash or is missing one, the route will still match and the
-   *    `$location.path` will be updated to add or drop the trailing slash to exactly match the
-   *    route definition.
-   *
-   *    * `path` can contain named groups starting with a colon: e.g. `:name`. All characters up
-   *        to the next slash are matched and stored in `$routeParams` under the given `name`
-   *        when the route matches.
-   *    * `path` can contain named groups starting with a colon and ending with a star:
-   *        e.g.`:name*`. All characters are eagerly stored in `$routeParams` under the given `name`
-   *        when the route matches.
-   *    * `path` can contain optional named groups with a question mark: e.g.`:name?`.
-   *
-   *    For example, routes like `/color/:color/largecode/:largecode*\/edit` will match
-   *    `/color/brown/largecode/code/with/slashes/edit` and extract:
-   *
-   *    * `color: brown`
-   *    * `largecode: code/with/slashes`.
-   *
-   *
-   * @param {Object} route Mapping information to be assigned to `$route.current` on route
-   *    match.
-   *
-   *    Object properties:
-   *
-   *    - `controller` – `{(string|function()=}` – Controller fn that should be associated with
-   *      newly created scope or the name of a {@link angular.Module#controller registered
-   *      controller} if passed as a string.
-   *    - `controllerAs` – `{string=}` – An identifier name for a reference to the controller.
-   *      If present, the controller will be published to scope under the `controllerAs` name.
-   *    - `template` – `{string=|function()=}` – html template as a string or a function that
-   *      returns an html template as a string which should be used by {@link
-   *      ngRoute.directive:ngView ngView} or {@link ng.directive:ngInclude ngInclude} directives.
-   *      This property takes precedence over `templateUrl`.
-   *
-   *      If `template` is a function, it will be called with the following parameters:
-   *
-   *      - `{Array.<Object>}` - route parameters extracted from the current
-   *        `$location.path()` by applying the current route
-   *
-   *    - `templateUrl` – `{string=|function()=}` – path or function that returns a path to an html
-   *      template that should be used by {@link ngRoute.directive:ngView ngView}.
-   *
-   *      If `templateUrl` is a function, it will be called with the following parameters:
-   *
-   *      - `{Array.<Object>}` - route parameters extracted from the current
-   *        `$location.path()` by applying the current route
-   *
-   *    - `resolve` - `{Object.<string, function>=}` - An optional map of dependencies which should
-   *      be injected into the controller. If any of these dependencies are promises, the router
-   *      will wait for them all to be resolved or one to be rejected before the controller is
-   *      instantiated.
-   *      If all the promises are resolved successfully, the values of the resolved promises are
-   *      injected and {@link ngRoute.$route#$routeChangeSuccess $routeChangeSuccess} event is
-   *      fired. If any of the promises are rejected the
-   *      {@link ngRoute.$route#$routeChangeError $routeChangeError} event is fired. The map object
-   *      is:
-   *
-   *      - `key` – `{string}`: a name of a dependency to be injected into the controller.
-   *      - `factory` - `{string|function}`: If `string` then it is an alias for a service.
-   *        Otherwise if function, then it is {@link auto.$injector#invoke injected}
-   *        and the return value is treated as the dependency. If the result is a promise, it is
-   *        resolved before its value is injected into the controller. Be aware that
-   *        `ngRoute.$routeParams` will still refer to the previous route within these resolve
-   *        functions.  Use `$route.current.params` to access the new route parameters, instead.
-   *
-   *    - `redirectTo` – {(string|function())=} – value to update
-   *      {@link ng.$location $location} path with and trigger route redirection.
-   *
-   *      If `redirectTo` is a function, it will be called with the following parameters:
-   *
-   *      - `{Object.<string>}` - route parameters extracted from the current
-   *        `$location.path()` by applying the current route templateUrl.
-   *      - `{string}` - current `$location.path()`
-   *      - `{Object}` - current `$location.search()`
-   *
-   *      The custom `redirectTo` function is expected to return a string which will be used
-   *      to update `$location.path()` and `$location.search()`.
-   *
-   *    - `[reloadOnSearch=true]` - {boolean=} - reload route when only `$location.search()`
-   *      or `$location.hash()` changes.
-   *
-   *      If the option is set to `false` and url in the browser changes, then
-   *      `$routeUpdate` event is broadcasted on the root scope.
-   *
-   *    - `[caseInsensitiveMatch=false]` - {boolean=} - match routes without being case sensitive
-   *
-   *      If the option is set to `true`, then the particular route can be matched without being
-   *      case sensitive
-   *
-   * @returns {Object} self
-   *
-   * @description
-   * Adds a new route definition to the `$route` service.
-   */
-  this.when = function(path, route) {
-    //copy original route object to preserve params inherited from proto chain
-    var routeCopy = angular.copy(route);
-    if (angular.isUndefined(routeCopy.reloadOnSearch)) {
-      routeCopy.reloadOnSearch = true;
-    }
-    if (angular.isUndefined(routeCopy.caseInsensitiveMatch)) {
-      routeCopy.caseInsensitiveMatch = this.caseInsensitiveMatch;
-    }
-    routes[path] = angular.extend(
-      routeCopy,
-      path && pathRegExp(path, routeCopy)
-    );
-
-    // create redirection for trailing slashes
-    if (path) {
-      var redirectPath = (path[path.length - 1] == '/')
-            ? path.substr(0, path.length - 1)
-            : path + '/';
-
-      routes[redirectPath] = angular.extend(
-        {redirectTo: path},
-        pathRegExp(redirectPath, routeCopy)
-      );
-    }
-
-    return this;
-  };
-
-  /**
-   * @ngdoc property
-   * @name $routeProvider#caseInsensitiveMatch
-   * @description
-   *
-   * A boolean property indicating if routes defined
-   * using this provider should be matched using a case insensitive
-   * algorithm. Defaults to `false`.
-   */
-  this.caseInsensitiveMatch = false;
-
-   /**
-    * @param path {string} path
-    * @param opts {Object} options
-    * @return {?Object}
-    *
-    * @description
-    * Normalizes the given path, returning a regular expression
-    * and the original path.
-    *
-    * Inspired by pathRexp in visionmedia/express/lib/utils.js.
-    */
-  function pathRegExp(path, opts) {
-    var insensitive = opts.caseInsensitiveMatch,
-        ret = {
-          originalPath: path,
-          regexp: path
-        },
-        keys = ret.keys = [];
-
-    path = path
-      .replace(/([().])/g, '\\$1')
-      .replace(/(\/)?:(\w+)([\?\*])?/g, function(_, slash, key, option) {
-        var optional = option === '?' ? option : null;
-        var star = option === '*' ? option : null;
-        keys.push({ name: key, optional: !!optional });
-        slash = slash || '';
-        return ''
-          + (optional ? '' : slash)
-          + '(?:'
-          + (optional ? slash : '')
-          + (star && '(.+?)' || '([^/]+)')
-          + (optional || '')
-          + ')'
-          + (optional || '');
-      })
-      .replace(/([\/$\*])/g, '\\$1');
-
-    ret.regexp = new RegExp('^' + path + '$', insensitive ? 'i' : '');
-    return ret;
-  }
-
-  /**
-   * @ngdoc method
-   * @name $routeProvider#otherwise
-   *
-   * @description
-   * Sets route definition that will be used on route change when no other route definition
-   * is matched.
-   *
-   * @param {Object|string} params Mapping information to be assigned to `$route.current`.
-   * If called with a string, the value maps to `redirectTo`.
-   * @returns {Object} self
-   */
-  this.otherwise = function(params) {
-    if (typeof params === 'string') {
-      params = {redirectTo: params};
-    }
-    this.when(null, params);
-    return this;
-  };
-
-
-  this.$get = ['$rootScope',
-               '$location',
-               '$routeParams',
-               '$q',
-               '$injector',
-               '$templateRequest',
-               '$sce',
-      function($rootScope, $location, $routeParams, $q, $injector, $templateRequest, $sce) {
-
-    /**
-     * @ngdoc service
-     * @name $route
-     * @requires $location
-     * @requires $routeParams
-     *
-     * @property {Object} current Reference to the current route definition.
-     * The route definition contains:
-     *
-     *   - `controller`: The controller constructor as define in route definition.
-     *   - `locals`: A map of locals which is used by {@link ng.$controller $controller} service for
-     *     controller instantiation. The `locals` contain
-     *     the resolved values of the `resolve` map. Additionally the `locals` also contain:
-     *
-     *     - `$scope` - The current route scope.
-     *     - `$template` - The current route template HTML.
-     *
-     * @property {Object} routes Object with all route configuration Objects as its properties.
-     *
-     * @description
-     * `$route` is used for deep-linking URLs to controllers and views (HTML partials).
-     * It watches `$location.url()` and tries to map the path to an existing route definition.
-     *
-     * Requires the {@link ngRoute `ngRoute`} module to be installed.
-     *
-     * You can define routes through {@link ngRoute.$routeProvider $routeProvider}'s API.
-     *
-     * The `$route` service is typically used in conjunction with the
-     * {@link ngRoute.directive:ngView `ngView`} directive and the
-     * {@link ngRoute.$routeParams `$routeParams`} service.
-     *
-     * @example
-     * This example shows how changing the URL hash causes the `$route` to match a route against the
-     * URL, and the `ngView` pulls in the partial.
-     *
-     * <example name="$route-service" module="ngRouteExample"
-     *          deps="angular-route.js" fixBase="true">
-     *   <file name="index.html">
-     *     <div ng-controller="MainController">
-     *       Choose:
-     *       <a href="Book/Moby">Moby</a> |
-     *       <a href="Book/Moby/ch/1">Moby: Ch1</a> |
-     *       <a href="Book/Gatsby">Gatsby</a> |
-     *       <a href="Book/Gatsby/ch/4?key=value">Gatsby: Ch4</a> |
-     *       <a href="Book/Scarlet">Scarlet Letter</a><br/>
-     *
-     *       <div ng-view></div>
-     *
-     *       <hr />
-     *
-     *       <pre>$location.path() = {{$location.path()}}</pre>
-     *       <pre>$route.current.templateUrl = {{$route.current.templateUrl}}</pre>
-     *       <pre>$route.current.params = {{$route.current.params}}</pre>
-     *       <pre>$route.current.scope.name = {{$route.current.scope.name}}</pre>
-     *       <pre>$routeParams = {{$routeParams}}</pre>
-     *     </div>
-     *   </file>
-     *
-     *   <file name="book.html">
-     *     controller: {{name}}<br />
-     *     Book Id: {{params.bookId}}<br />
-     *   </file>
-     *
-     *   <file name="chapter.html">
-     *     controller: {{name}}<br />
-     *     Book Id: {{params.bookId}}<br />
-     *     Chapter Id: {{params.chapterId}}
-     *   </file>
-     *
-     *   <file name="script.js">
-     *     angular.module('ngRouteExample', ['ngRoute'])
-     *
-     *      .controller('MainController', function($scope, $route, $routeParams, $location) {
-     *          $scope.$route = $route;
-     *          $scope.$location = $location;
-     *          $scope.$routeParams = $routeParams;
-     *      })
-     *
-     *      .controller('BookController', function($scope, $routeParams) {
-     *          $scope.name = "BookController";
-     *          $scope.params = $routeParams;
-     *      })
-     *
-     *      .controller('ChapterController', function($scope, $routeParams) {
-     *          $scope.name = "ChapterController";
-     *          $scope.params = $routeParams;
-     *      })
-     *
-     *     .config(function($routeProvider, $locationProvider) {
-     *       $routeProvider
-     *        .when('/Book/:bookId', {
-     *         templateUrl: 'book.html',
-     *         controller: 'BookController',
-     *         resolve: {
-     *           // I will cause a 1 second delay
-     *           delay: function($q, $timeout) {
-     *             var delay = $q.defer();
-     *             $timeout(delay.resolve, 1000);
-     *             return delay.promise;
-     *           }
-     *         }
-     *       })
-     *       .when('/Book/:bookId/ch/:chapterId', {
-     *         templateUrl: 'chapter.html',
-     *         controller: 'ChapterController'
-     *       });
-     *
-     *       // configure html5 to get links working on jsfiddle
-     *       $locationProvider.html5Mode(true);
-     *     });
-     *
-     *   </file>
-     *
-     *   <file name="protractor.js" type="protractor">
-     *     it('should load and compile correct template', function() {
-     *       element(by.linkText('Moby: Ch1')).click();
-     *       var content = element(by.css('[ng-view]')).getText();
-     *       expect(content).toMatch(/controller\: ChapterController/);
-     *       expect(content).toMatch(/Book Id\: Moby/);
-     *       expect(content).toMatch(/Chapter Id\: 1/);
-     *
-     *       element(by.partialLinkText('Scarlet')).click();
-     *
-     *       content = element(by.css('[ng-view]')).getText();
-     *       expect(content).toMatch(/controller\: BookController/);
-     *       expect(content).toMatch(/Book Id\: Scarlet/);
-     *     });
-     *   </file>
-     * </example>
-     */
-
-    /**
-     * @ngdoc event
-     * @name $route#$routeChangeStart
-     * @eventType broadcast on root scope
-     * @description
-     * Broadcasted before a route change. At this  point the route services starts
-     * resolving all of the dependencies needed for the route change to occur.
-     * Typically this involves fetching the view template as well as any dependencies
-     * defined in `resolve` route property. Once  all of the dependencies are resolved
-     * `$routeChangeSuccess` is fired.
-     *
-     * The route change (and the `$location` change that triggered it) can be prevented
-     * by calling `preventDefault` method of the event. See {@link ng.$rootScope.Scope#$on}
-     * for more details about event object.
-     *
-     * @param {Object} angularEvent Synthetic event object.
-     * @param {Route} next Future route information.
-     * @param {Route} current Current route information.
-     */
-
-    /**
-     * @ngdoc event
-     * @name $route#$routeChangeSuccess
-     * @eventType broadcast on root scope
-     * @description
-     * Broadcasted after a route change has happened successfully.
-     * The `resolve` dependencies are now available in the `current.locals` property.
-     *
-     * {@link ngRoute.directive:ngView ngView} listens for the directive
-     * to instantiate the controller and render the view.
-     *
-     * @param {Object} angularEvent Synthetic event object.
-     * @param {Route} current Current route information.
-     * @param {Route|Undefined} previous Previous route information, or undefined if current is
-     * first route entered.
-     */
-
-    /**
-     * @ngdoc event
-     * @name $route#$routeChangeError
-     * @eventType broadcast on root scope
-     * @description
-     * Broadcasted if any of the resolve promises are rejected.
-     *
-     * @param {Object} angularEvent Synthetic event object
-     * @param {Route} current Current route information.
-     * @param {Route} previous Previous route information.
-     * @param {Route} rejection Rejection of the promise. Usually the error of the failed promise.
-     */
-
-    /**
-     * @ngdoc event
-     * @name $route#$routeUpdate
-     * @eventType broadcast on root scope
-     * @description
-     * The `reloadOnSearch` property has been set to false, and we are reusing the same
-     * instance of the Controller.
-     *
-     * @param {Object} angularEvent Synthetic event object
-     * @param {Route} current Current/previous route information.
-     */
-
-    var forceReload = false,
-        preparedRoute,
-        preparedRouteIsUpdateOnly,
-        $route = {
-          routes: routes,
-
-          /**
-           * @ngdoc method
-           * @name $route#reload
-           *
-           * @description
-           * Causes `$route` service to reload the current route even if
-           * {@link ng.$location $location} hasn't changed.
-           *
-           * As a result of that, {@link ngRoute.directive:ngView ngView}
-           * creates new scope and reinstantiates the controller.
-           */
-          reload: function() {
-            forceReload = true;
-            $rootScope.$evalAsync(function() {
-              // Don't support cancellation of a reload for now...
-              prepareRoute();
-              commitRoute();
-            });
-          },
-
-          /**
-           * @ngdoc method
-           * @name $route#updateParams
-           *
-           * @description
-           * Causes `$route` service to update the current URL, replacing
-           * current route parameters with those specified in `newParams`.
-           * Provided property names that match the route's path segment
-           * definitions will be interpolated into the location's path, while
-           * remaining properties will be treated as query params.
-           *
-           * @param {!Object<string, string>} newParams mapping of URL parameter names to values
-           */
-          updateParams: function(newParams) {
-            if (this.current && this.current.$$route) {
-              newParams = angular.extend({}, this.current.params, newParams);
-              $location.path(interpolate(this.current.$$route.originalPath, newParams));
-              // interpolate modifies newParams, only query params are left
-              $location.search(newParams);
-            } else {
-              throw $routeMinErr('norout', 'Tried updating route when with no current route');
-            }
-          }
-        };
-
-    $rootScope.$on('$locationChangeStart', prepareRoute);
-    $rootScope.$on('$locationChangeSuccess', commitRoute);
-
-    return $route;
-
-    /////////////////////////////////////////////////////
-
-    /**
-     * @param on {string} current url
-     * @param route {Object} route regexp to match the url against
-     * @return {?Object}
-     *
-     * @description
-     * Check if the route matches the current url.
-     *
-     * Inspired by match in
-     * visionmedia/express/lib/router/router.js.
-     */
-    function switchRouteMatcher(on, route) {
-      var keys = route.keys,
-          params = {};
-
-      if (!route.regexp) return null;
-
-      var m = route.regexp.exec(on);
-      if (!m) return null;
-
-      for (var i = 1, len = m.length; i < len; ++i) {
-        var key = keys[i - 1];
-
-        var val = m[i];
-
-        if (key && val) {
-          params[key.name] = val;
-        }
-      }
-      return params;
-    }
-
-    function prepareRoute($locationEvent) {
-      var lastRoute = $route.current;
-
-      preparedRoute = parseRoute();
-      preparedRouteIsUpdateOnly = preparedRoute && lastRoute && preparedRoute.$$route === lastRoute.$$route
-          && angular.equals(preparedRoute.pathParams, lastRoute.pathParams)
-          && !preparedRoute.reloadOnSearch && !forceReload;
-
-      if (!preparedRouteIsUpdateOnly && (lastRoute || preparedRoute)) {
-        if ($rootScope.$broadcast('$routeChangeStart', preparedRoute, lastRoute).defaultPrevented) {
-          if ($locationEvent) {
-            $locationEvent.preventDefault();
-          }
-        }
-      }
-    }
-
-    function commitRoute() {
-      var lastRoute = $route.current;
-      var nextRoute = preparedRoute;
-
-      if (preparedRouteIsUpdateOnly) {
-        lastRoute.params = nextRoute.params;
-        angular.copy(lastRoute.params, $routeParams);
-        $rootScope.$broadcast('$routeUpdate', lastRoute);
-      } else if (nextRoute || lastRoute) {
-        forceReload = false;
-        $route.current = nextRoute;
-        if (nextRoute) {
-          if (nextRoute.redirectTo) {
-            if (angular.isString(nextRoute.redirectTo)) {
-              $location.path(interpolate(nextRoute.redirectTo, nextRoute.params)).search(nextRoute.params)
-                       .replace();
-            } else {
-              $location.url(nextRoute.redirectTo(nextRoute.pathParams, $location.path(), $location.search()))
-                       .replace();
-            }
-          }
-        }
-
-        $q.when(nextRoute).
-          then(function() {
-            if (nextRoute) {
-              var locals = angular.extend({}, nextRoute.resolve),
-                  template, templateUrl;
-
-              angular.forEach(locals, function(value, key) {
-                locals[key] = angular.isString(value) ?
-                    $injector.get(value) : $injector.invoke(value, null, null, key);
-              });
-
-              if (angular.isDefined(template = nextRoute.template)) {
-                if (angular.isFunction(template)) {
-                  template = template(nextRoute.params);
-                }
-              } else if (angular.isDefined(templateUrl = nextRoute.templateUrl)) {
-                if (angular.isFunction(templateUrl)) {
-                  templateUrl = templateUrl(nextRoute.params);
-                }
-                if (angular.isDefined(templateUrl)) {
-                  nextRoute.loadedTemplateUrl = $sce.valueOf(templateUrl);
-                  template = $templateRequest(templateUrl);
-                }
-              }
-              if (angular.isDefined(template)) {
-                locals['$template'] = template;
-              }
-              return $q.all(locals);
-            }
-          }).
-          then(function(locals) {
-            // after route change
-            if (nextRoute == $route.current) {
-              if (nextRoute) {
-                nextRoute.locals = locals;
-                angular.copy(nextRoute.params, $routeParams);
-              }
-              $rootScope.$broadcast('$routeChangeSuccess', nextRoute, lastRoute);
-            }
-          }, function(error) {
-            if (nextRoute == $route.current) {
-              $rootScope.$broadcast('$routeChangeError', nextRoute, lastRoute, error);
-            }
-          });
-      }
-    }
-
-
-    /**
-     * @returns {Object} the current active route, by matching it against the URL
-     */
-    function parseRoute() {
-      // Match a route
-      var params, match;
-      angular.forEach(routes, function(route, path) {
-        if (!match && (params = switchRouteMatcher($location.path(), route))) {
-          match = inherit(route, {
-            params: angular.extend({}, $location.search(), params),
-            pathParams: params});
-          match.$$route = route;
-        }
-      });
-      // No route matched; fallback to "otherwise" route
-      return match || routes[null] && inherit(routes[null], {params: {}, pathParams:{}});
-    }
-
-    /**
-     * @returns {string} interpolation of the redirect path with the parameters
-     */
-    function interpolate(string, params) {
-      var result = [];
-      angular.forEach((string || '').split(':'), function(segment, i) {
-        if (i === 0) {
-          result.push(segment);
-        } else {
-          var segmentMatch = segment.match(/(\w+)(?:[?*])?(.*)/);
-          var key = segmentMatch[1];
-          result.push(params[key]);
-          result.push(segmentMatch[2] || '');
-          delete params[key];
-        }
-      });
-      return result.join('');
-    }
-  }];
-}
-
-ngRouteModule.provider('$routeParams', $RouteParamsProvider);
-
-
-/**
- * @ngdoc service
- * @name $routeParams
- * @requires $route
- *
- * @description
- * The `$routeParams` service allows you to retrieve the current set of route parameters.
- *
- * Requires the {@link ngRoute `ngRoute`} module to be installed.
- *
- * The route parameters are a combination of {@link ng.$location `$location`}'s
- * {@link ng.$location#search `search()`} and {@link ng.$location#path `path()`}.
- * The `path` parameters are extracted when the {@link ngRoute.$route `$route`} path is matched.
- *
- * In case of parameter name collision, `path` params take precedence over `search` params.
- *
- * The service guarantees that the identity of the `$routeParams` object will remain unchanged
- * (but its properties will likely change) even when a route change occurs.
- *
- * Note that the `$routeParams` are only updated *after* a route change completes successfully.
- * This means that you cannot rely on `$routeParams` being correct in route resolve functions.
- * Instead you can use `$route.current.params` to access the new route's parameters.
- *
- * @example
- * ```js
- *  // Given:
- *  // URL: http://server.com/index.html#/Chapter/1/Section/2?search=moby
- *  // Route: /Chapter/:chapterId/Section/:sectionId
- *  //
- *  // Then
- *  $routeParams ==> {chapterId:'1', sectionId:'2', search:'moby'}
- * ```
- */
-function $RouteParamsProvider() {
-  this.$get = function() { return {}; };
-}
-
-ngRouteModule.directive('ngView', ngViewFactory);
-ngRouteModule.directive('ngView', ngViewFillContentFactory);
-
-
-/**
- * @ngdoc directive
- * @name ngView
- * @restrict ECA
- *
- * @description
- * # Overview
- * `ngView` is a directive that complements the {@link ngRoute.$route $route} service by
- * including the rendered template of the current route into the main layout (`index.html`) file.
- * Every time the current route changes, the included view changes with it according to the
- * configuration of the `$route` service.
- *
- * Requires the {@link ngRoute `ngRoute`} module to be installed.
- *
- * @animations
- * enter - animation is used to bring new content into the browser.
- * leave - animation is used to animate existing content away.
- *
- * The enter and leave animation occur concurrently.
- *
- * @scope
- * @priority 400
- * @param {string=} onload Expression to evaluate whenever the view updates.
- *
- * @param {string=} autoscroll Whether `ngView` should call {@link ng.$anchorScroll
- *                  $anchorScroll} to scroll the viewport after the view is updated.
- *
- *                  - If the attribute is not set, disable scrolling.
- *                  - If the attribute is set without value, enable scrolling.
- *                  - Otherwise enable scrolling only if the `autoscroll` attribute value evaluated
- *                    as an expression yields a truthy value.
- * @example
-    <example name="ngView-directive" module="ngViewExample"
-             deps="angular-route.js;angular-animate.js"
-             animations="true" fixBase="true">
-      <file name="index.html">
-        <div ng-controller="MainCtrl as main">
-          Choose:
-          <a href="Book/Moby">Moby</a> |
-          <a href="Book/Moby/ch/1">Moby: Ch1</a> |
-          <a href="Book/Gatsby">Gatsby</a> |
-          <a href="Book/Gatsby/ch/4?key=value">Gatsby: Ch4</a> |
-          <a href="Book/Scarlet">Scarlet Letter</a><br/>
-
-          <div class="view-animate-container">
-            <div ng-view class="view-animate"></div>
-          </div>
-          <hr />
-
-          <pre>$location.path() = {{main.$location.path()}}</pre>
-          <pre>$route.current.templateUrl = {{main.$route.current.templateUrl}}</pre>
-          <pre>$route.current.params = {{main.$route.current.params}}</pre>
-          <pre>$routeParams = {{main.$routeParams}}</pre>
-        </div>
-      </file>
-
-      <file name="book.html">
-        <div>
-          controller: {{book.name}}<br />
-          Book Id: {{book.params.bookId}}<br />
-        </div>
-      </file>
-
-      <file name="chapter.html">
-        <div>
-          controller: {{chapter.name}}<br />
-          Book Id: {{chapter.params.bookId}}<br />
-          Chapter Id: {{chapter.params.chapterId}}
-        </div>
-      </file>
-
-      <file name="animations.css">
-        .view-animate-container {
-          position:relative;
-          height:100px!important;
-          background:white;
-          border:1px solid black;
-          height:40px;
-          overflow:hidden;
-        }
-
-        .view-animate {
-          padding:10px;
-        }
-
-        .view-animate.ng-enter, .view-animate.ng-leave {
-          transition:all cubic-bezier(0.250, 0.460, 0.450, 0.940) 1.5s;
-
-          display:block;
-          width:100%;
-          border-left:1px solid black;
-
-          position:absolute;
-          top:0;
-          left:0;
-          right:0;
-          bottom:0;
-          padding:10px;
-        }
-
-        .view-animate.ng-enter {
-          left:100%;
-        }
-        .view-animate.ng-enter.ng-enter-active {
-          left:0;
-        }
-        .view-animate.ng-leave.ng-leave-active {
-          left:-100%;
-        }
-      </file>
-
-      <file name="script.js">
-        angular.module('ngViewExample', ['ngRoute', 'ngAnimate'])
-          .config(['$routeProvider', '$locationProvider',
-            function($routeProvider, $locationProvider) {
-              $routeProvider
-                .when('/Book/:bookId', {
-                  templateUrl: 'book.html',
-                  controller: 'BookCtrl',
-                  controllerAs: 'book'
-                })
-                .when('/Book/:bookId/ch/:chapterId', {
-                  templateUrl: 'chapter.html',
-                  controller: 'ChapterCtrl',
-                  controllerAs: 'chapter'
-                });
-
-              $locationProvider.html5Mode(true);
-          }])
-          .controller('MainCtrl', ['$route', '$routeParams', '$location',
-            function($route, $routeParams, $location) {
-              this.$route = $route;
-              this.$location = $location;
-              this.$routeParams = $routeParams;
-          }])
-          .controller('BookCtrl', ['$routeParams', function($routeParams) {
-            this.name = "BookCtrl";
-            this.params = $routeParams;
-          }])
-          .controller('ChapterCtrl', ['$routeParams', function($routeParams) {
-            this.name = "ChapterCtrl";
-            this.params = $routeParams;
-          }]);
-
-      </file>
-
-      <file name="protractor.js" type="protractor">
-        it('should load and compile correct template', function() {
-          element(by.linkText('Moby: Ch1')).click();
-          var content = element(by.css('[ng-view]')).getText();
-          expect(content).toMatch(/controller\: ChapterCtrl/);
-          expect(content).toMatch(/Book Id\: Moby/);
-          expect(content).toMatch(/Chapter Id\: 1/);
-
-          element(by.partialLinkText('Scarlet')).click();
-
-          content = element(by.css('[ng-view]')).getText();
-          expect(content).toMatch(/controller\: BookCtrl/);
-          expect(content).toMatch(/Book Id\: Scarlet/);
-        });
-      </file>
-    </example>
- */
-
-
-/**
- * @ngdoc event
- * @name ngView#$viewContentLoaded
- * @eventType emit on the current ngView scope
- * @description
- * Emitted every time the ngView content is reloaded.
- */
-ngViewFactory.$inject = ['$route', '$anchorScroll', '$animate'];
-function ngViewFactory($route, $anchorScroll, $animate) {
-  return {
-    restrict: 'ECA',
-    terminal: true,
-    priority: 400,
-    transclude: 'element',
-    link: function(scope, $element, attr, ctrl, $transclude) {
-        var currentScope,
-            currentElement,
-            previousLeaveAnimation,
-            autoScrollExp = attr.autoscroll,
-            onloadExp = attr.onload || '';
-
-        scope.$on('$routeChangeSuccess', update);
-        update();
-
-        function cleanupLastView() {
-          if (previousLeaveAnimation) {
-            $animate.cancel(previousLeaveAnimation);
-            previousLeaveAnimation = null;
-          }
-
-          if (currentScope) {
-            currentScope.$destroy();
-            currentScope = null;
-          }
-          if (currentElement) {
-            previousLeaveAnimation = $animate.leave(currentElement);
-            previousLeaveAnimation.then(function() {
-              previousLeaveAnimation = null;
-            });
-            currentElement = null;
-          }
-        }
-
-        function update() {
-          var locals = $route.current && $route.current.locals,
-              template = locals && locals.$template;
-
-          if (angular.isDefined(template)) {
-            var newScope = scope.$new();
-            var current = $route.current;
-
-            // Note: This will also link all children of ng-view that were contained in the original
-            // html. If that content contains controllers, ... they could pollute/change the scope.
-            // However, using ng-view on an element with additional content does not make sense...
-            // Note: We can't remove them in the cloneAttchFn of $transclude as that
-            // function is called before linking the content, which would apply child
-            // directives to non existing elements.
-            var clone = $transclude(newScope, function(clone) {
-              $animate.enter(clone, null, currentElement || $element).then(function onNgViewEnter() {
-                if (angular.isDefined(autoScrollExp)
-                  && (!autoScrollExp || scope.$eval(autoScrollExp))) {
-                  $anchorScroll();
-                }
-              });
-              cleanupLastView();
-            });
-
-            currentElement = clone;
-            currentScope = current.scope = newScope;
-            currentScope.$emit('$viewContentLoaded');
-            currentScope.$eval(onloadExp);
-          } else {
-            cleanupLastView();
-          }
-        }
-    }
-  };
-}
-
-// This directive is called during the $transclude call of the first `ngView` directive.
-// It will replace and compile the content of the element with the loaded template.
-// We need this directive so that the element content is already filled when
-// the link function of another directive on the same element as ngView
-// is called.
-ngViewFillContentFactory.$inject = ['$compile', '$controller', '$route'];
-function ngViewFillContentFactory($compile, $controller, $route) {
-  return {
-    restrict: 'ECA',
-    priority: -400,
-    link: function(scope, $element) {
-      var current = $route.current,
-          locals = current.locals;
-
-      $element.html(locals.$template);
-
-      var link = $compile($element.contents());
-
-      if (current.controller) {
-        locals.$scope = scope;
-        var controller = $controller(current.controller, locals);
-        if (current.controllerAs) {
-          scope[current.controllerAs] = controller;
-        }
-        $element.data('$ngControllerController', controller);
-        $element.children().data('$ngControllerController', controller);
-      }
-
-      link(scope);
-    }
-  };
-}
-
-
-})(window, window.angular);
-
-/**
- * @license AngularJS v1.4.7
+ * @license AngularJS v1.4.8
  * (c) 2010-2015 Google, Inc. http://angularjs.org
  * License: MIT
  */
@@ -45403,7 +44214,7 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
 })(window, window.angular);
 
 /**
- * @license AngularJS v1.4.7
+ * @license AngularJS v1.4.8
  * (c) 2010-2015 Google, Inc. http://angularjs.org
  * License: MIT
  */
@@ -52765,3 +51576,24558 @@ angular.module('ui.router.state')
   .filter('isState', $IsStateFilter)
   .filter('includedByState', $IncludedByStateFilter);
 })(window, window.angular);
+//! api-check version 7.5.5 built with ♥ by Kent C. Dodds <kent@doddsfamily.us> (http://kent.doddsfamily.us) (ó ì_í)=óò=(ì_í ò)
+
+(function webpackUniversalModuleDefinition(root, factory) {
+	if(typeof exports === 'object' && typeof module === 'object')
+		module.exports = factory();
+	else if(typeof define === 'function' && define.amd)
+		define(factory);
+	else if(typeof exports === 'object')
+		exports["apiCheck"] = factory();
+	else
+		root["apiCheck"] = factory();
+})(this, function() {
+return /******/ (function(modules) { // webpackBootstrap
+/******/ 	// The module cache
+/******/ 	var installedModules = {};
+
+/******/ 	// The require function
+/******/ 	function __webpack_require__(moduleId) {
+
+/******/ 		// Check if module is in cache
+/******/ 		if(installedModules[moduleId])
+/******/ 			return installedModules[moduleId].exports;
+
+/******/ 		// Create a new module (and put it into the cache)
+/******/ 		var module = installedModules[moduleId] = {
+/******/ 			exports: {},
+/******/ 			id: moduleId,
+/******/ 			loaded: false
+/******/ 		};
+
+/******/ 		// Execute the module function
+/******/ 		modules[moduleId].call(module.exports, module, module.exports, __webpack_require__);
+
+/******/ 		// Flag the module as loaded
+/******/ 		module.loaded = true;
+
+/******/ 		// Return the exports of the module
+/******/ 		return module.exports;
+/******/ 	}
+
+
+/******/ 	// expose the modules object (__webpack_modules__)
+/******/ 	__webpack_require__.m = modules;
+
+/******/ 	// expose the module cache
+/******/ 	__webpack_require__.c = installedModules;
+
+/******/ 	// __webpack_public_path__
+/******/ 	__webpack_require__.p = "";
+
+/******/ 	// Load entry module and return exports
+/******/ 	return __webpack_require__(0);
+/******/ })
+/************************************************************************/
+/******/ ([
+/* 0 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	Object.defineProperty(exports, '__esModule', {
+	  value: true
+	});
+
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+
+	var _apiCheck = __webpack_require__(1);
+
+	var _apiCheck2 = _interopRequireDefault(_apiCheck);
+
+	exports['default'] = _apiCheck2['default'];
+	module.exports = exports['default'];
+
+/***/ },
+/* 1 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	var stringify = __webpack_require__(2);
+	var apiCheckUtil = __webpack_require__(3);
+	var each = apiCheckUtil.each;
+	var isError = apiCheckUtil.isError;
+	var t = apiCheckUtil.t;
+	var arrayify = apiCheckUtil.arrayify;
+	var getCheckerDisplay = apiCheckUtil.getCheckerDisplay;
+	var typeOf = apiCheckUtil.typeOf;
+	var getError = apiCheckUtil.getError;
+
+	var checkers = __webpack_require__(4);
+	var apiCheckApis = getApiCheckApis();
+
+	module.exports = getApiCheckInstance;
+	module.exports.VERSION = ("7.5.5");
+	module.exports.utils = apiCheckUtil;
+	module.exports.globalConfig = {
+	  verbose: false,
+	  disabled: false
+	};
+
+	var apiCheckApiCheck = getApiCheckInstance({
+	  output: { prefix: 'apiCheck' }
+	});
+	module.exports.internalChecker = apiCheckApiCheck;
+
+	each(checkers, function (checker, name) {
+	  return module.exports[name] = checker;
+	});
+
+	function getApiCheckInstance() {
+	  var config = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
+	  var extraCheckers = arguments.length <= 1 || arguments[1] === undefined ? {} : arguments[1];
+
+	  /* eslint complexity:[2, 6] */
+	  if (apiCheckApiCheck && arguments.length) {
+	    apiCheckApiCheck['throw'](apiCheckApis.getApiCheckInstanceCheckers, arguments, {
+	      prefix: 'creating an apiCheck instance'
+	    });
+	  }
+
+	  var additionalProperties = {
+	    'throw': getApiCheck(true),
+	    warn: getApiCheck(false),
+	    getErrorMessage: getErrorMessage,
+	    handleErrorMessage: handleErrorMessage,
+	    config: {
+	      output: config.output || {
+	        prefix: '',
+	        suffix: '',
+	        docsBaseUrl: ''
+	      },
+	      verbose: config.verbose || false,
+	      disabled: config.disabled || false
+	    },
+	    utils: apiCheckUtil
+	  };
+
+	  each(additionalProperties, function (wrapper, name) {
+	    return apiCheck[name] = wrapper;
+	  });
+
+	  var disabled = apiCheck.disabled || module.exports.globalConfig.disabled;
+	  each(checkers.getCheckers(disabled), function (checker, name) {
+	    return apiCheck[name] = checker;
+	  });
+	  each(extraCheckers, function (checker, name) {
+	    return apiCheck[name] = checker;
+	  });
+
+	  return apiCheck;
+
+	  /**
+	   * This is the instance function. Other things are attached to this see additional properties above.
+	   * @param {Array} api - the checkers to check with
+	   * @param {Array} args - the args to check
+	   * @param {Object} output - output options
+	   * @returns {Object} - if this has a failed = true property, then it failed
+	   */
+	  function apiCheck(api, args, output) {
+	    /* eslint complexity:[2, 8] */
+	    if (apiCheck.config.disabled || module.exports.globalConfig.disabled) {
+	      return {
+	        apiTypes: {}, argTypes: {},
+	        passed: true, message: '',
+	        failed: false
+	      }; // empty version of what is normally returned
+	    }
+	    checkApiCheckApi(arguments);
+	    if (!Array.isArray(api)) {
+	      api = [api];
+	      args = [args];
+	    } else {
+	      // turn arguments into an array
+	      args = Array.prototype.slice.call(args);
+	    }
+	    var messages = checkEnoughArgs(api, args);
+	    if (!messages.length) {
+	      // this is where we actually go perform the checks.
+	      messages = checkApiWithArgs(api, args);
+	    }
+
+	    var returnObject = getTypes(api, args);
+	    returnObject.args = args;
+	    if (messages.length) {
+	      returnObject.message = apiCheck.getErrorMessage(api, args, messages, output);
+	      returnObject.failed = true;
+	      returnObject.passed = false;
+	    } else {
+	      returnObject.message = '';
+	      returnObject.failed = false;
+	      returnObject.passed = true;
+	    }
+	    return returnObject;
+	  }
+
+	  /**
+	   * checkApiCheckApi, should be read like: check apiCheck api. As in, check the api for apiCheck :-)
+	   * @param {Array} checkApiArgs - args provided to apiCheck function
+	   */
+	  function checkApiCheckApi(checkApiArgs) {
+	    var api = checkApiArgs[0];
+	    var args = checkApiArgs[1];
+	    var isArrayOrArgs = Array.isArray(args) || args && typeof args === 'object' && typeof args.length === 'number';
+
+	    if (Array.isArray(api) && !isArrayOrArgs) {
+	      throw new Error(getErrorMessage(api, [args], ['If an array is provided for the api, an array must be provided for the args as well.'], { prefix: 'apiCheck' }));
+	    }
+	    // dog fooding here
+	    var errors = checkApiWithArgs(apiCheckApis.checkApiCheckApi, checkApiArgs);
+	    if (errors.length) {
+	      var message = apiCheck.getErrorMessage(apiCheckApis.checkApiCheckApi, checkApiArgs, errors, {
+	        prefix: 'apiCheck'
+	      });
+	      apiCheck.handleErrorMessage(message, true);
+	    }
+	  }
+
+	  function getApiCheck(shouldThrow) {
+	    return function apiCheckWrapper(api, args, output) {
+	      var result = apiCheck(api, args, output);
+	      apiCheck.handleErrorMessage(result.message, shouldThrow);
+	      return result; // wont get here if an error is thrown
+	    };
+	  }
+
+	  function handleErrorMessage(message, shouldThrow) {
+	    if (shouldThrow && message) {
+	      throw new Error(message);
+	    } else if (message) {
+	      /* eslint no-console:0 */
+	      console.warn(message);
+	    }
+	  }
+
+	  function getErrorMessage(api, args) {
+	    var messages = arguments.length <= 2 || arguments[2] === undefined ? [] : arguments[2];
+	    var output = arguments.length <= 3 || arguments[3] === undefined ? {} : arguments[3];
+
+	    var gOut = apiCheck.config.output || {};
+	    var prefix = getPrefix();
+	    var suffix = getSuffix();
+	    var url = getUrl();
+	    var message = 'apiCheck failed! ' + messages.join(', ');
+	    var passedAndShouldHavePassed = '\n\n' + buildMessageFromApiAndArgs(api, args);
+	    return (prefix + ' ' + message + ' ' + suffix + ' ' + (url || '') + passedAndShouldHavePassed).trim();
+
+	    function getPrefix() {
+	      var p = output.onlyPrefix;
+	      if (!p) {
+	        p = ((gOut.prefix || '') + ' ' + (output.prefix || '')).trim();
+	      }
+	      return p;
+	    }
+
+	    function getSuffix() {
+	      var s = output.onlySuffix;
+	      if (!s) {
+	        s = ((output.suffix || '') + ' ' + (gOut.suffix || '')).trim();
+	      }
+	      return s;
+	    }
+
+	    function getUrl() {
+	      var u = output.url;
+	      if (!u) {
+	        u = gOut.docsBaseUrl && output.urlSuffix && ('' + gOut.docsBaseUrl + output.urlSuffix).trim();
+	      }
+	      return u;
+	    }
+	  }
+
+	  function buildMessageFromApiAndArgs(api, args) {
+	    var _getTypes = getTypes(api, args);
+
+	    var apiTypes = _getTypes.apiTypes;
+	    var argTypes = _getTypes.argTypes;
+
+	    var copy = Array.prototype.slice.call(args || []);
+	    var replacedItems = [];
+	    replaceFunctionWithName(copy);
+	    var passedArgs = getObjectString(copy);
+	    argTypes = getObjectString(argTypes);
+	    apiTypes = getObjectString(apiTypes);
+
+	    return generateMessage();
+
+	    // functions
+
+	    function replaceFunctionWithName(obj) {
+	      each(obj, function (val, name) {
+	        /* eslint complexity:[2, 6] */
+	        if (replacedItems.indexOf(val) === -1) {
+	          // avoid recursive problems
+	          replacedItems.push(val);
+	          if (typeof val === 'object') {
+	            replaceFunctionWithName(obj);
+	          } else if (typeof val === 'function') {
+	            obj[name] = val.displayName || val.name || 'anonymous function';
+	          }
+	        }
+	      });
+	    }
+
+	    function getObjectString(types) {
+	      if (!types || !types.length) {
+	        return 'nothing';
+	      } else if (types && types.length === 1) {
+	        types = types[0];
+	      }
+	      return stringify(types, null, 2);
+	    }
+
+	    function generateMessage() {
+	      var n = '\n';
+	      var useS = true;
+	      if (args && args.length === 1) {
+	        if (typeof args[0] === 'object' && args[0] !== null) {
+	          useS = !!Object.keys(args[0]).length;
+	        } else {
+	          useS = false;
+	        }
+	      }
+	      var types = 'type' + (useS ? 's' : '');
+	      var newLine = n + n;
+	      return 'You passed:' + n + passedArgs + newLine + ('With the ' + types + ':' + n + argTypes + newLine) + ('The API calls for:' + n + apiTypes);
+	    }
+	  }
+
+	  function getTypes(api, args) {
+	    api = arrayify(api);
+	    args = arrayify(args);
+	    var apiTypes = api.map(function (checker, index) {
+	      var specified = module.exports.globalConfig.hasOwnProperty('verbose');
+	      return getCheckerDisplay(checker, {
+	        terse: specified ? !module.exports.globalConfig.verbose : !apiCheck.config.verbose,
+	        obj: args[index],
+	        addHelpers: true
+	      });
+	    });
+	    var argTypes = args.map(function (arg) {
+	      return getArgDisplay(arg, []);
+	    });
+	    return { argTypes: argTypes, apiTypes: apiTypes };
+	  }
+	}
+
+	// STATELESS FUNCTIONS
+
+	/**
+	 * This is where the magic happens for actually checking the arguments with the api.
+	 * @param {Array} api - checkers
+	 * @param  {Array} args - and arguments object
+	 * @returns {Array} - the error messages
+	 */
+	function checkApiWithArgs(api, args) {
+	  /* eslint complexity:[2, 7] */
+	  var messages = [];
+	  var failed = false;
+	  var checkerIndex = 0;
+	  var argIndex = 0;
+	  var arg = undefined,
+	      checker = undefined,
+	      res = undefined,
+	      lastChecker = undefined,
+	      argName = undefined,
+	      argFailed = undefined,
+	      skipPreviousChecker = undefined;
+	  /* jshint -W084 */
+	  while ((checker = api[checkerIndex++]) && argIndex < args.length) {
+	    arg = args[argIndex++];
+	    argName = 'Argument ' + argIndex + (checker.isOptional ? ' (optional)' : '');
+	    res = checker(arg, 'value', argName);
+	    argFailed = isError(res);
+	    lastChecker = checkerIndex >= api.length;
+	    skipPreviousChecker = checkerIndex > 1 && api[checkerIndex - 1].isOptional;
+	    if (argFailed && lastChecker || argFailed && !lastChecker && !checker.isOptional && !skipPreviousChecker) {
+	      failed = true;
+	      messages.push(getCheckerErrorMessage(res, checker, arg));
+	    } else if (argFailed && checker.isOptional) {
+	      argIndex--;
+	    } else {
+	      messages.push(t(argName) + ' passed');
+	    }
+	  }
+	  return failed ? messages : [];
+	}
+
+	checkerTypeType.type = 'function with __apiCheckData property and `${function.type}` property';
+	function checkerTypeType(checkerType, name, location) {
+	  var apiCheckDataChecker = checkers.shape({
+	    type: checkers.string,
+	    optional: checkers.bool
+	  });
+	  var asFunc = checkers.func.withProperties({ __apiCheckData: apiCheckDataChecker });
+	  var asShape = checkers.shape({ __apiCheckData: apiCheckDataChecker });
+	  var wrongShape = checkers.oneOfType([asFunc, asShape])(checkerType, name, location);
+	  if (isError(wrongShape)) {
+	    return wrongShape;
+	  }
+	  if (typeof checkerType !== 'function' && !checkerType.hasOwnProperty(checkerType.__apiCheckData.type)) {
+	    return getError(name, location, checkerTypeType.type);
+	  }
+	}
+
+	function getCheckerErrorMessage(res, checker, val) {
+	  var checkerHelp = getCheckerHelp(checker, val);
+	  checkerHelp = checkerHelp ? ' - ' + checkerHelp : '';
+	  return res.message + checkerHelp;
+	}
+
+	function getCheckerHelp(_ref, val) {
+	  var help = _ref.help;
+
+	  if (!help) {
+	    return '';
+	  }
+	  if (typeof help === 'function') {
+	    help = help(val);
+	  }
+	  return help;
+	}
+
+	function checkEnoughArgs(api, args) {
+	  var requiredArgs = api.filter(function (a) {
+	    return !a.isOptional;
+	  });
+	  if (args.length < requiredArgs.length) {
+	    return ['Not enough arguments specified. Requires `' + requiredArgs.length + '`, you passed `' + args.length + '`'];
+	  } else {
+	    return [];
+	  }
+	}
+
+	function getArgDisplay(arg, gottenArgs) {
+	  /* eslint complexity:[2, 7] */
+	  var cName = arg && arg.constructor && arg.constructor.name;
+	  var type = typeOf(arg);
+	  if (type === 'function') {
+	    if (hasKeys()) {
+	      var properties = stringify(getDisplayIfNotGotten());
+	      return cName + ' (with properties: ' + properties + ')';
+	    }
+	    return cName;
+	  }
+
+	  if (arg === null) {
+	    return 'null';
+	  }
+
+	  if (type !== 'array' && type !== 'object') {
+	    return type;
+	  }
+
+	  if (hasKeys()) {
+	    return getDisplayIfNotGotten();
+	  }
+
+	  return cName;
+
+	  // utility functions
+	  function hasKeys() {
+	    return arg && Object.keys(arg).length;
+	  }
+
+	  function getDisplayIfNotGotten() {
+	    if (gottenArgs.indexOf(arg) !== -1) {
+	      return '[Circular]';
+	    }
+	    gottenArgs.push(arg);
+	    return getDisplay(arg, gottenArgs);
+	  }
+	}
+
+	function getDisplay(obj, gottenArgs) {
+	  var argDisplay = {};
+	  each(obj, function (v, k) {
+	    return argDisplay[k] = getArgDisplay(v, gottenArgs);
+	  });
+	  return argDisplay;
+	}
+
+	function getApiCheckApis() {
+	  var os = checkers.string.optional;
+
+	  var checkerFnChecker = checkers.func.withProperties({
+	    type: checkers.oneOfType([checkers.string, checkerTypeType]).optional,
+	    displayName: checkers.string.optional,
+	    shortType: checkers.string.optional,
+	    notOptional: checkers.bool.optional,
+	    notRequired: checkers.bool.optional
+	  });
+
+	  var getApiCheckInstanceCheckers = [checkers.shape({
+	    output: checkers.shape({
+	      prefix: checkers.string.optional,
+	      suffix: checkers.string.optional,
+	      docsBaseUrl: checkers.string.optional
+	    }).strict.optional,
+	    verbose: checkers.bool.optional,
+	    disabled: checkers.bool.optional
+	  }).strict.optional, checkers.objectOf(checkerFnChecker).optional];
+
+	  var checkApiCheckApi = [checkers.typeOrArrayOf(checkerFnChecker), checkers.any.optional, checkers.shape({
+	    prefix: os, suffix: os, urlSuffix: os, // appended case
+	    onlyPrefix: os, onlySuffix: os, url: os // override case
+	  }).strict.optional];
+
+	  return {
+	    checkerFnChecker: checkerFnChecker,
+	    getApiCheckInstanceCheckers: getApiCheckInstanceCheckers,
+	    checkApiCheckApi: checkApiCheckApi
+	  };
+	}
+
+/***/ },
+/* 2 */
+/***/ function(module, exports) {
+
+	module.exports = stringify;
+
+	function getSerialize (fn, decycle) {
+	  var seen = [], keys = [];
+	  decycle = decycle || function(key, value) {
+	    return '[Circular ' + getPath(value, seen, keys) + ']'
+	  };
+	  return function(key, value) {
+	    var ret = value;
+	    if (typeof value === 'object' && value) {
+	      if (seen.indexOf(value) !== -1)
+	        ret = decycle(key, value);
+	      else {
+	        seen.push(value);
+	        keys.push(key);
+	      }
+	    }
+	    if (fn) ret = fn(key, ret);
+	    return ret;
+	  }
+	}
+
+	function getPath (value, seen, keys) {
+	  var index = seen.indexOf(value);
+	  var path = [ keys[index] ];
+	  for (index--; index >= 0; index--) {
+	    if (seen[index][ path[0] ] === value) {
+	      value = seen[index];
+	      path.unshift(keys[index]);
+	    }
+	  }
+	  return '~' + path.join('.');
+	}
+
+	function stringify(obj, fn, spaces, decycle) {
+	  return JSON.stringify(obj, getSerialize(fn, decycle), spaces);
+	}
+
+	stringify.getSerialize = getSerialize;
+
+
+/***/ },
+/* 3 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
+	var stringify = __webpack_require__(2);
+	var checkerHelpers = {
+	  addOptional: addOptional, getRequiredVersion: getRequiredVersion, setupChecker: setupChecker, addNullable: addNullable
+	};
+
+	module.exports = {
+	  each: each, copy: copy, typeOf: typeOf, arrayify: arrayify, getCheckerDisplay: getCheckerDisplay,
+	  isError: isError, list: list, getError: getError, nAtL: nAtL, t: t, undef: undef, checkerHelpers: checkerHelpers,
+	  noop: noop
+	};
+
+	function copy(obj) {
+	  var type = typeOf(obj);
+	  var daCopy = undefined;
+	  if (type === 'array') {
+	    daCopy = [];
+	  } else if (type === 'object') {
+	    daCopy = {};
+	  } else {
+	    return obj;
+	  }
+	  each(obj, function (val, key) {
+	    daCopy[key] = val; // cannot single-line this because we don't want to abort the each
+	  });
+	  return daCopy;
+	}
+
+	function typeOf(obj) {
+	  if (Array.isArray(obj)) {
+	    return 'array';
+	  } else if (obj instanceof RegExp) {
+	    return 'object';
+	  } else {
+	    return typeof obj;
+	  }
+	}
+
+	function getCheckerDisplay(checker, options) {
+	  /* eslint complexity:[2, 7] */
+	  var display = undefined;
+	  var short = options && options.short;
+	  if (short && checker.shortType) {
+	    display = checker.shortType;
+	  } else if (!short && typeof checker.type === 'object' || checker.type === 'function') {
+	    display = getCheckerType(checker, options);
+	  } else {
+	    display = getCheckerType(checker, options) || checker.displayName || checker.name;
+	  }
+	  return display;
+	}
+
+	function getCheckerType(_ref, options) {
+	  var type = _ref.type;
+
+	  if (typeof type === 'function') {
+	    var __apiCheckData = type.__apiCheckData;
+	    var typeTypes = type(options);
+	    type = _defineProperty({
+	      __apiCheckData: __apiCheckData
+	    }, __apiCheckData.type, typeTypes);
+	  }
+	  return type;
+	}
+
+	function arrayify(obj) {
+	  if (!obj) {
+	    return [];
+	  } else if (Array.isArray(obj)) {
+	    return obj;
+	  } else {
+	    return [obj];
+	  }
+	}
+
+	function each(obj, iterator, context) {
+	  if (Array.isArray(obj)) {
+	    return eachArry(obj, iterator, context);
+	  } else {
+	    return eachObj(obj, iterator, context);
+	  }
+	}
+
+	function eachObj(obj, iterator, context) {
+	  var ret = undefined;
+	  var hasOwn = Object.prototype.hasOwnProperty;
+	  /* eslint prefer-const:0 */ // some weird eslint bug?
+	  for (var key in obj) {
+	    if (hasOwn.call(obj, key)) {
+	      ret = iterator.call(context, obj[key], key, obj);
+	      if (ret === false) {
+	        return ret;
+	      }
+	    }
+	  }
+	  return true;
+	}
+
+	function eachArry(obj, iterator, context) {
+	  var ret = undefined;
+	  var length = obj.length;
+	  for (var i = 0; i < length; i++) {
+	    ret = iterator.call(context, obj[i], i, obj);
+	    if (ret === false) {
+	      return ret;
+	    }
+	  }
+	  return true;
+	}
+
+	function isError(obj) {
+	  return obj instanceof Error;
+	}
+
+	function list(arry, join, finalJoin) {
+	  arry = arrayify(arry);
+	  var copy = arry.slice();
+	  var last = copy.pop();
+	  if (copy.length === 1) {
+	    join = ' ';
+	  }
+	  return copy.join(join) + ('' + (copy.length ? join + finalJoin : '') + last);
+	}
+
+	function getError(name, location, checkerType) {
+	  if (typeof checkerType === 'function') {
+	    checkerType = checkerType({ short: true });
+	  }
+	  var stringType = typeof checkerType !== 'object' ? checkerType : stringify(checkerType);
+	  return new Error(nAtL(name, location) + ' must be ' + t(stringType));
+	}
+
+	function nAtL(name, location) {
+	  var tName = t(name || 'value');
+	  var tLocation = !location ? '' : ' at ' + t(location);
+	  return '' + tName + tLocation;
+	}
+
+	function t(thing) {
+	  return '`' + thing + '`';
+	}
+
+	function undef(thing) {
+	  return typeof thing === 'undefined';
+	}
+
+	/**
+	 * This will set up the checker with all of the defaults that most checkers want like required by default and an
+	 * optional version
+	 *
+	 * @param {Function} checker - the checker to setup with properties
+	 * @param {Object} properties - properties to add to the checker
+	 * @param {boolean} disabled - when set to true, this will set the checker to a no-op function
+	 * @returns {Function} checker - the setup checker
+	 */
+	function setupChecker(checker, properties, disabled) {
+	  /* eslint complexity:[2, 9] */
+	  if (disabled) {
+	    // swap out the checker for its own copy of noop
+	    checker = getNoop();
+	    checker.isNoop = true;
+	  }
+
+	  if (typeof checker.type === 'string') {
+	    checker.shortType = checker.type;
+	  }
+
+	  // assign all properties given
+	  each(properties, function (prop, name) {
+	    return checker[name] = prop;
+	  });
+
+	  if (!checker.displayName) {
+	    checker.displayName = 'apiCheck ' + t(checker.shortType || checker.type || checker.name) + ' type checker';
+	  }
+
+	  if (!checker.notRequired) {
+	    checker = getRequiredVersion(checker, disabled);
+	  }
+
+	  if (!checker.notNullable) {
+	    addNullable(checker, disabled);
+	  }
+
+	  if (!checker.notOptional) {
+	    addOptional(checker, disabled);
+	  }
+
+	  return checker;
+	}
+
+	function getRequiredVersion(checker, disabled) {
+	  var requiredChecker = disabled ? getNoop() : function requiredChecker(val, name, location, obj) {
+	    if (undef(val) && !checker.isOptional) {
+	      var tLocation = location ? ' in ' + t(location) : '';
+	      var type = getCheckerDisplay(checker, { short: true });
+	      var stringType = typeof type !== 'object' ? type : stringify(type);
+	      return new Error('Required ' + t(name) + ' not specified' + tLocation + '. Must be ' + t(stringType));
+	    } else {
+	      return checker(val, name, location, obj);
+	    }
+	  };
+	  copyProps(checker, requiredChecker);
+	  requiredChecker.originalChecker = checker;
+	  return requiredChecker;
+	}
+
+	function addOptional(checker, disabled) {
+	  var optionalCheck = disabled ? getNoop() : function optionalCheck(val, name, location, obj) {
+	    if (!undef(val)) {
+	      return checker(val, name, location, obj);
+	    }
+	  };
+	  // inherit all properties on the original checker
+	  copyProps(checker, optionalCheck);
+
+	  optionalCheck.isOptional = true;
+	  optionalCheck.displayName = checker.displayName + ' (optional)';
+	  optionalCheck.originalChecker = checker;
+
+	  // the magic line that allows you to add .optional to the end of the checkers
+	  checker.optional = optionalCheck;
+
+	  fixType(checker, checker.optional);
+	}
+
+	function addNullable(checker, disabled) {
+	  var nullableCheck = disabled ? getNoop() : function nullableCheck(val, name, location, obj) {
+	    if (val !== null) {
+	      return checker(val, name, location, obj);
+	    }
+	  };
+	  // inherit all properties on the original checker
+	  copyProps(checker, nullableCheck);
+
+	  nullableCheck.isNullable = true;
+	  nullableCheck.displayName = checker.displayName + ' (nullable)';
+	  nullableCheck.originalChecker = checker;
+
+	  // the magic line that allows you to add .nullable to the end of the checkers
+	  checker.nullable = nullableCheck;
+
+	  fixType(checker, checker.nullable);
+	  if (!checker.notOptional) {
+	    addOptional(checker.nullable, disabled);
+	  }
+	}
+
+	function fixType(checker, checkerCopy) {
+	  // fix type, because it's not a straight copy...
+	  // the reason is we need to specify type.__apiCheckData.optional as true for the terse/verbose option.
+	  // we also want to add "(optional)" to the types with a string
+	  if (typeof checkerCopy.type === 'object') {
+	    checkerCopy.type = copy(checkerCopy.type); // make our own copy of this
+	  } else if (typeof checkerCopy.type === 'function') {
+	      checkerCopy.type = function () {
+	        return checker.type.apply(checker, arguments);
+	      };
+	    } else {
+	      checkerCopy.type += ' (optional)';
+	      return;
+	    }
+	  checkerCopy.type.__apiCheckData = copy(checker.type.__apiCheckData) || {}; // and this
+	  checkerCopy.type.__apiCheckData.optional = true;
+	}
+
+	// UTILS
+
+	function copyProps(src, dest) {
+	  each(Object.keys(src), function (key) {
+	    return dest[key] = src[key];
+	  });
+	}
+
+	function noop() {}
+
+	function getNoop() {
+	  /* eslint no-shadow:0 */
+	  /* istanbul ignore next */
+	  return function noop() {};
+	}
+
+/***/ },
+/* 4 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	var stringify = __webpack_require__(2);
+
+	var _require = __webpack_require__(3);
+
+	var typeOf = _require.typeOf;
+	var each = _require.each;
+	var copy = _require.copy;
+	var getCheckerDisplay = _require.getCheckerDisplay;
+	var isError = _require.isError;
+	var arrayify = _require.arrayify;
+	var list = _require.list;
+	var getError = _require.getError;
+	var nAtL = _require.nAtL;
+	var t = _require.t;
+	var checkerHelpers = _require.checkerHelpers;
+	var undef = _require.undef;
+	var setupChecker = checkerHelpers.setupChecker;
+
+	var checkers = module.exports = getCheckers();
+	module.exports.getCheckers = getCheckers;
+
+	function getCheckers(disabled) {
+	  return {
+	    array: typeOfCheckGetter('Array'),
+	    bool: typeOfCheckGetter('Boolean'),
+	    number: typeOfCheckGetter('Number'),
+	    string: typeOfCheckGetter('String'),
+	    func: funcCheckGetter(),
+	    object: objectCheckGetter(),
+
+	    emptyObject: emptyObjectCheckGetter(),
+
+	    instanceOf: instanceCheckGetter,
+	    oneOf: oneOfCheckGetter,
+	    oneOfType: oneOfTypeCheckGetter,
+
+	    arrayOf: arrayOfCheckGetter,
+	    objectOf: objectOfCheckGetter,
+	    typeOrArrayOf: typeOrArrayOfCheckGetter,
+
+	    range: rangeCheckGetter,
+	    lessThan: lessThanCheckGetter,
+	    greaterThan: greaterThanCheckGetter,
+
+	    shape: getShapeCheckGetter(),
+	    args: argumentsCheckerGetter(),
+
+	    any: anyCheckGetter(),
+	    'null': nullCheckGetter()
+
+	  };
+
+	  function typeOfCheckGetter(type) {
+	    var lType = type.toLowerCase();
+	    return setupChecker(function typeOfCheckerDefinition(val, name, location) {
+	      if (typeOf(val) !== lType) {
+	        return getError(name, location, type);
+	      }
+	    }, { type: type }, disabled);
+	  }
+
+	  function funcCheckGetter() {
+	    var type = 'Function';
+	    var functionChecker = setupChecker(function functionCheckerDefinition(val, name, location) {
+	      if (typeOf(val) !== 'function') {
+	        return getError(name, location, type);
+	      }
+	    }, { type: type }, disabled);
+
+	    functionChecker.withProperties = function getWithPropertiesChecker(properties) {
+	      var apiError = checkers.objectOf(checkers.func)(properties, 'properties', 'apiCheck.func.withProperties');
+	      if (isError(apiError)) {
+	        throw apiError;
+	      }
+	      var shapeChecker = checkers.shape(properties, true);
+	      shapeChecker.type.__apiCheckData.type = 'func.withProperties';
+
+	      return setupChecker(function functionWithPropertiesChecker(val, name, location) {
+	        var notFunction = checkers.func(val, name, location);
+	        if (isError(notFunction)) {
+	          return notFunction;
+	        }
+	        return shapeChecker(val, name, location);
+	      }, { type: shapeChecker.type, shortType: 'func.withProperties' }, disabled);
+	    };
+	    return functionChecker;
+	  }
+
+	  function objectCheckGetter() {
+	    var type = 'Object';
+	    var nullType = 'Object (null ok)';
+	    var objectNullOkChecker = setupChecker(function objectNullOkCheckerDefinition(val, name, location) {
+	      if (typeOf(val) !== 'object') {
+	        return getError(name, location, nullType);
+	      }
+	    }, { type: nullType }, disabled);
+
+	    var objectChecker = setupChecker(function objectCheckerDefinition(val, name, location) {
+	      if (val === null || isError(objectNullOkChecker(val, name, location))) {
+	        return getError(name, location, objectChecker.type);
+	      }
+	    }, { type: type, nullOk: objectNullOkChecker }, disabled);
+
+	    return objectChecker;
+	  }
+
+	  function instanceCheckGetter(classToCheck) {
+	    return setupChecker(function instanceCheckerDefinition(val, name, location) {
+	      if (!(val instanceof classToCheck)) {
+	        return getError(name, location, classToCheck.name);
+	      }
+	    }, { type: classToCheck.name }, disabled);
+	  }
+
+	  function oneOfCheckGetter(enums) {
+	    var type = {
+	      __apiCheckData: { optional: false, type: 'enum' },
+	      'enum': enums
+	    };
+	    var shortType = 'oneOf[' + enums.map(function (enm) {
+	      return stringify(enm);
+	    }).join(', ') + ']';
+	    return setupChecker(function oneOfCheckerDefinition(val, name, location) {
+	      if (!enums.some(function (enm) {
+	        return enm === val;
+	      })) {
+	        return getError(name, location, shortType);
+	      }
+	    }, { type: type, shortType: shortType }, disabled);
+	  }
+
+	  function oneOfTypeCheckGetter(typeCheckers) {
+	    var checkersDisplay = typeCheckers.map(function (checker) {
+	      return getCheckerDisplay(checker, { short: true });
+	    });
+	    var shortType = 'oneOfType[' + checkersDisplay.join(', ') + ']';
+	    function type(options) {
+	      if (options && options.short) {
+	        return shortType;
+	      }
+	      return typeCheckers.map(function (checker) {
+	        return getCheckerDisplay(checker, options);
+	      });
+	    }
+	    type.__apiCheckData = { optional: false, type: 'oneOfType' };
+	    return setupChecker(function oneOfTypeCheckerDefinition(val, name, location) {
+	      if (!typeCheckers.some(function (checker) {
+	        return !isError(checker(val, name, location));
+	      })) {
+	        return getError(name, location, shortType);
+	      }
+	    }, { type: type, shortType: shortType }, disabled);
+	  }
+
+	  function arrayOfCheckGetter(checker) {
+	    var shortCheckerDisplay = getCheckerDisplay(checker, { short: true });
+	    var shortType = 'arrayOf[' + shortCheckerDisplay + ']';
+
+	    function type(options) {
+	      if (options && options.short) {
+	        return shortType;
+	      }
+	      return getCheckerDisplay(checker, options);
+	    }
+	    type.__apiCheckData = { optional: false, type: 'arrayOf' };
+
+	    return setupChecker(function arrayOfCheckerDefinition(val, name, location) {
+	      if (isError(checkers.array(val)) || !val.every(function (item) {
+	        return !isError(checker(item));
+	      })) {
+	        return getError(name, location, shortType);
+	      }
+	    }, { type: type, shortType: shortType }, disabled);
+	  }
+
+	  function objectOfCheckGetter(checker) {
+	    var checkerDisplay = getCheckerDisplay(checker, { short: true });
+	    var shortType = 'objectOf[' + checkerDisplay + ']';
+
+	    function type(options) {
+	      if (options && options.short) {
+	        return shortType;
+	      }
+	      return getCheckerDisplay(checker, options);
+	    }
+	    type.__apiCheckData = { optional: false, type: 'objectOf' };
+
+	    return setupChecker(function objectOfCheckerDefinition(val, name, location) {
+	      var notObject = checkers.object(val, name, location);
+	      if (isError(notObject)) {
+	        return notObject;
+	      }
+	      var allTypesSuccess = each(val, function (item, key) {
+	        if (isError(checker(item, key, name))) {
+	          return false;
+	        }
+	      });
+	      if (!allTypesSuccess) {
+	        return getError(name, location, shortType);
+	      }
+	    }, { type: type, shortType: shortType }, disabled);
+	  }
+
+	  function typeOrArrayOfCheckGetter(checker) {
+	    var checkerDisplay = getCheckerDisplay(checker, { short: true });
+	    var shortType = 'typeOrArrayOf[' + checkerDisplay + ']';
+
+	    function type(options) {
+	      if (options && options.short) {
+	        return shortType;
+	      }
+	      return getCheckerDisplay(checker, options);
+	    }
+
+	    type.__apiCheckData = { optional: false, type: 'typeOrArrayOf' };
+	    return setupChecker(function typeOrArrayOfDefinition(val, name, location, obj) {
+	      if (isError(checkers.oneOfType([checker, checkers.arrayOf(checker)])(val, name, location, obj))) {
+	        return getError(name, location, shortType);
+	      }
+	    }, { type: type, shortType: shortType }, disabled);
+	  }
+
+	  function getShapeCheckGetter() {
+	    function shapeCheckGetter(shape, nonObject) {
+	      var shapeTypes = {};
+	      each(shape, function (checker, prop) {
+	        shapeTypes[prop] = getCheckerDisplay(checker);
+	      });
+	      function type() {
+	        var options = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
+
+	        var ret = {};
+	        var terse = options.terse;
+	        var obj = options.obj;
+	        var addHelpers = options.addHelpers;
+
+	        var parentRequired = options.required;
+	        each(shape, function (checker, prop) {
+	          /* eslint complexity:[2, 6] */
+	          var specified = obj && obj.hasOwnProperty(prop);
+	          var required = undef(parentRequired) ? !checker.isOptional : parentRequired;
+	          if (!terse || (specified || !checker.isOptional)) {
+	            ret[prop] = getCheckerDisplay(checker, { terse: terse, obj: obj && obj[prop], required: required, addHelpers: addHelpers });
+	          }
+	          if (addHelpers) {
+	            modifyTypeDisplayToHelpOut(ret, prop, specified, checker, required);
+	          }
+	        });
+	        return ret;
+
+	        function modifyTypeDisplayToHelpOut(theRet, prop, specified, checker, required) {
+	          if (!specified && required && !checker.isOptional) {
+	            var item = 'ITEM';
+	            if (checker.type && checker.type.__apiCheckData) {
+	              item = checker.type.__apiCheckData.type.toUpperCase();
+	            }
+	            addHelper('missing', 'MISSING THIS ' + item, ' <-- YOU ARE MISSING THIS');
+	          } else if (specified) {
+	            var error = checker(obj[prop], prop, null, obj);
+	            if (isError(error)) {
+	              addHelper('error', 'THIS IS THE PROBLEM: ' + error.message, ' <-- THIS IS THE PROBLEM: ' + error.message);
+	            }
+	          }
+
+	          function addHelper(property, objectMessage, stringMessage) {
+	            if (typeof theRet[prop] === 'string') {
+	              theRet[prop] += stringMessage;
+	            } else {
+	              theRet[prop].__apiCheckData[property] = objectMessage;
+	            }
+	          }
+	        }
+	      }
+
+	      type.__apiCheckData = { strict: false, optional: false, type: 'shape' };
+	      var shapeChecker = setupChecker(function shapeCheckerDefinition(val, name, location) {
+	        /* eslint complexity:[2, 6] */
+	        var isObject = !nonObject && checkers.object(val, name, location);
+	        if (isError(isObject)) {
+	          return isObject;
+	        }
+	        var shapePropError = undefined;
+	        location = location ? location + (name ? '/' : '') : '';
+	        name = name || '';
+	        each(shape, function (checker, prop) {
+	          if (val.hasOwnProperty(prop) || !checker.isOptional) {
+	            shapePropError = checker(val[prop], prop, '' + location + name, val);
+	            return !isError(shapePropError);
+	          }
+	        });
+	        if (isError(shapePropError)) {
+	          return shapePropError;
+	        }
+	      }, { type: type, shortType: 'shape' }, disabled);
+
+	      function strictType() {
+	        return type.apply(undefined, arguments);
+	      }
+
+	      strictType.__apiCheckData = copy(shapeChecker.type.__apiCheckData);
+	      strictType.__apiCheckData.strict = true;
+	      shapeChecker.strict = setupChecker(function strictShapeCheckerDefinition(val, name, location) {
+	        var shapeError = shapeChecker(val, name, location);
+	        if (isError(shapeError)) {
+	          return shapeError;
+	        }
+	        var allowedProperties = Object.keys(shape);
+	        var extraProps = Object.keys(val).filter(function (prop) {
+	          return allowedProperties.indexOf(prop) === -1;
+	        });
+	        if (extraProps.length) {
+	          return new Error(nAtL(name, location) + ' cannot have extra properties: ' + t(extraProps.join('`, `')) + '.' + ('It is limited to ' + t(allowedProperties.join('`, `'))));
+	        }
+	      }, { type: strictType, shortType: 'strict shape' }, disabled);
+
+	      return shapeChecker;
+	    }
+
+	    shapeCheckGetter.ifNot = function ifNot(otherProps, propChecker) {
+	      if (!Array.isArray(otherProps)) {
+	        otherProps = [otherProps];
+	      }
+	      var description = undefined;
+	      if (otherProps.length === 1) {
+	        description = 'specified only if ' + otherProps[0] + ' is not specified';
+	      } else {
+	        description = 'specified only if none of the following are specified: [' + list(otherProps, ', ', 'and ') + ']';
+	      }
+	      var shortType = 'ifNot[' + otherProps.join(', ') + ']';
+	      var type = getTypeForShapeChild(propChecker, description, shortType);
+	      return setupChecker(function ifNotChecker(prop, propName, location, obj) {
+	        var propExists = obj && obj.hasOwnProperty(propName);
+	        var otherPropsExist = otherProps.some(function (otherProp) {
+	          return obj && obj.hasOwnProperty(otherProp);
+	        });
+	        if (propExists === otherPropsExist) {
+	          return getError(propName, location, type);
+	        } else if (propExists) {
+	          return propChecker(prop, propName, location, obj);
+	        }
+	      }, { notRequired: true, type: type, shortType: shortType }, disabled);
+	    };
+
+	    shapeCheckGetter.onlyIf = function onlyIf(otherProps, propChecker) {
+	      otherProps = arrayify(otherProps);
+	      var description = undefined;
+	      if (otherProps.length === 1) {
+	        description = 'specified only if ' + otherProps[0] + ' is also specified';
+	      } else {
+	        description = 'specified only if all of the following are specified: [' + list(otherProps, ', ', 'and ') + ']';
+	      }
+	      var shortType = 'onlyIf[' + otherProps.join(', ') + ']';
+	      var type = getTypeForShapeChild(propChecker, description, shortType);
+	      return setupChecker(function onlyIfCheckerDefinition(prop, propName, location, obj) {
+	        var othersPresent = otherProps.every(function (property) {
+	          return obj.hasOwnProperty(property);
+	        });
+	        if (!othersPresent) {
+	          return getError(propName, location, type);
+	        } else {
+	          return propChecker(prop, propName, location, obj);
+	        }
+	      }, { type: type, shortType: shortType }, disabled);
+	    };
+
+	    shapeCheckGetter.requiredIfNot = function shapeRequiredIfNot(otherProps, propChecker) {
+	      if (!Array.isArray(otherProps)) {
+	        otherProps = [otherProps];
+	      }
+	      return getRequiredIfNotChecker(false, otherProps, propChecker);
+	    };
+
+	    shapeCheckGetter.requiredIfNot.all = function shapeRequiredIfNotAll(otherProps, propChecker) {
+	      if (!Array.isArray(otherProps)) {
+	        throw new Error('requiredIfNot.all must be passed an array');
+	      }
+	      return getRequiredIfNotChecker(true, otherProps, propChecker);
+	    };
+
+	    function getRequiredIfNotChecker(all, otherProps, propChecker) {
+	      var props = t(otherProps.join(', '));
+	      var ifProps = 'if ' + (all ? 'all of' : 'at least one of');
+	      var description = 'specified ' + ifProps + ' these are not specified: ' + props + ' (otherwise it\'s optional)';
+	      var shortType = 'requiredIfNot' + (all ? '.all' : '') + '[' + otherProps.join(', ') + '}]';
+	      var type = getTypeForShapeChild(propChecker, description, shortType);
+	      return setupChecker(function shapeRequiredIfNotDefinition(prop, propName, location, obj) {
+	        var propExists = obj && obj.hasOwnProperty(propName);
+	        var iteration = all ? 'every' : 'some';
+	        var otherPropsExist = otherProps[iteration](function (otherProp) {
+	          return obj && obj.hasOwnProperty(otherProp);
+	        });
+	        if (!otherPropsExist && !propExists) {
+	          return getError(propName, location, type);
+	        } else if (propExists) {
+	          return propChecker(prop, propName, location, obj);
+	        }
+	      }, { type: type, notRequired: true }, disabled);
+	    }
+
+	    return shapeCheckGetter;
+
+	    function getTypeForShapeChild(propChecker, description, shortType) {
+	      function type(options) {
+	        if (options && options.short) {
+	          return shortType;
+	        }
+	        return getCheckerDisplay(propChecker);
+	      }
+	      type.__apiCheckData = { optional: false, type: 'ifNot', description: description };
+	      return type;
+	    }
+	  }
+
+	  function argumentsCheckerGetter() {
+	    var type = 'function arguments';
+	    return setupChecker(function argsCheckerDefinition(val, name, location) {
+	      if (Array.isArray(val) || isError(checkers.object(val)) || isError(checkers.number(val.length))) {
+	        return getError(name, location, type);
+	      }
+	    }, { type: type }, disabled);
+	  }
+
+	  function anyCheckGetter() {
+	    return setupChecker(function anyCheckerDefinition() {
+	      // don't do anything
+	    }, { type: 'any' }, disabled);
+	  }
+
+	  function nullCheckGetter() {
+	    var type = 'null';
+	    return setupChecker(function nullChecker(val, name, location) {
+	      if (val !== null) {
+	        return getError(name, location, type);
+	      }
+	    }, { type: type }, disabled);
+	  }
+
+	  function rangeCheckGetter(min, max) {
+	    var type = 'Range (' + min + ' - ' + max + ')';
+	    return setupChecker(function rangeChecker(val, name, location) {
+	      if (typeof val !== 'number' || val < min || val > max) {
+	        return getError(name, location, type);
+	      }
+	    }, { type: type }, disabled);
+	  }
+
+	  function lessThanCheckGetter(min) {
+	    var type = 'lessThan[' + min + ']';
+	    return setupChecker(function lessThanChecker(val, name, location) {
+	      if (typeof val !== 'number' || val > min) {
+	        return getError(name, location, type);
+	      }
+	    }, { type: type }, disabled);
+	  }
+
+	  function greaterThanCheckGetter(max) {
+	    var type = 'greaterThan[' + max + ']';
+	    return setupChecker(function greaterThanChecker(val, name, location) {
+	      if (typeof val !== 'number' || val < max) {
+	        return getError(name, location, type);
+	      }
+	    }, { type: type }, disabled);
+	  }
+
+	  function emptyObjectCheckGetter() {
+	    var type = 'empty object';
+	    return setupChecker(function emptyObjectChecker(val, name, location) {
+	      if (typeOf(val) !== 'object' || val === null || Object.keys(val).length) {
+	        return getError(name, location, type);
+	      }
+	    }, { type: type }, disabled);
+	  }
+	}
+
+/***/ }
+/******/ ])
+});
+;
+//! angular-formly version 7.1.2 built with ♥ by Astrism <astrisms@gmail.com>, Kent C. Dodds <kent@doddsfamily.us> (ó ì_í)=óò=(ì_í ò)
+
+(function webpackUniversalModuleDefinition(root, factory) {
+	if(typeof exports === 'object' && typeof module === 'object')
+		module.exports = factory(require("angular"), require("api-check"));
+	else if(typeof define === 'function' && define.amd)
+		define(["angular", "api-check"], factory);
+	else if(typeof exports === 'object')
+		exports["ngFormly"] = factory(require("angular"), require("api-check"));
+	else
+		root["ngFormly"] = factory(root["angular"], root["apiCheck"]);
+})(this, function(__WEBPACK_EXTERNAL_MODULE_3__, __WEBPACK_EXTERNAL_MODULE_5__) {
+return /******/ (function(modules) { // webpackBootstrap
+/******/ 	// The module cache
+/******/ 	var installedModules = {};
+
+/******/ 	// The require function
+/******/ 	function __webpack_require__(moduleId) {
+
+/******/ 		// Check if module is in cache
+/******/ 		if(installedModules[moduleId])
+/******/ 			return installedModules[moduleId].exports;
+
+/******/ 		// Create a new module (and put it into the cache)
+/******/ 		var module = installedModules[moduleId] = {
+/******/ 			exports: {},
+/******/ 			id: moduleId,
+/******/ 			loaded: false
+/******/ 		};
+
+/******/ 		// Execute the module function
+/******/ 		modules[moduleId].call(module.exports, module, module.exports, __webpack_require__);
+
+/******/ 		// Flag the module as loaded
+/******/ 		module.loaded = true;
+
+/******/ 		// Return the exports of the module
+/******/ 		return module.exports;
+/******/ 	}
+
+
+/******/ 	// expose the modules object (__webpack_modules__)
+/******/ 	__webpack_require__.m = modules;
+
+/******/ 	// expose the module cache
+/******/ 	__webpack_require__.c = installedModules;
+
+/******/ 	// __webpack_public_path__
+/******/ 	__webpack_require__.p = "";
+
+/******/ 	// Load entry module and return exports
+/******/ 	return __webpack_require__(0);
+/******/ })
+/************************************************************************/
+/******/ ([
+/* 0 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	Object.defineProperty(exports, '__esModule', {
+	  value: true
+	});
+
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+
+	var _indexCommon = __webpack_require__(1);
+
+	var _indexCommon2 = _interopRequireDefault(_indexCommon);
+
+	exports['default'] = _indexCommon2['default'];
+	module.exports = exports['default'];
+
+/***/ },
+/* 1 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	Object.defineProperty(exports, '__esModule', {
+	  value: true
+	});
+
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+
+	var _angularFix = __webpack_require__(2);
+
+	var _angularFix2 = _interopRequireDefault(_angularFix);
+
+	var _providersFormlyApiCheck = __webpack_require__(4);
+
+	var _providersFormlyApiCheck2 = _interopRequireDefault(_providersFormlyApiCheck);
+
+	var _otherDocsBaseUrl = __webpack_require__(6);
+
+	var _otherDocsBaseUrl2 = _interopRequireDefault(_otherDocsBaseUrl);
+
+	var _providersFormlyUsability = __webpack_require__(7);
+
+	var _providersFormlyUsability2 = _interopRequireDefault(_providersFormlyUsability);
+
+	var _providersFormlyConfig = __webpack_require__(8);
+
+	var _providersFormlyConfig2 = _interopRequireDefault(_providersFormlyConfig);
+
+	var _providersFormlyValidationMessages = __webpack_require__(10);
+
+	var _providersFormlyValidationMessages2 = _interopRequireDefault(_providersFormlyValidationMessages);
+
+	var _servicesFormlyUtil = __webpack_require__(11);
+
+	var _servicesFormlyUtil2 = _interopRequireDefault(_servicesFormlyUtil);
+
+	var _servicesFormlyWarn = __webpack_require__(12);
+
+	var _servicesFormlyWarn2 = _interopRequireDefault(_servicesFormlyWarn);
+
+	var _directivesFormlyCustomValidation = __webpack_require__(13);
+
+	var _directivesFormlyCustomValidation2 = _interopRequireDefault(_directivesFormlyCustomValidation);
+
+	var _directivesFormlyField = __webpack_require__(14);
+
+	var _directivesFormlyField2 = _interopRequireDefault(_directivesFormlyField);
+
+	var _directivesFormlyFocus = __webpack_require__(15);
+
+	var _directivesFormlyFocus2 = _interopRequireDefault(_directivesFormlyFocus);
+
+	var _directivesFormlyForm = __webpack_require__(16);
+
+	var _directivesFormlyForm2 = _interopRequireDefault(_directivesFormlyForm);
+
+	var _runFormlyNgModelAttrsManipulator = __webpack_require__(17);
+
+	var _runFormlyNgModelAttrsManipulator2 = _interopRequireDefault(_runFormlyNgModelAttrsManipulator);
+
+	var _runFormlyCustomTags = __webpack_require__(18);
+
+	var _runFormlyCustomTags2 = _interopRequireDefault(_runFormlyCustomTags);
+
+	var ngModuleName = 'formly';
+
+	exports['default'] = ngModuleName;
+
+	var ngModule = _angularFix2['default'].module(ngModuleName, []);
+
+	ngModule.constant('formlyApiCheck', _providersFormlyApiCheck2['default']);
+	ngModule.constant('formlyErrorAndWarningsUrlPrefix', _otherDocsBaseUrl2['default']);
+	ngModule.constant('formlyVersion', ("7.1.2")); // <-- webpack variable
+
+	ngModule.provider('formlyUsability', _providersFormlyUsability2['default']);
+	ngModule.provider('formlyConfig', _providersFormlyConfig2['default']);
+
+	ngModule.factory('formlyValidationMessages', _providersFormlyValidationMessages2['default']);
+	ngModule.factory('formlyUtil', _servicesFormlyUtil2['default']);
+	ngModule.factory('formlyWarn', _servicesFormlyWarn2['default']);
+
+	ngModule.directive('formlyCustomValidation', _directivesFormlyCustomValidation2['default']);
+	ngModule.directive('formlyField', _directivesFormlyField2['default']);
+	ngModule.directive('formlyFocus', _directivesFormlyFocus2['default']);
+	ngModule.directive('formlyForm', _directivesFormlyForm2['default']);
+
+	ngModule.run(_runFormlyNgModelAttrsManipulator2['default']);
+	ngModule.run(_runFormlyCustomTags2['default']);
+	module.exports = exports['default'];
+
+/***/ },
+/* 2 */
+/***/ function(module, exports, __webpack_require__) {
+
+	// some versions of angular don't export the angular module properly,
+	// so we get it from window in this case.
+	'use strict';
+
+	Object.defineProperty(exports, '__esModule', {
+	  value: true
+	});
+	var angular = __webpack_require__(3);
+
+	/* istanbul ignore next */
+	if (!angular.version) {
+	  angular = window.angular;
+	}
+	exports['default'] = angular;
+	module.exports = exports['default'];
+
+/***/ },
+/* 3 */
+/***/ function(module, exports) {
+
+	module.exports = __WEBPACK_EXTERNAL_MODULE_3__;
+
+/***/ },
+/* 4 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	Object.defineProperty(exports, '__esModule', {
+	  value: true
+	});
+
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+
+	var _angularFix = __webpack_require__(2);
+
+	var _angularFix2 = _interopRequireDefault(_angularFix);
+
+	var _apiCheck = __webpack_require__(5);
+
+	var _apiCheck2 = _interopRequireDefault(_apiCheck);
+
+	var apiCheck = (0, _apiCheck2['default'])({
+	  output: {
+	    prefix: 'angular-formly:',
+	    docsBaseUrl: __webpack_require__(6)
+	  }
+	});
+
+	function shapeRequiredIfNot(otherProps, propChecker) {
+	  if (!_angularFix2['default'].isArray(otherProps)) {
+	    otherProps = [otherProps];
+	  }
+	  var type = 'specified if these are not specified: `' + otherProps.join(', ') + '` (otherwise it\'s optional)';
+
+	  function shapeRequiredIfNotDefinition(prop, propName, location, obj) {
+	    var propExists = obj && obj.hasOwnProperty(propName);
+	    var otherPropsExist = otherProps.some(function (otherProp) {
+	      return obj && obj.hasOwnProperty(otherProp);
+	    });
+	    if (!otherPropsExist && !propExists) {
+	      return apiCheck.utils.getError(propName, location, type);
+	    } else if (propExists) {
+	      return propChecker(prop, propName, location, obj);
+	    }
+	  }
+
+	  shapeRequiredIfNotDefinition.type = type;
+	  return apiCheck.utils.checkerHelpers.setupChecker(shapeRequiredIfNotDefinition);
+	}
+
+	var formlyExpression = apiCheck.oneOfType([apiCheck.string, apiCheck.func]);
+	var specifyWrapperType = apiCheck.typeOrArrayOf(apiCheck.string).nullable;
+
+	var apiCheckProperty = apiCheck.func;
+
+	var apiCheckInstanceProperty = apiCheck.shape.onlyIf('apiCheck', apiCheck.func.withProperties({
+	  warn: apiCheck.func,
+	  'throw': apiCheck.func,
+	  shape: apiCheck.func
+	}));
+
+	var apiCheckFunctionProperty = apiCheck.shape.onlyIf('apiCheck', apiCheck.oneOf(['throw', 'warn']));
+
+	var formlyWrapperType = apiCheck.shape({
+	  name: shapeRequiredIfNot('types', apiCheck.string).optional,
+	  template: apiCheck.shape.ifNot('templateUrl', apiCheck.string).optional,
+	  templateUrl: apiCheck.shape.ifNot('template', apiCheck.string).optional,
+	  types: apiCheck.typeOrArrayOf(apiCheck.string).optional,
+	  overwriteOk: apiCheck.bool.optional,
+	  apiCheck: apiCheckProperty.optional,
+	  apiCheckInstance: apiCheckInstanceProperty.optional,
+	  apiCheckFunction: apiCheckFunctionProperty.optional,
+	  apiCheckOptions: apiCheck.object.optional
+	}).strict;
+
+	var expressionProperties = apiCheck.objectOf(apiCheck.oneOfType([formlyExpression, apiCheck.shape({
+	  expression: formlyExpression,
+	  message: formlyExpression.optional
+	}).strict]));
+
+	var modelChecker = apiCheck.oneOfType([apiCheck.string, apiCheck.object]);
+
+	var templateManipulators = apiCheck.shape({
+	  preWrapper: apiCheck.arrayOf(apiCheck.func).nullable.optional,
+	  postWrapper: apiCheck.arrayOf(apiCheck.func).nullable.optional
+	}).strict.nullable;
+
+	var validatorChecker = apiCheck.objectOf(apiCheck.oneOfType([formlyExpression, apiCheck.shape({
+	  expression: formlyExpression,
+	  message: formlyExpression.optional
+	}).strict]));
+
+	var fieldOptionsApiShape = {
+	  $$hashKey: apiCheck.any.optional,
+	  type: apiCheck.shape.ifNot(['template', 'templateUrl'], apiCheck.string).optional,
+	  template: apiCheck.shape.ifNot(['type', 'templateUrl'], apiCheck.oneOfType([apiCheck.string, apiCheck.func])).optional,
+	  templateUrl: apiCheck.shape.ifNot(['type', 'template'], apiCheck.oneOfType([apiCheck.string, apiCheck.func])).optional,
+	  key: apiCheck.oneOfType([apiCheck.string, apiCheck.number]).optional,
+	  model: modelChecker.optional,
+	  originalModel: modelChecker.optional,
+	  className: apiCheck.string.optional,
+	  id: apiCheck.string.optional,
+	  name: apiCheck.string.optional,
+	  expressionProperties: expressionProperties.optional,
+	  extras: apiCheck.shape({
+	    validateOnModelChange: apiCheck.bool.optional,
+	    skipNgModelAttrsManipulator: apiCheck.oneOfType([apiCheck.string, apiCheck.bool]).optional
+	  }).strict.optional,
+	  data: apiCheck.object.optional,
+	  templateOptions: apiCheck.object.optional,
+	  wrapper: specifyWrapperType.optional,
+	  modelOptions: apiCheck.shape({
+	    updateOn: apiCheck.string.optional,
+	    debounce: apiCheck.oneOfType([apiCheck.objectOf(apiCheck.number), apiCheck.number]).optional,
+	    allowInvalid: apiCheck.bool.optional,
+	    getterSetter: apiCheck.bool.optional,
+	    timezone: apiCheck.string.optional
+	  }).optional,
+	  watcher: apiCheck.typeOrArrayOf(apiCheck.shape({
+	    expression: formlyExpression.optional,
+	    listener: formlyExpression
+	  })).optional,
+	  validators: validatorChecker.optional,
+	  asyncValidators: validatorChecker.optional,
+	  parsers: apiCheck.arrayOf(formlyExpression).optional,
+	  formatters: apiCheck.arrayOf(formlyExpression).optional,
+	  noFormControl: apiCheck.bool.optional,
+	  hide: apiCheck.bool.optional,
+	  hideExpression: formlyExpression.optional,
+	  ngModelElAttrs: apiCheck.objectOf(apiCheck.string).optional,
+	  ngModelAttrs: apiCheck.objectOf(apiCheck.shape({
+	    statement: apiCheck.shape.ifNot(['value', 'attribute', 'bound', 'boolean'], apiCheck.any).optional,
+	    value: apiCheck.shape.ifNot('statement', apiCheck.any).optional,
+	    attribute: apiCheck.shape.ifNot('statement', apiCheck.any).optional,
+	    bound: apiCheck.shape.ifNot('statement', apiCheck.any).optional,
+	    boolean: apiCheck.shape.ifNot('statement', apiCheck.any).optional
+	  }).strict).optional,
+	  elementAttributes: apiCheck.objectOf(apiCheck.string).optional,
+	  optionsTypes: apiCheck.typeOrArrayOf(apiCheck.string).optional,
+	  link: apiCheck.func.optional,
+	  controller: apiCheck.oneOfType([apiCheck.string, apiCheck.func, apiCheck.array]).optional,
+	  validation: apiCheck.shape({
+	    show: apiCheck.bool.nullable.optional,
+	    messages: apiCheck.objectOf(formlyExpression).optional,
+	    errorExistsAndShouldBeVisible: apiCheck.bool.optional
+	  }).optional,
+	  formControl: apiCheck.typeOrArrayOf(apiCheck.object).optional,
+	  value: apiCheck.func.optional,
+	  runExpressions: apiCheck.func.optional,
+	  templateManipulators: templateManipulators.optional,
+	  resetModel: apiCheck.func.optional,
+	  updateInitialValue: apiCheck.func.optional,
+	  initialValue: apiCheck.any.optional,
+	  defaultValue: apiCheck.any.optional
+	};
+
+	var formlyFieldOptions = apiCheck.shape(fieldOptionsApiShape).strict;
+
+	var formOptionsApi = apiCheck.shape({
+	  formState: apiCheck.object.optional,
+	  resetModel: apiCheck.func.optional,
+	  updateInitialValue: apiCheck.func.optional,
+	  removeChromeAutoComplete: apiCheck.bool.optional,
+	  templateManipulators: templateManipulators.optional,
+	  wrapper: specifyWrapperType.optional,
+	  fieldTransform: apiCheck.oneOfType([apiCheck.func, apiCheck.array]).optional,
+	  data: apiCheck.object.optional
+	}).strict;
+
+	var fieldGroup = apiCheck.shape({
+	  $$hashKey: apiCheck.any.optional,
+	  key: apiCheck.oneOfType([apiCheck.string, apiCheck.number]).optional,
+	  // danger. Nested field groups wont get api-checked...
+	  fieldGroup: apiCheck.arrayOf(apiCheck.oneOfType([formlyFieldOptions, apiCheck.object])),
+	  className: apiCheck.string.optional,
+	  options: formOptionsApi.optional,
+	  hide: apiCheck.bool.optional,
+	  hideExpression: formlyExpression.optional,
+	  data: apiCheck.object.optional,
+	  model: modelChecker.optional,
+	  form: apiCheck.object.optional,
+	  elementAttributes: apiCheck.objectOf(apiCheck.string).optional
+	}).strict;
+
+	var typeOptionsDefaultOptions = _angularFix2['default'].copy(fieldOptionsApiShape);
+	typeOptionsDefaultOptions.key = apiCheck.string.optional;
+
+	var formlyTypeOptions = apiCheck.shape({
+	  name: apiCheck.string,
+	  template: apiCheck.shape.ifNot('templateUrl', apiCheck.oneOfType([apiCheck.string, apiCheck.func])).optional,
+	  templateUrl: apiCheck.shape.ifNot('template', apiCheck.oneOfType([apiCheck.string, apiCheck.func])).optional,
+	  controller: apiCheck.oneOfType([apiCheck.func, apiCheck.string, apiCheck.array]).optional,
+	  link: apiCheck.func.optional,
+	  defaultOptions: apiCheck.oneOfType([apiCheck.func, apiCheck.shape(typeOptionsDefaultOptions)]).optional,
+	  'extends': apiCheck.string.optional,
+	  wrapper: specifyWrapperType.optional,
+	  data: apiCheck.object.optional,
+	  apiCheck: apiCheckProperty.optional,
+	  apiCheckInstance: apiCheckInstanceProperty.optional,
+	  apiCheckFunction: apiCheckFunctionProperty.optional,
+	  apiCheckOptions: apiCheck.object.optional,
+	  overwriteOk: apiCheck.bool.optional
+	}).strict;
+
+	_angularFix2['default'].extend(apiCheck, {
+	  formlyTypeOptions: formlyTypeOptions, formlyFieldOptions: formlyFieldOptions, formlyExpression: formlyExpression, formlyWrapperType: formlyWrapperType, fieldGroup: fieldGroup, formOptionsApi: formOptionsApi
+	});
+
+	exports['default'] = apiCheck;
+	module.exports = exports['default'];
+
+/***/ },
+/* 5 */
+/***/ function(module, exports) {
+
+	module.exports = __WEBPACK_EXTERNAL_MODULE_5__;
+
+/***/ },
+/* 6 */
+/***/ function(module, exports, __webpack_require__) {
+
+	"use strict";
+
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
+	exports["default"] = "https://github.com/formly-js/angular-formly/blob/" + ("7.1.2") + "/other/ERRORS_AND_WARNINGS.md#";
+	module.exports = exports["default"];
+
+/***/ },
+/* 7 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	Object.defineProperty(exports, '__esModule', {
+	  value: true
+	});
+
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+
+	var _angularFix = __webpack_require__(2);
+
+	var _angularFix2 = _interopRequireDefault(_angularFix);
+
+	exports['default'] = formlyUsability;
+
+	// @ngInject
+	function formlyUsability(formlyApiCheck, formlyErrorAndWarningsUrlPrefix) {
+	  var _this = this;
+
+	  _angularFix2['default'].extend(this, {
+	    getFormlyError: getFormlyError,
+	    getFieldError: getFieldError,
+	    checkWrapper: checkWrapper,
+	    checkWrapperTemplate: checkWrapperTemplate,
+	    getErrorMessage: getErrorMessage,
+	    $get: function $get() {
+	      return _this;
+	    }
+	  });
+
+	  function getFieldError(errorInfoSlug, message, field) {
+	    if (arguments.length < 3) {
+	      field = message;
+	      message = errorInfoSlug;
+	      errorInfoSlug = null;
+	    }
+	    return new Error(getErrorMessage(errorInfoSlug, message) + (' Field definition: ' + _angularFix2['default'].toJson(field)));
+	  }
+
+	  function getFormlyError(errorInfoSlug, message) {
+	    if (!message) {
+	      message = errorInfoSlug;
+	      errorInfoSlug = null;
+	    }
+	    return new Error(getErrorMessage(errorInfoSlug, message));
+	  }
+
+	  function getErrorMessage(errorInfoSlug, message) {
+	    var url = '';
+	    if (errorInfoSlug !== null) {
+	      url = '' + formlyErrorAndWarningsUrlPrefix + errorInfoSlug;
+	    }
+	    return 'Formly Error: ' + message + '. ' + url;
+	  }
+
+	  function checkWrapper(wrapper) {
+	    formlyApiCheck['throw'](formlyApiCheck.formlyWrapperType, wrapper, {
+	      prefix: 'formlyConfig.setWrapper',
+	      urlSuffix: 'setwrapper-validation-failed'
+	    });
+	  }
+
+	  function checkWrapperTemplate(template, additionalInfo) {
+	    var formlyTransclude = '<formly-transclude></formly-transclude>';
+	    if (template.indexOf(formlyTransclude) === -1) {
+	      throw getFormlyError('Template wrapper templates must use "' + formlyTransclude + '" somewhere in them. ' + ('This one does not have "<formly-transclude></formly-transclude>" in it: ' + template) + '\n' + ('Additional information: ' + JSON.stringify(additionalInfo)));
+	    }
+	  }
+	}
+	formlyUsability.$inject = ["formlyApiCheck", "formlyErrorAndWarningsUrlPrefix"];
+	module.exports = exports['default'];
+
+/***/ },
+/* 8 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	Object.defineProperty(exports, '__esModule', {
+	  value: true
+	});
+
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+
+	function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) arr2[i] = arr[i]; return arr2; } else { return Array.from(arr); } }
+
+	var _angularFix = __webpack_require__(2);
+
+	var _angularFix2 = _interopRequireDefault(_angularFix);
+
+	var _otherUtils = __webpack_require__(9);
+
+	var _otherUtils2 = _interopRequireDefault(_otherUtils);
+
+	exports['default'] = formlyConfig;
+
+	// @ngInject
+	function formlyConfig(formlyUsabilityProvider, formlyErrorAndWarningsUrlPrefix, formlyApiCheck) {
+	  var _this2 = this;
+
+	  var typeMap = {};
+	  var templateWrappersMap = {};
+	  var defaultWrapperName = 'default';
+	  var _this = this;
+	  var getError = formlyUsabilityProvider.getFormlyError;
+
+	  _angularFix2['default'].extend(this, {
+	    setType: setType,
+	    getType: getType,
+	    getTypeHeritage: getTypeHeritage,
+	    setWrapper: setWrapper,
+	    getWrapper: getWrapper,
+	    getWrapperByType: getWrapperByType,
+	    removeWrapperByName: removeWrapperByName,
+	    removeWrappersForType: removeWrappersForType,
+	    disableWarnings: false,
+	    extras: {
+	      disableNgModelAttrsManipulator: false,
+	      ngModelAttrsManipulatorPreferUnbound: false,
+	      removeChromeAutoComplete: false,
+	      defaultHideDirective: 'ng-if',
+	      getFieldId: null,
+	      explicitAsync: false
+	    },
+	    templateManipulators: {
+	      preWrapper: [],
+	      postWrapper: []
+	    },
+	    $get: function $get() {
+	      return _this2;
+	    }
+	  });
+
+	  function setType(options) {
+	    if (_angularFix2['default'].isArray(options)) {
+	      var _ret = (function () {
+	        var allTypes = [];
+	        _angularFix2['default'].forEach(options, function (item) {
+	          allTypes.push(setType(item));
+	        });
+	        return {
+	          v: allTypes
+	        };
+	      })();
+
+	      if (typeof _ret === 'object') return _ret.v;
+	    } else if (_angularFix2['default'].isObject(options)) {
+	      checkType(options);
+	      if (options['extends']) {
+	        extendTypeOptions(options);
+	      }
+	      typeMap[options.name] = options;
+	      return typeMap[options.name];
+	    } else {
+	      throw getError('You must provide an object or array for setType. You provided: ' + JSON.stringify(arguments));
+	    }
+	  }
+
+	  function checkType(options) {
+	    formlyApiCheck['throw'](formlyApiCheck.formlyTypeOptions, options, {
+	      prefix: 'formlyConfig.setType',
+	      url: 'settype-validation-failed'
+	    });
+	    if (!options.overwriteOk) {
+	      checkOverwrite(options.name, typeMap, options, 'types');
+	    } else {
+	      options.overwriteOk = undefined;
+	    }
+	  }
+
+	  function extendTypeOptions(options) {
+	    var extendsType = getType(options['extends'], true, options);
+	    extendTypeControllerFunction(options, extendsType);
+	    extendTypeLinkFunction(options, extendsType);
+	    extendTypeDefaultOptions(options, extendsType);
+	    _otherUtils2['default'].reverseDeepMerge(options, extendsType);
+	    extendTemplate(options, extendsType);
+	  }
+
+	  function extendTemplate(options, extendsType) {
+	    if (options.template && extendsType.templateUrl) {
+	      delete options.templateUrl;
+	    } else if (options.templateUrl && extendsType.template) {
+	      delete options.template;
+	    }
+	  }
+
+	  function extendTypeControllerFunction(options, extendsType) {
+	    var extendsCtrl = extendsType.controller;
+	    if (!_angularFix2['default'].isDefined(extendsCtrl)) {
+	      return;
+	    }
+	    var optionsCtrl = options.controller;
+	    if (_angularFix2['default'].isDefined(optionsCtrl)) {
+	      options.controller = function ($scope, $controller) {
+	        $controller(extendsCtrl, { $scope: $scope });
+	        $controller(optionsCtrl, { $scope: $scope });
+	      };
+	      options.controller.$inject = ['$scope', '$controller'];
+	    } else {
+	      options.controller = extendsCtrl;
+	    }
+	  }
+
+	  function extendTypeLinkFunction(options, extendsType) {
+	    var extendsFn = extendsType.link;
+	    if (!_angularFix2['default'].isDefined(extendsFn)) {
+	      return;
+	    }
+	    var optionsFn = options.link;
+	    if (_angularFix2['default'].isDefined(optionsFn)) {
+	      options.link = function () {
+	        extendsFn.apply(undefined, arguments);
+	        optionsFn.apply(undefined, arguments);
+	      };
+	    } else {
+	      options.link = extendsFn;
+	    }
+	  }
+
+	  function extendTypeDefaultOptions(options, extendsType) {
+	    var extendsDO = extendsType.defaultOptions;
+	    if (!_angularFix2['default'].isDefined(extendsDO)) {
+	      return;
+	    }
+	    var optionsDO = options.defaultOptions;
+	    var optionsDOIsFn = _angularFix2['default'].isFunction(optionsDO);
+	    var extendsDOIsFn = _angularFix2['default'].isFunction(extendsDO);
+	    if (extendsDOIsFn) {
+	      options.defaultOptions = function defaultOptions(opts, scope) {
+	        var extendsDefaultOptions = extendsDO(opts, scope);
+	        var mergedDefaultOptions = {};
+	        _otherUtils2['default'].reverseDeepMerge(mergedDefaultOptions, opts, extendsDefaultOptions);
+	        var extenderOptionsDefaultOptions = optionsDO;
+	        if (optionsDOIsFn) {
+	          extenderOptionsDefaultOptions = extenderOptionsDefaultOptions(mergedDefaultOptions, scope);
+	        }
+	        _otherUtils2['default'].reverseDeepMerge(extendsDefaultOptions, extenderOptionsDefaultOptions);
+	        return extendsDefaultOptions;
+	      };
+	    } else if (optionsDOIsFn) {
+	      options.defaultOptions = function defaultOptions(opts, scope) {
+	        var newDefaultOptions = {};
+	        _otherUtils2['default'].reverseDeepMerge(newDefaultOptions, opts, extendsDO);
+	        return optionsDO(newDefaultOptions, scope);
+	      };
+	    }
+	  }
+
+	  function getType(name, throwError, errorContext) {
+	    if (!name) {
+	      return undefined;
+	    }
+	    var type = typeMap[name];
+	    if (!type && throwError === true) {
+	      throw getError('There is no type by the name of "' + name + '": ' + JSON.stringify(errorContext));
+	    } else {
+	      return type;
+	    }
+	  }
+
+	  function getTypeHeritage(parent) {
+	    var heritage = [];
+	    var type = parent;
+	    if (_angularFix2['default'].isString(type)) {
+	      type = getType(parent);
+	    }
+	    parent = type['extends'];
+	    while (parent) {
+	      type = getType(parent);
+	      heritage.push(type);
+	      parent = type['extends'];
+	    }
+	    return heritage;
+	  }
+
+	  function setWrapper(_x, _x2) {
+	    var _again = true;
+
+	    _function: while (_again) {
+	      var options = _x,
+	          name = _x2;
+	      _again = false;
+
+	      if (_angularFix2['default'].isArray(options)) {
+	        return options.map(function (wrapperOptions) {
+	          return setWrapper(wrapperOptions);
+	        });
+	      } else if (_angularFix2['default'].isObject(options)) {
+	        options.types = getOptionsTypes(options);
+	        options.name = getOptionsName(options, name);
+	        checkWrapperAPI(options);
+	        templateWrappersMap[options.name] = options;
+	        return options;
+	      } else if (_angularFix2['default'].isString(options)) {
+	        _x = {
+	          template: options,
+	          name: name
+	        };
+	        _x2 = undefined;
+	        _again = true;
+	        continue _function;
+	      }
+	    }
+	  }
+
+	  function getOptionsTypes(options) {
+	    if (_angularFix2['default'].isString(options.types)) {
+	      return [options.types];
+	    }
+	    if (!_angularFix2['default'].isDefined(options.types)) {
+	      return [];
+	    } else {
+	      return options.types;
+	    }
+	  }
+
+	  function getOptionsName(options, name) {
+	    return options.name || name || options.types.join(' ') || defaultWrapperName;
+	  }
+
+	  function checkWrapperAPI(options) {
+	    formlyUsabilityProvider.checkWrapper(options);
+	    if (options.template) {
+	      formlyUsabilityProvider.checkWrapperTemplate(options.template, options);
+	    }
+	    if (!options.overwriteOk) {
+	      checkOverwrite(options.name, templateWrappersMap, options, 'templateWrappers');
+	    } else {
+	      delete options.overwriteOk;
+	    }
+	    checkWrapperTypes(options);
+	  }
+
+	  function checkWrapperTypes(options) {
+	    var shouldThrow = !_angularFix2['default'].isArray(options.types) || !options.types.every(_angularFix2['default'].isString);
+	    if (shouldThrow) {
+	      throw getError('Attempted to create a template wrapper with types that is not a string or an array of strings');
+	    }
+	  }
+
+	  function checkOverwrite(property, object, newValue, objectName) {
+	    if (object.hasOwnProperty(property)) {
+	      warn('overwriting-types-or-wrappers', ['Attempting to overwrite ' + property + ' on ' + objectName + ' which is currently', JSON.stringify(object[property]) + ' with ' + JSON.stringify(newValue), 'To supress this warning, specify the property "overwriteOk: true"'].join(' '));
+	    }
+	  }
+
+	  function getWrapper(name) {
+	    return templateWrappersMap[name || defaultWrapperName];
+	  }
+
+	  function getWrapperByType(type) {
+	    /* eslint prefer-const:0 */
+	    var wrappers = [];
+	    for (var _name in templateWrappersMap) {
+	      if (templateWrappersMap.hasOwnProperty(_name)) {
+	        if (templateWrappersMap[_name].types && templateWrappersMap[_name].types.indexOf(type) !== -1) {
+	          wrappers.push(templateWrappersMap[_name]);
+	        }
+	      }
+	    }
+	    return wrappers;
+	  }
+
+	  function removeWrapperByName(name) {
+	    var wrapper = templateWrappersMap[name];
+	    delete templateWrappersMap[name];
+	    return wrapper;
+	  }
+
+	  function removeWrappersForType(type) {
+	    var wrappers = getWrapperByType(type);
+	    if (!wrappers) {
+	      return undefined;
+	    }
+	    if (!_angularFix2['default'].isArray(wrappers)) {
+	      return removeWrapperByName(wrappers.name);
+	    } else {
+	      wrappers.forEach(function (wrapper) {
+	        return removeWrapperByName(wrapper.name);
+	      });
+	      return wrappers;
+	    }
+	  }
+
+	  function warn() {
+	    if (!_this.disableWarnings && console.warn) {
+	      /* eslint no-console:0 */
+	      var args = Array.prototype.slice.call(arguments);
+	      var warnInfoSlug = args.shift();
+	      args.unshift('Formly Warning:');
+	      args.push('' + formlyErrorAndWarningsUrlPrefix + warnInfoSlug);
+	      console.warn.apply(console, _toConsumableArray(args));
+	    }
+	  }
+	}
+	formlyConfig.$inject = ["formlyUsabilityProvider", "formlyErrorAndWarningsUrlPrefix", "formlyApiCheck"];
+	module.exports = exports['default'];
+
+/***/ },
+/* 9 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	Object.defineProperty(exports, '__esModule', {
+	  value: true
+	});
+
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+
+	var _angularFix = __webpack_require__(2);
+
+	var _angularFix2 = _interopRequireDefault(_angularFix);
+
+	exports['default'] = {
+	  formlyEval: formlyEval, getFieldId: getFieldId, reverseDeepMerge: reverseDeepMerge, findByNodeName: findByNodeName, arrayify: arrayify, extendFunction: extendFunction, extendArray: extendArray, startsWith: startsWith, contains: contains
+	};
+
+	function formlyEval(scope, expression, $modelValue, $viewValue, extraLocals) {
+	  if (_angularFix2['default'].isFunction(expression)) {
+	    return expression($viewValue, $modelValue, scope, extraLocals);
+	  } else {
+	    return scope.$eval(expression, _angularFix2['default'].extend({ $viewValue: $viewValue, $modelValue: $modelValue }, extraLocals));
+	  }
+	}
+
+	function getFieldId(formId, options, index) {
+	  if (options.id) {
+	    return options.id;
+	  }
+	  var type = options.type;
+	  if (!type && options.template) {
+	    type = 'template';
+	  } else if (!type && options.templateUrl) {
+	    type = 'templateUrl';
+	  }
+
+	  return [formId, type, options.key, index].join('_');
+	}
+
+	function reverseDeepMerge(dest) {
+	  _angularFix2['default'].forEach(arguments, function (src, index) {
+	    if (!index) {
+	      return;
+	    }
+	    _angularFix2['default'].forEach(src, function (val, prop) {
+	      if (!_angularFix2['default'].isDefined(dest[prop])) {
+	        dest[prop] = _angularFix2['default'].copy(val);
+	      } else if (objAndSameType(dest[prop], val)) {
+	        reverseDeepMerge(dest[prop], val);
+	      }
+	    });
+	  });
+	  return dest;
+	}
+
+	function objAndSameType(obj1, obj2) {
+	  return _angularFix2['default'].isObject(obj1) && _angularFix2['default'].isObject(obj2) && Object.getPrototypeOf(obj1) === Object.getPrototypeOf(obj2);
+	}
+
+	// recurse down a node tree to find a node with matching nodeName, for custom tags jQuery.find doesn't work in IE8
+	function findByNodeName(el, nodeName) {
+	  if (!el.prop) {
+	    // not a jQuery or jqLite object -> wrap it
+	    el = _angularFix2['default'].element(el);
+	  }
+
+	  if (el.prop('nodeName') === nodeName.toUpperCase()) {
+	    return el;
+	  }
+
+	  var c = el.children();
+	  for (var i = 0; c && i < c.length; i++) {
+	    var node = findByNodeName(c[i], nodeName);
+	    if (node) {
+	      return node;
+	    }
+	  }
+	}
+
+	function arrayify(obj) {
+	  if (obj && !_angularFix2['default'].isArray(obj)) {
+	    obj = [obj];
+	  } else if (!obj) {
+	    obj = [];
+	  }
+	  return obj;
+	}
+
+	function extendFunction() {
+	  for (var _len = arguments.length, fns = Array(_len), _key = 0; _key < _len; _key++) {
+	    fns[_key] = arguments[_key];
+	  }
+
+	  return function extendedFunction() {
+	    var args = arguments;
+	    fns.forEach(function (fn) {
+	      return fn.apply(null, args);
+	    });
+	  };
+	}
+
+	function extendArray(primary, secondary, property) {
+	  if (property) {
+	    primary = primary[property];
+	    secondary = secondary[property];
+	  }
+	  if (secondary && primary) {
+	    _angularFix2['default'].forEach(secondary, function (item) {
+	      if (primary.indexOf(item) === -1) {
+	        primary.push(item);
+	      }
+	    });
+	    return primary;
+	  } else if (secondary) {
+	    return secondary;
+	  } else {
+	    return primary;
+	  }
+	}
+
+	function startsWith(str, search) {
+	  if (_angularFix2['default'].isString(str) && _angularFix2['default'].isString(search)) {
+	    return str.length >= search.length && str.substring(0, search.length) === search;
+	  } else {
+	    return false;
+	  }
+	}
+
+	function contains(str, search) {
+	  if (_angularFix2['default'].isString(str) && _angularFix2['default'].isString(search)) {
+	    return str.length >= search.length && str.indexOf(search) !== -1;
+	  } else {
+	    return false;
+	  }
+	}
+	module.exports = exports['default'];
+
+/***/ },
+/* 10 */
+/***/ function(module, exports) {
+
+	"use strict";
+
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
+	exports["default"] = formlyValidationMessages;
+
+	// @ngInject
+	function formlyValidationMessages() {
+
+	  var validationMessages = {
+	    addTemplateOptionValueMessage: addTemplateOptionValueMessage,
+	    addStringMessage: addStringMessage,
+	    messages: {}
+	  };
+
+	  return validationMessages;
+
+	  function addTemplateOptionValueMessage(name, prop, prefix, suffix, alternate) {
+	    validationMessages.messages[name] = templateOptionValue(prop, prefix, suffix, alternate);
+	  }
+
+	  function addStringMessage(name, string) {
+	    validationMessages.messages[name] = function () {
+	      return string;
+	    };
+	  }
+
+	  function templateOptionValue(prop, prefix, suffix, alternate) {
+	    return function getValidationMessage(viewValue, modelValue, scope) {
+	      if (scope.options.templateOptions[prop]) {
+	        return prefix + " " + scope.options.templateOptions[prop] + " " + suffix;
+	      } else {
+	        return alternate;
+	      }
+	    };
+	  }
+	}
+	module.exports = exports["default"];
+
+/***/ },
+/* 11 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	Object.defineProperty(exports, '__esModule', {
+	  value: true
+	});
+
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+
+	var _otherUtils = __webpack_require__(9);
+
+	var _otherUtils2 = _interopRequireDefault(_otherUtils);
+
+	exports['default'] = formlyUtil;
+
+	// @ngInject
+	function formlyUtil() {
+	  return _otherUtils2['default'];
+	}
+	module.exports = exports['default'];
+
+/***/ },
+/* 12 */
+/***/ function(module, exports) {
+
+	'use strict';
+
+	Object.defineProperty(exports, '__esModule', {
+	  value: true
+	});
+
+	function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) arr2[i] = arr[i]; return arr2; } else { return Array.from(arr); } }
+
+	exports['default'] = formlyWarn;
+
+	// @ngInject
+	function formlyWarn(formlyConfig, formlyErrorAndWarningsUrlPrefix, $log) {
+	  return function warn() {
+	    if (!formlyConfig.disableWarnings) {
+	      var args = Array.prototype.slice.call(arguments);
+	      var warnInfoSlug = args.shift();
+	      args.unshift('Formly Warning:');
+	      args.push('' + formlyErrorAndWarningsUrlPrefix + warnInfoSlug);
+	      $log.warn.apply($log, _toConsumableArray(args));
+	    }
+	  };
+	}
+	formlyWarn.$inject = ["formlyConfig", "formlyErrorAndWarningsUrlPrefix", "$log"];
+	module.exports = exports['default'];
+
+/***/ },
+/* 13 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	Object.defineProperty(exports, '__esModule', {
+	  value: true
+	});
+
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+
+	var _angularFix = __webpack_require__(2);
+
+	var _angularFix2 = _interopRequireDefault(_angularFix);
+
+	exports['default'] = formlyCustomValidation;
+
+	// @ngInject
+	function formlyCustomValidation(formlyUtil) {
+	  return {
+	    restrict: 'A',
+	    require: 'ngModel',
+	    link: function formlyCustomValidationLink(scope, el, attrs, ctrl) {
+	      var opts = scope.options;
+	      opts.validation.messages = opts.validation.messages || {};
+	      _angularFix2['default'].forEach(opts.validation.messages, function (message, key) {
+	        opts.validation.messages[key] = function () {
+	          return formlyUtil.formlyEval(scope, message, ctrl.$modelValue, ctrl.$viewValue);
+	        };
+	      });
+
+	      var useNewValidatorsApi = ctrl.hasOwnProperty('$validators') && !attrs.hasOwnProperty('useParsers');
+	      _angularFix2['default'].forEach(opts.validators, _angularFix2['default'].bind(null, addValidatorToPipeline, false));
+	      _angularFix2['default'].forEach(opts.asyncValidators, _angularFix2['default'].bind(null, addValidatorToPipeline, true));
+
+	      function addValidatorToPipeline(isAsync, validator, name) {
+	        setupMessage(validator, name);
+	        validator = _angularFix2['default'].isObject(validator) ? validator.expression : validator;
+	        if (useNewValidatorsApi) {
+	          setupWithValidators(validator, name, isAsync);
+	        } else {
+	          setupWithParsers(validator, name, isAsync);
+	        }
+	      }
+
+	      function setupMessage(validator, name) {
+	        var message = validator.message;
+	        if (message) {
+	          opts.validation.messages[name] = function () {
+	            return formlyUtil.formlyEval(scope, message, ctrl.$modelValue, ctrl.$viewValue);
+	          };
+	        }
+	      }
+
+	      function setupWithValidators(validator, name, isAsync) {
+	        var validatorCollection = isAsync ? '$asyncValidators' : '$validators';
+
+	        ctrl[validatorCollection][name] = function evalValidity(modelValue, viewValue) {
+	          return formlyUtil.formlyEval(scope, validator, modelValue, viewValue);
+	        };
+	      }
+
+	      function setupWithParsers(validator, name, isAsync) {
+	        var inFlightValidator = undefined;
+	        ctrl.$parsers.unshift(function evalValidityOfParser(viewValue) {
+	          var isValid = formlyUtil.formlyEval(scope, validator, ctrl.$modelValue, viewValue);
+	          if (isAsync) {
+	            ctrl.$pending = ctrl.$pending || {};
+	            ctrl.$pending[name] = true;
+	            inFlightValidator = isValid;
+	            isValid.then(function () {
+	              if (inFlightValidator === isValid) {
+	                ctrl.$setValidity(name, true);
+	              }
+	            })['catch'](function () {
+	              if (inFlightValidator === isValid) {
+	                ctrl.$setValidity(name, false);
+	              }
+	            })['finally'](function () {
+	              var $pending = ctrl.$pending || {};
+	              if (Object.keys($pending).length === 1) {
+	                delete ctrl.$pending;
+	              } else {
+	                delete ctrl.$pending[name];
+	              }
+	            });
+	          } else {
+	            ctrl.$setValidity(name, isValid);
+	          }
+	          return viewValue;
+	        });
+	      }
+	    }
+	  };
+	}
+	formlyCustomValidation.$inject = ["formlyUtil"];
+	module.exports = exports['default'];
+
+/***/ },
+/* 14 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	Object.defineProperty(exports, '__esModule', {
+	  value: true
+	});
+
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+
+	function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) arr2[i] = arr[i]; return arr2; } else { return Array.from(arr); } }
+
+	var _angularFix = __webpack_require__(2);
+
+	var _angularFix2 = _interopRequireDefault(_angularFix);
+
+	var _apiCheck = __webpack_require__(5);
+
+	var _apiCheck2 = _interopRequireDefault(_apiCheck);
+
+	exports['default'] = formlyField;
+
+	/**
+	 * @ngdoc directive
+	 * @name formlyField
+	 * @restrict AE
+	 */
+	// @ngInject
+	function formlyField($http, $q, $compile, $templateCache, $interpolate, formlyConfig, formlyApiCheck, formlyUtil, formlyUsability, formlyWarn) {
+	  var arrayify = formlyUtil.arrayify;
+
+	  FormlyFieldController.$inject = ["$scope", "$timeout", "$parse", "$controller", "formlyValidationMessages"];
+	  return {
+	    restrict: 'AE',
+	    transclude: true,
+	    require: '?^formlyForm',
+	    scope: {
+	      options: '=',
+	      model: '=',
+	      originalModel: '=?',
+	      formId: '@', // TODO remove formId in a breaking release
+	      index: '=?',
+	      fields: '=?',
+	      formState: '=?',
+	      formOptions: '=?',
+	      form: '=?' // TODO require form in a breaking release
+	    },
+	    controller: FormlyFieldController,
+	    link: fieldLink
+	  };
+
+	  // @ngInject
+	  function FormlyFieldController($scope, $timeout, $parse, $controller, formlyValidationMessages) {
+	    /* eslint max-statements:[2, 31] */
+	    if ($scope.options.fieldGroup) {
+	      setupFieldGroup();
+	      return;
+	    }
+
+	    var fieldType = getFieldType($scope.options);
+	    simplifyLife($scope.options);
+	    mergeFieldOptionsWithTypeDefaults($scope.options, fieldType);
+	    extendOptionsWithDefaults($scope.options, $scope.index);
+	    checkApi($scope.options);
+	    // set field id to link labels and fields
+
+	    // initalization
+	    setFieldIdAndName();
+	    setDefaultValue();
+	    setInitialValue();
+	    runExpressions();
+	    addValidationMessages($scope.options);
+	    invokeControllers($scope, $scope.options, fieldType);
+
+	    // function definitions
+	    function runExpressions() {
+	      // must run on next tick to make sure that the current value is correct.
+	      $timeout(function runExpressionsOnNextTick() {
+	        var field = $scope.options;
+	        var currentValue = valueGetterSetter();
+	        _angularFix2['default'].forEach(field.expressionProperties, function runExpression(expression, prop) {
+	          var setter = $parse(prop).assign;
+	          var promise = $q.when(formlyUtil.formlyEval($scope, expression, currentValue, currentValue));
+	          promise.then(function setFieldValue(value) {
+	            setter(field, value);
+	          });
+	        });
+	      }, 0, false);
+	    }
+
+	    function valueGetterSetter(newVal) {
+	      if (!$scope.model || !$scope.options.key) {
+	        return undefined;
+	      }
+	      if (_angularFix2['default'].isDefined(newVal)) {
+	        $scope.model[$scope.options.key] = newVal;
+	      }
+	      return $scope.model[$scope.options.key];
+	    }
+
+	    function simplifyLife(options) {
+	      // add a few empty objects (if they don't already exist) so you don't have to undefined check everywhere
+	      formlyUtil.reverseDeepMerge(options, {
+	        originalModel: options.model,
+	        extras: {},
+	        data: {},
+	        templateOptions: {},
+	        validation: {}
+	      });
+	      // create $scope.to so template authors can reference to instead of $scope.options.templateOptions
+	      $scope.to = $scope.options.templateOptions;
+	      $scope.formOptions = $scope.formOptions || {};
+	    }
+
+	    function setFieldIdAndName() {
+	      if (_angularFix2['default'].isFunction(formlyConfig.extras.getFieldId)) {
+	        $scope.id = formlyConfig.extras.getFieldId($scope.options, $scope.model, $scope);
+	      } else {
+	        var formName = $scope.form && $scope.form.$name || $scope.formId;
+	        $scope.id = formlyUtil.getFieldId(formName, $scope.options, $scope.index);
+	      }
+	      $scope.options.id = $scope.id;
+	      $scope.name = $scope.options.name || $scope.options.id;
+	      $scope.options.name = $scope.name;
+	    }
+
+	    function setDefaultValue() {
+	      if (_angularFix2['default'].isDefined($scope.options.defaultValue) && !_angularFix2['default'].isDefined($scope.model[$scope.options.key])) {
+	        var setter = $parse($scope.options.key).assign;
+	        setter($scope.model, $scope.options.defaultValue);
+	      }
+	    }
+
+	    function setInitialValue() {
+	      $scope.options.initialValue = $scope.model && $scope.model[$scope.options.key];
+	    }
+
+	    function mergeFieldOptionsWithTypeDefaults(options, type) {
+	      if (type) {
+	        mergeOptions(options, type.defaultOptions);
+	      }
+	      var properOrder = arrayify(options.optionsTypes).reverse(); // so the right things are overridden
+	      _angularFix2['default'].forEach(properOrder, function (typeName) {
+	        mergeOptions(options, formlyConfig.getType(typeName, true, options).defaultOptions);
+	      });
+	    }
+
+	    function mergeOptions(options, extraOptions) {
+	      if (extraOptions) {
+	        if (_angularFix2['default'].isFunction(extraOptions)) {
+	          extraOptions = extraOptions(options, $scope);
+	        }
+	        formlyUtil.reverseDeepMerge(options, extraOptions);
+	      }
+	    }
+
+	    function extendOptionsWithDefaults(options, index) {
+	      var key = options.key || index || 0;
+	      _angularFix2['default'].extend(options, {
+	        // attach the key in case the formly-field directive is used directly
+	        key: key,
+	        value: options.value || valueGetterSetter,
+	        runExpressions: runExpressions,
+	        resetModel: resetModel,
+	        updateInitialValue: updateInitialValue
+	      });
+	    }
+
+	    function resetModel() {
+	      $scope.model[$scope.options.key] = $scope.options.initialValue;
+	      if ($scope.options.formControl) {
+	        if (_angularFix2['default'].isArray($scope.options.formControl)) {
+	          _angularFix2['default'].forEach($scope.options.formControl, function (formControl) {
+	            resetFormControl(formControl, true);
+	          });
+	        } else {
+	          resetFormControl($scope.options.formControl);
+	        }
+	      }
+	    }
+
+	    function resetFormControl(formControl, isMultiNgModel) {
+	      if (!isMultiNgModel) {
+	        formControl.$setViewValue($scope.model[$scope.options.key]);
+	      }
+
+	      formControl.$render();
+	      formControl.$setUntouched && formControl.$setUntouched();
+	      formControl.$setPristine();
+
+	      // To prevent breaking change requiring a digest to reset $viewModel
+	      if (!$scope.$root.$$phase) {
+	        $scope.$digest();
+	      }
+	    }
+
+	    function updateInitialValue() {
+	      $scope.options.initialValue = $scope.model[$scope.options.key];
+	    }
+
+	    function addValidationMessages(options) {
+	      options.validation.messages = options.validation.messages || {};
+	      _angularFix2['default'].forEach(formlyValidationMessages.messages, function createFunctionForMessage(expression, name) {
+	        if (!options.validation.messages[name]) {
+	          options.validation.messages[name] = function evaluateMessage(viewValue, modelValue, scope) {
+	            return formlyUtil.formlyEval(scope, expression, modelValue, viewValue);
+	          };
+	        }
+	      });
+	    }
+
+	    function invokeControllers(scope) {
+	      var options = arguments.length <= 1 || arguments[1] === undefined ? {} : arguments[1];
+	      var type = arguments.length <= 2 || arguments[2] === undefined ? {} : arguments[2];
+
+	      _angularFix2['default'].forEach([type.controller, options.controller], function (controller) {
+	        if (controller) {
+	          $controller(controller, { $scope: scope });
+	        }
+	      });
+	    }
+
+	    function setupFieldGroup() {
+	      $scope.options.options = $scope.options.options || {};
+	      $scope.options.options.formState = $scope.formState;
+	    }
+	  }
+
+	  // link function
+	  function fieldLink(scope, el, attrs, formlyFormCtrl) {
+	    if (scope.options.fieldGroup) {
+	      setFieldGroupTemplate();
+	      return;
+	    }
+
+	    // watch the field model (if exists) if there is no parent formly-form directive (that would watch it instead)
+	    if (!formlyFormCtrl && scope.options.model) {
+	      scope.$watch('options.model', function () {
+	        return scope.options.runExpressions();
+	      }, true);
+	    }
+
+	    addAttributes();
+	    addClasses();
+
+	    var type = getFieldType(scope.options);
+	    var args = arguments;
+	    var thusly = this;
+	    var fieldCount = 0;
+	    var fieldManipulators = getManipulators(scope.options, scope.formOptions);
+	    getFieldTemplate(scope.options).then(runManipulators(fieldManipulators.preWrapper)).then(transcludeInWrappers(scope.options, scope.formOptions)).then(runManipulators(fieldManipulators.postWrapper)).then(setElementTemplate).then(watchFormControl).then(callLinkFunctions)['catch'](function (error) {
+	      formlyWarn('there-was-a-problem-setting-the-template-for-this-field', 'There was a problem setting the template for this field ', scope.options, error);
+	    });
+
+	    function setFieldGroupTemplate() {
+	      checkFieldGroupApi(scope.options);
+	      el.addClass('formly-field-group');
+	      var extraAttributes = '';
+	      if (scope.options.elementAttributes) {
+	        extraAttributes = Object.keys(scope.options.elementAttributes).map(function (key) {
+	          return key + '="' + scope.options.elementAttributes[key] + '"';
+	        }).join(' ');
+	      }
+	      var modelValue = 'model';
+	      scope.options.form = scope.form;
+	      if (scope.options.key) {
+	        modelValue = 'model[\'' + scope.options.key + '\']';
+	      }
+	      setElementTemplate('\n          <formly-form model="' + modelValue + '"\n                       fields="options.fieldGroup"\n                       options="options.options"\n                       form="options.form"\n                       class="' + scope.options.className + '"\n                       ' + extraAttributes + '\n                       is-field-group>\n          </formly-form>\n        ');
+	    }
+
+	    function addAttributes() {
+	      if (scope.options.elementAttributes) {
+	        el.attr(scope.options.elementAttributes);
+	      }
+	    }
+
+	    function addClasses() {
+	      if (scope.options.className) {
+	        el.addClass(scope.options.className);
+	      }
+	      if (scope.options.type) {
+	        el.addClass('formly-field-' + scope.options.type);
+	      }
+	    }
+
+	    function setElementTemplate(templateString) {
+	      el.html(asHtml(templateString));
+	      $compile(el.contents())(scope);
+	      return templateString;
+	    }
+
+	    function watchFormControl(templateString) {
+	      var stopWatchingShowError = _angularFix2['default'].noop;
+	      if (scope.options.noFormControl) {
+	        return;
+	      }
+	      var templateEl = _angularFix2['default'].element('<div>' + templateString + '</div>');
+	      var ngModelNodes = templateEl[0].querySelectorAll('[ng-model],[data-ng-model]');
+
+	      if (ngModelNodes.length) {
+	        _angularFix2['default'].forEach(ngModelNodes, function (ngModelNode) {
+	          fieldCount++;
+	          watchFieldNameOrExistence(ngModelNode.getAttribute('name'));
+	        });
+	      }
+
+	      function watchFieldNameOrExistence(name) {
+	        var nameExpressionRegex = /\{\{(.*?)}}/;
+	        var nameExpression = nameExpressionRegex.exec(name);
+	        if (nameExpression) {
+	          name = $interpolate(name)(scope);
+	        }
+	        watchFieldExistence(name);
+	      }
+
+	      function watchFieldExistence(name) {
+	        scope.$watch('form["' + name + '"]', function formControlChange(formControl) {
+	          if (formControl) {
+	            if (fieldCount > 1) {
+	              if (!scope.options.formControl) {
+	                scope.options.formControl = [];
+	              }
+	              scope.options.formControl.push(formControl);
+	            } else {
+	              scope.options.formControl = formControl;
+	            }
+	            scope.fc = scope.options.formControl; // shortcut for template authors
+	            stopWatchingShowError();
+	            addShowMessagesWatcher();
+	            addParsers();
+	            addFormatters();
+	          }
+	        });
+	      }
+
+	      function addShowMessagesWatcher() {
+	        stopWatchingShowError = scope.$watch(function watchShowValidationChange() {
+	          var customExpression = formlyConfig.extras.errorExistsAndShouldBeVisibleExpression;
+	          var options = scope.options;
+	          var fc = scope.fc;
+
+	          if (!fc.$invalid) {
+	            return false;
+	          } else if (typeof options.validation.show === 'boolean') {
+	            return options.validation.show;
+	          } else if (customExpression) {
+	            return formlyUtil.formlyEval(scope, customExpression, fc.$modelValue, fc.$viewValue);
+	          } else {
+	            var noTouchedButDirty = _angularFix2['default'].isUndefined(fc.$touched) && fc.$dirty;
+	            return scope.fc.$touched || noTouchedButDirty;
+	          }
+	        }, function onShowValidationChange(show) {
+	          scope.options.validation.errorExistsAndShouldBeVisible = show;
+	          scope.showError = show; // shortcut for template authors
+	        });
+	      }
+
+	      function addParsers() {
+	        setParsersOrFormatters('parsers');
+	      }
+
+	      function addFormatters() {
+	        setParsersOrFormatters('formatters');
+	        var ctrl = scope.fc;
+	        var formWasPristine = scope.form.$pristine;
+	        if (scope.options.formatters) {
+	          (function () {
+	            var value = ctrl.$modelValue;
+	            ctrl.$formatters.forEach(function (formatter) {
+	              value = formatter(value);
+	            });
+
+	            ctrl.$setViewValue(value);
+	            ctrl.$render();
+	            ctrl.$setPristine();
+	            if (formWasPristine) {
+	              scope.form.$setPristine();
+	            }
+	          })();
+	        }
+	      }
+
+	      function setParsersOrFormatters(which) {
+	        var originalThingProp = 'originalParser';
+	        if (which === 'formatters') {
+	          originalThingProp = 'originalFormatter';
+	        }
+
+	        // init with type's parsers
+	        var things = getThingsFromType(type);
+
+	        // get optionsTypes things
+	        things = formlyUtil.extendArray(things, getThingsFromOptionsTypes(scope.options.optionsTypes));
+
+	        // get field's things
+	        things = formlyUtil.extendArray(things, scope.options[which]);
+
+	        // convert things into formlyExpression things
+	        _angularFix2['default'].forEach(things, function (thing, index) {
+	          things[index] = getFormlyExpressionThing(thing);
+	        });
+
+	        var ngModelCtrls = scope.fc;
+	        if (!_angularFix2['default'].isArray(ngModelCtrls)) {
+	          ngModelCtrls = [ngModelCtrls];
+	        }
+
+	        _angularFix2['default'].forEach(ngModelCtrls, function (ngModelCtrl) {
+	          var _ngModelCtrl;
+
+	          ngModelCtrl['$' + which] = (_ngModelCtrl = ngModelCtrl['$' + which]).concat.apply(_ngModelCtrl, _toConsumableArray(things));
+	        });
+
+	        function getThingsFromType(theType) {
+	          if (!theType) {
+	            return [];
+	          }
+	          if (_angularFix2['default'].isString(theType)) {
+	            theType = formlyConfig.getType(theType, true, scope.options);
+	          }
+	          var typeThings = [];
+
+	          // get things from parent
+	          if (theType['extends']) {
+	            typeThings = formlyUtil.extendArray(typeThings, getThingsFromType(theType['extends']));
+	          }
+
+	          // get own type's things
+	          typeThings = formlyUtil.extendArray(typeThings, getDefaultOptionsProperty(theType, which, []));
+
+	          // get things from optionsTypes
+	          typeThings = formlyUtil.extendArray(typeThings, getThingsFromOptionsTypes(getDefaultOptionsOptionsTypes(theType)));
+
+	          return typeThings;
+	        }
+
+	        function getThingsFromOptionsTypes() {
+	          var optionsTypes = arguments.length <= 0 || arguments[0] === undefined ? [] : arguments[0];
+
+	          var optionsTypesThings = [];
+	          _angularFix2['default'].forEach(_angularFix2['default'].copy(arrayify(optionsTypes)).reverse(), function (optionsTypeName) {
+	            optionsTypesThings = formlyUtil.extendArray(optionsTypesThings, getThingsFromType(optionsTypeName));
+	          });
+	          return optionsTypesThings;
+	        }
+
+	        function getFormlyExpressionThing(thing) {
+	          formlyExpressionParserOrFormatterFunction[originalThingProp] = thing;
+	          return formlyExpressionParserOrFormatterFunction;
+
+	          function formlyExpressionParserOrFormatterFunction($viewValue) {
+	            var $modelValue = scope.options.value();
+	            return formlyUtil.formlyEval(scope, thing, $modelValue, $viewValue);
+	          }
+	        }
+	      }
+	    }
+
+	    function callLinkFunctions() {
+	      if (type && type.link) {
+	        type.link.apply(thusly, args);
+	      }
+	      if (scope.options.link) {
+	        scope.options.link.apply(thusly, args);
+	      }
+	    }
+
+	    function runManipulators(manipulators) {
+	      return function runManipulatorsOnTemplate(templateToManipulate) {
+	        var chain = $q.when(templateToManipulate);
+	        _angularFix2['default'].forEach(manipulators, function (manipulator) {
+	          chain = chain.then(function (template) {
+	            return $q.when(manipulator(template, scope.options, scope)).then(function (newTemplate) {
+	              return _angularFix2['default'].isString(newTemplate) ? newTemplate : asHtml(newTemplate);
+	            });
+	          });
+	        });
+	        return chain;
+	      };
+	    }
+	  }
+
+	  // sort-of stateless util functions
+	  function asHtml(el) {
+	    var wrapper = _angularFix2['default'].element('<a></a>');
+	    return wrapper.append(el).html();
+	  }
+
+	  function getFieldType(options) {
+	    return options.type && formlyConfig.getType(options.type);
+	  }
+
+	  function getManipulators(options, formOptions) {
+	    var preWrapper = [];
+	    var postWrapper = [];
+	    addManipulators(options.templateManipulators);
+	    addManipulators(formOptions.templateManipulators);
+	    addManipulators(formlyConfig.templateManipulators);
+	    return { preWrapper: preWrapper, postWrapper: postWrapper };
+
+	    function addManipulators(manipulators) {
+	      /* eslint-disable */ // it doesn't understand this :-(
+
+	      var _ref = manipulators || {};
+
+	      var _ref$preWrapper = _ref.preWrapper;
+	      var pre = _ref$preWrapper === undefined ? [] : _ref$preWrapper;
+	      var _ref$postWrapper = _ref.postWrapper;
+	      var post = _ref$postWrapper === undefined ? [] : _ref$postWrapper;
+
+	      preWrapper = preWrapper.concat(pre);
+	      postWrapper = postWrapper.concat(post);
+	      /* eslint-enable */
+	    }
+	  }
+
+	  function getFieldTemplate(options) {
+	    function fromOptionsOrType(key, fieldType) {
+	      if (_angularFix2['default'].isDefined(options[key])) {
+	        return options[key];
+	      } else if (fieldType && _angularFix2['default'].isDefined(fieldType[key])) {
+	        return fieldType[key];
+	      }
+	    }
+
+	    var type = formlyConfig.getType(options.type, true, options);
+	    var template = fromOptionsOrType('template', type);
+	    var templateUrl = fromOptionsOrType('templateUrl', type);
+	    if (_angularFix2['default'].isUndefined(template) && !templateUrl) {
+	      throw formlyUsability.getFieldError('type-type-has-no-template', 'Type \'' + options.type + '\' has no template. On element:', options);
+	    }
+
+	    return getTemplate(templateUrl || template, _angularFix2['default'].isUndefined(template), options);
+	  }
+
+	  function getTemplate(template, isUrl, options) {
+	    var templatePromise = undefined;
+	    if (_angularFix2['default'].isFunction(template)) {
+	      templatePromise = $q.when(template(options));
+	    } else {
+	      templatePromise = $q.when(template);
+	    }
+
+	    if (!isUrl) {
+	      return templatePromise;
+	    } else {
+	      var _ret2 = (function () {
+	        var httpOptions = { cache: $templateCache };
+	        return {
+	          v: templatePromise.then(function (url) {
+	            return $http.get(url, httpOptions);
+	          }).then(function (response) {
+	            return response.data;
+	          })['catch'](function handleErrorGettingATemplate(error) {
+	            formlyWarn('problem-loading-template-for-templateurl', 'Problem loading template for ' + template, error);
+	          })
+	        };
+	      })();
+
+	      if (typeof _ret2 === 'object') return _ret2.v;
+	    }
+	  }
+
+	  function transcludeInWrappers(options, formOptions) {
+	    var wrapper = getWrapperOption(options, formOptions);
+
+	    return function transcludeTemplate(template) {
+	      if (!wrapper.length) {
+	        return $q.when(template);
+	      }
+
+	      wrapper.forEach(function (aWrapper) {
+	        formlyUsability.checkWrapper(aWrapper, options);
+	        runApiCheck(aWrapper, options);
+	      });
+	      var promises = wrapper.map(function (w) {
+	        return getTemplate(w.template || w.templateUrl, !w.template);
+	      });
+	      return $q.all(promises).then(function (wrappersTemplates) {
+	        wrappersTemplates.forEach(function (wrapperTemplate, index) {
+	          formlyUsability.checkWrapperTemplate(wrapperTemplate, wrapper[index]);
+	        });
+	        wrappersTemplates.reverse(); // wrapper 0 is wrapped in wrapper 1 and so on...
+	        var totalWrapper = wrappersTemplates.shift();
+	        wrappersTemplates.forEach(function (wrapperTemplate) {
+	          totalWrapper = doTransclusion(totalWrapper, wrapperTemplate);
+	        });
+	        return doTransclusion(totalWrapper, template);
+	      });
+	    };
+	  }
+
+	  function doTransclusion(wrapper, template) {
+	    var superWrapper = _angularFix2['default'].element('<a></a>'); // this allows people not have to have a single root in wrappers
+	    superWrapper.append(wrapper);
+	    var transcludeEl = superWrapper.find('formly-transclude');
+	    if (!transcludeEl.length) {
+	      // try it using our custom find function
+	      transcludeEl = formlyUtil.findByNodeName(superWrapper, 'formly-transclude');
+	    }
+	    transcludeEl.replaceWith(template);
+	    return superWrapper.html();
+	  }
+
+	  function getWrapperOption(options, formOptions) {
+	    /* eslint complexity:[2, 6] */
+	    var wrapper = options.wrapper;
+	    // explicit null means no wrapper
+	    if (wrapper === null) {
+	      return [];
+	    }
+
+	    // nothing specified means use the default wrapper for the type
+	    if (!wrapper) {
+	      // get all wrappers that specify they apply to this type
+	      wrapper = arrayify(formlyConfig.getWrapperByType(options.type));
+	    } else {
+	      wrapper = arrayify(wrapper).map(formlyConfig.getWrapper);
+	    }
+
+	    // get all wrappers for that the type specified that it uses.
+	    var type = formlyConfig.getType(options.type, true, options);
+	    if (type && type.wrapper) {
+	      var typeWrappers = arrayify(type.wrapper).map(formlyConfig.getWrapper);
+	      wrapper = wrapper.concat(typeWrappers);
+	    }
+
+	    // add form wrappers
+	    if (formOptions.wrapper) {
+	      var formWrappers = arrayify(formOptions.wrapper).map(formlyConfig.getWrapper);
+	      wrapper = wrapper.concat(formWrappers);
+	    }
+
+	    // add the default wrapper last
+	    var defaultWrapper = formlyConfig.getWrapper();
+	    if (defaultWrapper) {
+	      wrapper.push(defaultWrapper);
+	    }
+	    return wrapper;
+	  }
+
+	  function checkApi(options) {
+	    formlyApiCheck['throw'](formlyApiCheck.formlyFieldOptions, options, {
+	      prefix: 'formly-field directive',
+	      url: 'formly-field-directive-validation-failed'
+	    });
+	    // validate with the type
+	    var type = options.type && formlyConfig.getType(options.type);
+	    if (type) {
+	      runApiCheck(type, options, true);
+	    }
+	    if (options.expressionProperties && options.expressionProperties.hide) {
+	      formlyWarn('dont-use-expressionproperties.hide-use-hideexpression-instead', 'You have specified `hide` in `expressionProperties`. Use `hideExpression` instead', options);
+	    }
+	  }
+
+	  function checkFieldGroupApi(options) {
+	    formlyApiCheck['throw'](formlyApiCheck.fieldGroup, options, {
+	      prefix: 'formly-field directive',
+	      url: 'formly-field-directive-validation-failed'
+	    });
+	  }
+
+	  function runApiCheck(_ref2, options, forType) {
+	    var apiCheck = _ref2.apiCheck;
+	    var apiCheckInstance = _ref2.apiCheckInstance;
+	    var apiCheckFunction = _ref2.apiCheckFunction;
+	    var apiCheckOptions = _ref2.apiCheckOptions;
+
+	    runApiCheckForType(apiCheck, apiCheckInstance, apiCheckFunction, apiCheckOptions, options);
+	    if (forType && options.type) {
+	      _angularFix2['default'].forEach(formlyConfig.getTypeHeritage(options.type), function (type) {
+	        runApiCheckForType(type.apiCheck, type.apiCheckInstance, type.apiCheckFunction, type.apiCheckOptions, options);
+	      });
+	    }
+	  }
+
+	  function runApiCheckForType(apiCheck, apiCheckInstance, apiCheckFunction, apiCheckOptions, options) {
+	    /* eslint complexity:[2, 9] */
+	    if (!apiCheck) {
+	      return;
+	    }
+	    var instance = apiCheckInstance || formlyConfig.extras.apiCheckInstance || formlyApiCheck;
+	    if (instance.config.disabled || _apiCheck2['default'].globalConfig.disabled) {
+	      return;
+	    }
+	    var fn = apiCheckFunction || 'warn';
+	    // this is the new API
+	    var checkerObjects = apiCheck(instance);
+	    _angularFix2['default'].forEach(checkerObjects, function (shape, name) {
+	      var checker = instance.shape(shape);
+	      var checkOptions = _angularFix2['default'].extend({
+	        prefix: 'formly-field type ' + options.type + ' for property ' + name,
+	        url: formlyApiCheck.config.output.docsBaseUrl + 'formly-field-type-apicheck-failed'
+	      }, apiCheckOptions);
+	      instance[fn](checker, options[name], checkOptions);
+	    });
+	  }
+	}
+	formlyField.$inject = ["$http", "$q", "$compile", "$templateCache", "$interpolate", "formlyConfig", "formlyApiCheck", "formlyUtil", "formlyUsability", "formlyWarn"];
+
+	// Stateless util functions
+	function getDefaultOptionsOptionsTypes(type) {
+	  return getDefaultOptionsProperty(type, 'optionsTypes', []);
+	}
+
+	function getDefaultOptionsProperty(type, prop, defaultValue) {
+	  return type.defaultOptions && type.defaultOptions[prop] || defaultValue;
+	}
+	module.exports = exports['default'];
+
+/***/ },
+/* 15 */
+/***/ function(module, exports) {
+
+	'use strict';
+
+	Object.defineProperty(exports, '__esModule', {
+	  value: true
+	});
+	exports['default'] = formlyFocus;
+
+	// @ngInject
+	function formlyFocus($timeout, $document) {
+	  return {
+	    restrict: 'A',
+	    link: function formlyFocusLink(scope, element, attrs) {
+	      var previousEl = null;
+	      var el = element[0];
+	      var doc = $document[0];
+	      attrs.$observe('formlyFocus', function respondToFocusExpressionChange(value) {
+	        /* eslint no-bitwise:0 */ // I know what I'm doing. I promise...
+	        if (value === 'true') {
+	          $timeout(function setElementFocus() {
+	            previousEl = doc.activeElement;
+	            el.focus();
+	          }, ~ ~attrs.focusWait);
+	        } else if (value === 'false') {
+	          if (doc.activeElement === el) {
+	            el.blur();
+	            if (attrs.hasOwnProperty('refocus') && previousEl) {
+	              previousEl.focus();
+	            }
+	          }
+	        }
+	      });
+	    }
+	  };
+	}
+	formlyFocus.$inject = ["$timeout", "$document"];
+	module.exports = exports['default'];
+
+/***/ },
+/* 16 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	Object.defineProperty(exports, '__esModule', {
+	  value: true
+	});
+	var _slice = Array.prototype.slice;
+
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+
+	function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) arr2[i] = arr[i]; return arr2; } else { return Array.from(arr); } }
+
+	var _angularFix = __webpack_require__(2);
+
+	var _angularFix2 = _interopRequireDefault(_angularFix);
+
+	exports['default'] = formlyForm;
+
+	/**
+	 * @ngdoc directive
+	 * @name formlyForm
+	 * @restrict AE
+	 */
+	// @ngInject
+	function formlyForm(formlyUsability, formlyWarn, $parse, formlyConfig, $interpolate) {
+	  var currentFormId = 1;
+	  FormlyFormController.$inject = ["$scope", "formlyApiCheck", "formlyUtil"];
+	  return {
+	    restrict: 'AE',
+	    template: formlyFormGetTemplate,
+	    replace: true,
+	    transclude: true,
+	    scope: {
+	      fields: '=',
+	      model: '=',
+	      form: '=?',
+	      options: '=?'
+	    },
+	    controller: FormlyFormController,
+	    link: formlyFormLink
+	  };
+
+	  function formlyFormGetTemplate(el, attrs) {
+	    var rootEl = getRootEl();
+	    var fieldRootEl = getFieldRootEl();
+	    var formId = 'formly_' + currentFormId++;
+	    var parentFormAttributes = '';
+	    if (attrs.hasOwnProperty('isFieldGroup') && el.parent().parent().hasClass('formly')) {
+	      parentFormAttributes = copyAttributes(el.parent().parent()[0].attributes);
+	    }
+	    return '\n        <' + rootEl + ' class="formly"\n                 name="' + getFormName() + '"\n                 role="form" ' + parentFormAttributes + '>\n          <' + fieldRootEl + ' formly-field\n               ng-repeat="field in fields ' + getTrackBy() + '"\n               ' + getHideDirective() + '="!field.hide"\n               class="formly-field"\n               options="field"\n               model="field.model || model"\n               original-model="model"\n               fields="fields"\n               form="theFormlyForm"\n               form-id="' + getFormName() + '"\n               form-state="options.formState"\n               form-options="options"\n               index="$index">\n          </' + fieldRootEl + '>\n          <div ng-transclude class="' + getTranscludeClass() + '"></div>\n        </' + rootEl + '>\n      ';
+
+	    function getRootEl() {
+	      return attrs.rootEl || 'ng-form';
+	    }
+
+	    function getFieldRootEl() {
+	      return attrs.fieldRootEl || 'div';
+	    }
+
+	    function getHideDirective() {
+	      return attrs.hideDirective || formlyConfig.extras.defaultHideDirective || 'ng-if';
+	    }
+
+	    function getTrackBy() {
+	      if (!attrs.trackBy) {
+	        return '';
+	      } else {
+	        return 'track by ' + attrs.trackBy;
+	      }
+	    }
+
+	    function getFormName() {
+	      var formName = formId;
+	      var bindName = attrs.bindName;
+	      if (bindName) {
+	        if (_angularFix2['default'].version.minor < 3) {
+	          throw formlyUsability.getFormlyError('bind-name attribute on formly-form not allowed in < angular 1.3');
+	        }
+	        // we can do a one-time binding here because we know we're in 1.3.x territory
+	        formName = $interpolate.startSymbol() + '::\'formly_\' + ' + bindName + $interpolate.endSymbol();
+	      }
+	      return formName;
+	    }
+
+	    function getTranscludeClass() {
+	      return attrs.transcludeClass || '';
+	    }
+
+	    function copyAttributes(attributes) {
+	      var excluded = ['model', 'form', 'fields', 'options', 'name', 'role', 'class', 'data-model', 'data-form', 'data-fields', 'data-options', 'data-name'];
+	      var arrayAttrs = [];
+	      _angularFix2['default'].forEach(attributes, function (_ref) {
+	        var nodeName = _ref.nodeName;
+	        var value = _ref.value;
+
+	        if (nodeName !== 'undefined' && excluded.indexOf(nodeName) === -1) {
+	          arrayAttrs.push(toKebabCase(nodeName) + '="' + value + '"');
+	        }
+	      });
+	      return arrayAttrs.join(' ');
+	    }
+	  }
+
+	  // @ngInject
+	  function FormlyFormController($scope, formlyApiCheck, formlyUtil) {
+	    setupOptions();
+	    $scope.model = $scope.model || {};
+	    setupFields();
+
+	    // watch the model and evaluate watch expressions that depend on it.
+	    $scope.$watch('model', onModelOrFormStateChange, true);
+	    if ($scope.options.formState) {
+	      $scope.$watch('options.formState', onModelOrFormStateChange, true);
+	    }
+
+	    function onModelOrFormStateChange() {
+	      _angularFix2['default'].forEach($scope.fields, function runFieldExpressionProperties(field, index) {
+	        var model = field.model || $scope.model;
+	        field.runExpressions && field.runExpressions();
+	        if (field.hideExpression) {
+	          // can't use hide with expressionProperties reliably
+	          var val = model[field.key];
+	          field.hide = evalCloseToFormlyExpression(field.hideExpression, val, field, index);
+	        }
+	        if (field.extras && field.extras.validateOnModelChange && field.formControl) {
+	          field.formControl.$validate();
+	        }
+	      });
+	    }
+
+	    function setupFields() {
+	      $scope.fields = $scope.fields || [];
+
+	      checkDeprecatedOptions($scope.options);
+
+	      var fieldTransforms = $scope.options.fieldTransform || formlyConfig.extras.fieldTransform;
+
+	      if (!_angularFix2['default'].isArray(fieldTransforms)) {
+	        fieldTransforms = [fieldTransforms];
+	      }
+
+	      _angularFix2['default'].forEach(fieldTransforms, function transformFields(fieldTransform) {
+	        if (fieldTransform) {
+	          $scope.fields = fieldTransform($scope.fields, $scope.model, $scope.options, $scope.form);
+	          if (!$scope.fields) {
+	            throw formlyUsability.getFormlyError('fieldTransform must return an array of fields');
+	          }
+	        }
+	      });
+
+	      setupModels();
+
+	      _angularFix2['default'].forEach($scope.fields, attachKey); // attaches a key based on the index if a key isn't specified
+	      _angularFix2['default'].forEach($scope.fields, setupWatchers); // setup watchers for all fields
+	    }
+
+	    function checkDeprecatedOptions(options) {
+	      if (formlyConfig.extras.fieldTransform && _angularFix2['default'].isFunction(formlyConfig.extras.fieldTransform)) {
+	        formlyWarn('fieldtransform-as-a-function-deprecated', 'fieldTransform as a function has been deprecated.', 'Attempted for formlyConfig.extras: ' + formlyConfig.extras.fieldTransform.name, formlyConfig.extras);
+	      } else if (options.fieldTransform && _angularFix2['default'].isFunction(options.fieldTransform)) {
+	        formlyWarn('fieldtransform-as-a-function-deprecated', 'fieldTransform as a function has been deprecated.', 'Attempted for form', options);
+	      }
+	    }
+
+	    function setupOptions() {
+	      formlyApiCheck['throw']([formlyApiCheck.formOptionsApi.optional], [$scope.options], { prefix: 'formly-form options check' });
+	      $scope.options = $scope.options || {};
+	      $scope.options.formState = $scope.options.formState || {};
+
+	      _angularFix2['default'].extend($scope.options, {
+	        updateInitialValue: updateInitialValue,
+	        resetModel: resetModel
+	      });
+	    }
+
+	    function updateInitialValue() {
+	      _angularFix2['default'].forEach($scope.fields, function (field) {
+	        if (isFieldGroup(field) && field.options) {
+	          field.options.updateInitialValue();
+	        } else {
+	          field.updateInitialValue();
+	        }
+	      });
+	    }
+
+	    function resetModel() {
+	      _angularFix2['default'].forEach($scope.fields, function (field) {
+	        if (isFieldGroup(field) && field.options) {
+	          field.options.resetModel();
+	        } else if (field.resetModel) {
+	          field.resetModel();
+	        }
+	      });
+	    }
+
+	    function setupModels() {
+	      // a set of field models that are already watched (the $scope.model will have its own watcher)
+	      var watchedModels = [$scope.model];
+
+	      if ($scope.options.formState) {
+	        // $scope.options.formState will have its own watcher
+	        watchedModels.push($scope.options.formState);
+	      }
+
+	      _angularFix2['default'].forEach($scope.fields, function (field) {
+	        var isNewModel = initModel(field);
+
+	        if (field.model && isNewModel && watchedModels.indexOf(field.model) === -1) {
+	          $scope.$watch(function () {
+	            return field.model;
+	          }, onModelOrFormStateChange, true);
+	          watchedModels.push(field.model);
+	        }
+	      });
+	    }
+
+	    function initModel(field) {
+	      var isNewModel = true;
+
+	      if (_angularFix2['default'].isString(field.model)) {
+	        var expression = field.model;
+	        var index = $scope.fields.indexOf(field);
+
+	        isNewModel = !refrencesCurrentlyWatchedModel(expression);
+
+	        field.model = evalCloseToFormlyExpression(expression, undefined, field, index);
+	        if (!field.model) {
+	          throw formlyUsability.getFieldError('field-model-must-be-initialized', 'Field model must be initialized. When specifying a model as a string for a field, the result of the' + ' expression must have been initialized ahead of time.', field);
+	        }
+	      }
+	      return isNewModel;
+	    }
+
+	    function refrencesCurrentlyWatchedModel(expression) {
+	      return ['model', 'formState'].some(function (item) {
+	        return formlyUtil.startsWith(expression, item + '.') || formlyUtil.startsWith(expression, item + '[');
+	      });
+	    }
+
+	    function attachKey(field, index) {
+	      if (!isFieldGroup(field)) {
+	        field.key = field.key || index || 0;
+	      }
+	    }
+
+	    function setupWatchers(field, index) {
+	      if (isFieldGroup(field) || !_angularFix2['default'].isDefined(field.watcher)) {
+	        return;
+	      }
+	      var watchers = field.watcher;
+	      if (!_angularFix2['default'].isArray(watchers)) {
+	        watchers = [watchers];
+	      }
+	      _angularFix2['default'].forEach(watchers, function setupWatcher(watcher) {
+	        if (!_angularFix2['default'].isDefined(watcher.listener)) {
+	          throw formlyUsability.getFieldError('all-field-watchers-must-have-a-listener', 'All field watchers must have a listener', field);
+	        }
+	        var watchExpression = getWatchExpression(watcher, field, index);
+	        var watchListener = getWatchListener(watcher, field, index);
+
+	        var type = watcher.type || '$watch';
+	        watcher.stopWatching = $scope[type](watchExpression, watchListener, watcher.watchDeep);
+	      });
+	    }
+
+	    function getWatchExpression(watcher, field, index) {
+	      var watchExpression = watcher.expression || 'model[\'' + field.key + '\']';
+	      if (_angularFix2['default'].isFunction(watchExpression)) {
+	        (function () {
+	          // wrap the field's watch expression so we can call it with the field as the first arg
+	          // and the stop function as the last arg as a helper
+	          var originalExpression = watchExpression;
+	          watchExpression = function formlyWatchExpression() {
+	            var args = modifyArgs.apply(undefined, [watcher, index].concat(_slice.call(arguments)));
+	            return originalExpression.apply(undefined, _toConsumableArray(args));
+	          };
+	          watchExpression.displayName = 'Formly Watch Expression for field for ' + field.key;
+	        })();
+	      }
+	      return watchExpression;
+	    }
+
+	    function getWatchListener(watcher, field, index) {
+	      var watchListener = watcher.listener;
+	      if (_angularFix2['default'].isFunction(watchListener)) {
+	        (function () {
+	          // wrap the field's watch listener so we can call it with the field as the first arg
+	          // and the stop function as the last arg as a helper
+	          var originalListener = watchListener;
+	          watchListener = function formlyWatchListener() {
+	            var args = modifyArgs.apply(undefined, [watcher, index].concat(_slice.call(arguments)));
+	            return originalListener.apply(undefined, _toConsumableArray(args));
+	          };
+	          watchListener.displayName = 'Formly Watch Listener for field for ' + field.key;
+	        })();
+	      }
+	      return watchListener;
+	    }
+
+	    function modifyArgs(watcher, index) {
+	      for (var _len = arguments.length, originalArgs = Array(_len > 2 ? _len - 2 : 0), _key = 2; _key < _len; _key++) {
+	        originalArgs[_key - 2] = arguments[_key];
+	      }
+
+	      return [$scope.fields[index]].concat(originalArgs, [watcher.stopWatching]);
+	    }
+
+	    function evalCloseToFormlyExpression(expression, val, field, index) {
+	      var extraLocals = getFormlyFieldLikeLocals(field, index);
+	      return formlyUtil.formlyEval($scope, expression, val, val, extraLocals);
+	    }
+
+	    function getFormlyFieldLikeLocals(field, index) {
+	      // this makes it closer to what a regular formlyExpression would be
+	      return {
+	        options: field,
+	        index: index,
+	        formState: $scope.options.formState,
+	        formId: $scope.formId
+	      };
+	    }
+	  }
+
+	  function formlyFormLink(scope, el, attrs) {
+	    setFormController();
+	    fixChromeAutocomplete();
+
+	    function setFormController() {
+	      var formId = attrs.name;
+	      scope.formId = formId;
+	      scope.theFormlyForm = scope[formId];
+	      if (attrs.form) {
+	        var getter = $parse(attrs.form);
+	        var setter = getter.assign;
+	        var parentForm = getter(scope.$parent);
+	        if (parentForm) {
+	          scope.theFormlyForm = parentForm;
+	          if (scope[formId]) {
+	            scope.theFormlyForm.$removeControl(scope[formId]);
+	          }
+
+	          // this next line is probably one of the more dangerous things that angular-formly does to improve the
+	          // API for angular-formly forms. It ensures that the NgModelControllers inside of formly-form will be
+	          // attached to the form that is passed to formly-form rather than the one that formly-form creates
+	          // this is necessary because it's confusing to have a step between the form you pass in
+	          // and the fields in that form. It also is because angular doesn't propagate properties like $submitted down
+	          // to children forms :-( This line was added to solve this issue:
+	          // https://github.com/formly-js/angular-formly/issues/287
+	          // luckily, this is how the formController has been accessed by the NgModelController since angular 1.0.0
+	          // so I expect it will remain this way for the life of angular 1.x
+	          el.removeData('$formController');
+	        } else {
+	          setter(scope.$parent, scope[formId]);
+	        }
+	      }
+	      if (!scope.theFormlyForm && !formlyConfig.disableWarnings) {
+	        /* eslint no-console:0 */
+	        formlyWarn('formly-form-has-no-formcontroller', 'Your formly-form does not have a `form` property. Many functions of the form (like validation) may not work', el, scope);
+	      }
+	    }
+
+	    /*
+	     * chrome autocomplete lameness
+	     * see https://code.google.com/p/chromium/issues/detail?id=468153#c14
+	     * ლ(ಠ益ಠლ)   (╯°□°)╯︵ ┻━┻    (◞‸◟；)
+	     */
+	    function fixChromeAutocomplete() {
+	      var global = formlyConfig.extras.removeChromeAutoComplete === true;
+	      var offInstance = scope.options && scope.options.removeChromeAutoComplete === false;
+	      var onInstance = scope.options && scope.options.removeChromeAutoComplete === true;
+	      if (global && !offInstance || onInstance) {
+	        var input = document.createElement('input');
+	        input.setAttribute('autocomplete', 'address-level4');
+	        input.setAttribute('hidden', 'true');
+	        el[0].appendChild(input);
+	      }
+	    }
+	  }
+
+	  // stateless util functions
+	  function toKebabCase(string) {
+	    if (string) {
+	      return string.replace(/([A-Z])/g, function ($1) {
+	        return '-' + $1.toLowerCase();
+	      });
+	    } else {
+	      return '';
+	    }
+	  }
+
+	  function isFieldGroup(field) {
+	    return field && !!field.fieldGroup;
+	  }
+	}
+	formlyForm.$inject = ["formlyUsability", "formlyWarn", "$parse", "formlyConfig", "$interpolate"];
+	module.exports = exports['default'];
+
+/***/ },
+/* 17 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	Object.defineProperty(exports, '__esModule', {
+	  value: true
+	});
+
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+
+	var _angularFix = __webpack_require__(2);
+
+	var _angularFix2 = _interopRequireDefault(_angularFix);
+
+	var _otherUtils = __webpack_require__(9);
+
+	exports['default'] = addFormlyNgModelAttrsManipulator;
+
+	// @ngInject
+	function addFormlyNgModelAttrsManipulator(formlyConfig, $interpolate) {
+	  if (formlyConfig.extras.disableNgModelAttrsManipulator) {
+	    return;
+	  }
+	  formlyConfig.templateManipulators.preWrapper.push(ngModelAttrsManipulator);
+
+	  function ngModelAttrsManipulator(template, options, scope) {
+	    var node = document.createElement('div');
+	    var skip = options.extras && options.extras.skipNgModelAttrsManipulator;
+	    if (skip === true) {
+	      return template;
+	    }
+	    node.innerHTML = template;
+
+	    var modelNodes = getNgModelNodes(node, skip);
+	    if (!modelNodes || !modelNodes.length) {
+	      return template;
+	    }
+
+	    addIfNotPresent(modelNodes, 'id', scope.id);
+	    addIfNotPresent(modelNodes, 'name', scope.name || scope.id);
+
+	    addValidation();
+	    alterNgModelAttr();
+	    addModelOptions();
+	    addTemplateOptionsAttrs();
+	    addNgModelElAttrs();
+
+	    return node.innerHTML;
+
+	    function addValidation() {
+	      if (_angularFix2['default'].isDefined(options.validators) || _angularFix2['default'].isDefined(options.validation.messages)) {
+	        addIfNotPresent(modelNodes, 'formly-custom-validation', '');
+	      }
+	    }
+
+	    function alterNgModelAttr() {
+	      if (isPropertyAccessor(options.key)) {
+	        addRegardlessOfPresence(modelNodes, 'ng-model', 'model.' + options.key);
+	      }
+	    }
+
+	    function addModelOptions() {
+	      if (_angularFix2['default'].isDefined(options.modelOptions)) {
+	        addIfNotPresent(modelNodes, 'ng-model-options', 'options.modelOptions');
+	        if (options.modelOptions.getterSetter) {
+	          addRegardlessOfPresence(modelNodes, 'ng-model', 'options.value');
+	        }
+	      }
+	    }
+
+	    function addTemplateOptionsAttrs() {
+	      if (!options.templateOptions && !options.expressionProperties) {
+	        // no need to run these if there are no templateOptions or expressionProperties
+	        return;
+	      }
+	      var to = options.templateOptions || {};
+	      var ep = options.expressionProperties || {};
+
+	      var ngModelAttributes = getBuiltInAttributes();
+
+	      // extend with the user's specifications winning
+	      _angularFix2['default'].extend(ngModelAttributes, options.ngModelAttrs);
+
+	      // Feel free to make this more simple :-)
+	      _angularFix2['default'].forEach(ngModelAttributes, function (val, name) {
+	        /* eslint complexity:[2, 14] */
+	        var attrVal = undefined,
+	            attrName = undefined;
+	        var ref = 'options.templateOptions[\'' + name + '\']';
+	        var toVal = to[name];
+	        var epVal = getEpValue(ep, name);
+
+	        var inTo = _angularFix2['default'].isDefined(toVal);
+	        var inEp = _angularFix2['default'].isDefined(epVal);
+	        if (val.value) {
+	          // I realize this looks backwards, but it's right, trust me...
+	          attrName = val.value;
+	          attrVal = name;
+	        } else if (val.statement && inTo) {
+	          attrName = val.statement;
+	          if (_angularFix2['default'].isString(to[name])) {
+	            attrVal = '$eval(' + ref + ')';
+	          } else if (_angularFix2['default'].isFunction(to[name])) {
+	            attrVal = ref + '(model[options.key], options, this, $event)';
+	          } else {
+	            throw new Error('options.templateOptions.' + name + ' must be a string or function: ' + JSON.stringify(options));
+	          }
+	        } else if (val.bound && inEp) {
+	          attrName = val.bound;
+	          attrVal = ref;
+	        } else if ((val.attribute || val.boolean) && inEp) {
+	          attrName = val.attribute || val.boolean;
+	          attrVal = '' + $interpolate.startSymbol() + ref + $interpolate.endSymbol();
+	        } else if (val.attribute && inTo) {
+	          attrName = val.attribute;
+	          attrVal = toVal;
+	        } else if (val.boolean) {
+	          if (inTo && !inEp && toVal) {
+	            attrName = val.boolean;
+	            attrVal = true;
+	          } else {
+	            /* eslint no-empty:0 */
+	            // empty to illustrate that a boolean will not be added via val.bound
+	            // if you want it added via val.bound, then put it in expressionProperties
+	          }
+	        } else if (val.bound && inTo) {
+	            attrName = val.bound;
+	            attrVal = ref;
+	          }
+
+	        if (_angularFix2['default'].isDefined(attrName) && _angularFix2['default'].isDefined(attrVal)) {
+	          addIfNotPresent(modelNodes, attrName, attrVal);
+	        }
+	      });
+	    }
+
+	    function addNgModelElAttrs() {
+	      _angularFix2['default'].forEach(options.ngModelElAttrs, function (val, name) {
+	        addRegardlessOfPresence(modelNodes, name, val);
+	      });
+	    }
+	  }
+
+	  // Utility functions
+	  function getNgModelNodes(node, skip) {
+	    var selectorNot = _angularFix2['default'].isString(skip) ? ':not(' + skip + ')' : '';
+	    var skipNot = ':not([formly-skip-ng-model-attrs-manipulator])';
+	    var query = '[ng-model]' + selectorNot + skipNot + ', [data-ng-model]' + selectorNot + skipNot;
+	    try {
+	      return node.querySelectorAll(query);
+	    } catch (e) {
+	      //this code is needed for IE8, as it does not support the CSS3 ':not' selector
+	      //it should be removed when IE8 support is dropped
+	      return getNgModelNodesFallback(node, skip);
+	    }
+	  }
+
+	  function getNgModelNodesFallback(node, skip) {
+	    var allNgModelNodes = node.querySelectorAll('[ng-model], [data-ng-model]');
+	    var matchingNgModelNodes = [];
+
+	    //make sure this array is compatible with NodeList type by adding an 'item' function
+	    matchingNgModelNodes.item = function (i) {
+	      return this[i];
+	    };
+
+	    for (var i = 0; i < allNgModelNodes.length; i++) {
+	      var ngModelNode = allNgModelNodes[i];
+	      if (!ngModelNode.hasAttribute('formly-skip-ng-model-attrs-manipulator') && !(_angularFix2['default'].isString(skip) && nodeMatches(ngModelNode, skip))) {
+	        matchingNgModelNodes.push(ngModelNode);
+	      }
+	    }
+
+	    return matchingNgModelNodes;
+	  }
+
+	  function nodeMatches(node, selector) {
+	    var div = document.createElement('div');
+	    div.innerHTML = node.outerHTML;
+	    return div.querySelector(selector);
+	  }
+
+	  function getBuiltInAttributes() {
+	    var ngModelAttributes = {
+	      focus: {
+	        attribute: 'formly-focus'
+	      }
+	    };
+	    var boundOnly = [];
+	    var bothBooleanAndBound = ['required', 'disabled'];
+	    var bothAttributeAndBound = ['pattern', 'minlength'];
+	    var statementOnly = ['change', 'keydown', 'keyup', 'keypress', 'click', 'focus', 'blur'];
+	    var attributeOnly = ['placeholder', 'min', 'max', 'tabindex', 'type'];
+	    if (formlyConfig.extras.ngModelAttrsManipulatorPreferUnbound) {
+	      bothAttributeAndBound.push('maxlength');
+	    } else {
+	      boundOnly.push('maxlength');
+	    }
+
+	    _angularFix2['default'].forEach(boundOnly, function (item) {
+	      ngModelAttributes[item] = { bound: 'ng-' + item };
+	    });
+
+	    _angularFix2['default'].forEach(bothBooleanAndBound, function (item) {
+	      ngModelAttributes[item] = { boolean: item, bound: 'ng-' + item };
+	    });
+
+	    _angularFix2['default'].forEach(bothAttributeAndBound, function (item) {
+	      ngModelAttributes[item] = { attribute: item, bound: 'ng-' + item };
+	    });
+
+	    _angularFix2['default'].forEach(statementOnly, function (item) {
+	      var propName = 'on' + item.substr(0, 1).toUpperCase() + item.substr(1);
+	      ngModelAttributes[propName] = { statement: 'ng-' + item };
+	    });
+
+	    _angularFix2['default'].forEach(attributeOnly, function (item) {
+	      ngModelAttributes[item] = { attribute: item };
+	    });
+	    return ngModelAttributes;
+	  }
+
+	  function getEpValue(ep, name) {
+	    return ep['templateOptions.' + name] || ep['templateOptions[\'' + name + '\']'] || ep['templateOptions["' + name + '"]'];
+	  }
+
+	  function addIfNotPresent(nodes, attr, val) {
+	    _angularFix2['default'].forEach(nodes, function (node) {
+	      if (!node.getAttribute(attr)) {
+	        node.setAttribute(attr, val);
+	      }
+	    });
+	  }
+
+	  function addRegardlessOfPresence(nodes, attr, val) {
+	    _angularFix2['default'].forEach(nodes, function (node) {
+	      node.setAttribute(attr, val);
+	    });
+	  }
+
+	  function isPropertyAccessor(key) {
+	    return (0, _otherUtils.contains)(key, '.') || (0, _otherUtils.contains)(key, '[') && (0, _otherUtils.contains)(key, ']');
+	  }
+	}
+	addFormlyNgModelAttrsManipulator.$inject = ["formlyConfig", "$interpolate"];
+	module.exports = exports['default'];
+
+/***/ },
+/* 18 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	Object.defineProperty(exports, '__esModule', {
+	  value: true
+	});
+
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+
+	var _angularFix = __webpack_require__(2);
+
+	var _angularFix2 = _interopRequireDefault(_angularFix);
+
+	exports['default'] = addCustomTags;
+
+	// @ngInject
+	function addCustomTags($document) {
+	  if ($document && $document.get) {
+	    (function () {
+	      // IE8 check ->
+	      // http://stackoverflow.com/questions/10964966/detect-ie-version-prior-to-v9-in-javascript/10965203#10965203
+	      var document = $document.get(0);
+	      var div = document.createElement('div');
+	      div.innerHTML = '<!--[if lt IE 9]><i></i><![endif]-->';
+	      var isIeLessThan9 = div.getElementsByTagName('i').length === 1;
+
+	      if (isIeLessThan9) {
+	        // add the custom elements that we need for formly
+	        var customElements = ['formly-field', 'formly-form', 'formly-custom-validation', 'formly-focus', 'formly-transpose'];
+	        _angularFix2['default'].forEach(customElements, function (el) {
+	          document.createElement(el);
+	        });
+	      }
+	    })();
+	  }
+	}
+	addCustomTags.$inject = ["$document"];
+	module.exports = exports['default'];
+
+/***/ }
+/******/ ])
+});
+;
+//! angular-formly-templates-bootstrap version 6.1.4 built with ♥ by Astrism <astrisms@gmail.com>, Kent C. Dodds <kent@doddsfamily.us> (ó ì_í)=óò=(ì_í ò)
+
+(function webpackUniversalModuleDefinition(root, factory) {
+	if(typeof exports === 'object' && typeof module === 'object')
+		module.exports = factory(require("angular"), require("angular-formly"), require("api-check"));
+	else if(typeof define === 'function' && define.amd)
+		define(["angular", "angular-formly", "api-check"], factory);
+	else if(typeof exports === 'object')
+		exports["ngFormlyTemplatesBootstrap"] = factory(require("angular"), require("angular-formly"), require("api-check"));
+	else
+		root["ngFormlyTemplatesBootstrap"] = factory(root["angular"], root["ngFormly"], root["apiCheck"]);
+})(this, function(__WEBPACK_EXTERNAL_MODULE_3__, __WEBPACK_EXTERNAL_MODULE_4__, __WEBPACK_EXTERNAL_MODULE_5__) {
+return /******/ (function(modules) { // webpackBootstrap
+/******/ 	// The module cache
+/******/ 	var installedModules = {};
+
+/******/ 	// The require function
+/******/ 	function __webpack_require__(moduleId) {
+
+/******/ 		// Check if module is in cache
+/******/ 		if(installedModules[moduleId])
+/******/ 			return installedModules[moduleId].exports;
+
+/******/ 		// Create a new module (and put it into the cache)
+/******/ 		var module = installedModules[moduleId] = {
+/******/ 			exports: {},
+/******/ 			id: moduleId,
+/******/ 			loaded: false
+/******/ 		};
+
+/******/ 		// Execute the module function
+/******/ 		modules[moduleId].call(module.exports, module, module.exports, __webpack_require__);
+
+/******/ 		// Flag the module as loaded
+/******/ 		module.loaded = true;
+
+/******/ 		// Return the exports of the module
+/******/ 		return module.exports;
+/******/ 	}
+
+
+/******/ 	// expose the modules object (__webpack_modules__)
+/******/ 	__webpack_require__.m = modules;
+
+/******/ 	// expose the module cache
+/******/ 	__webpack_require__.c = installedModules;
+
+/******/ 	// __webpack_public_path__
+/******/ 	__webpack_require__.p = "";
+
+/******/ 	// Load entry module and return exports
+/******/ 	return __webpack_require__(0);
+/******/ })
+/************************************************************************/
+/******/ ([
+/* 0 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	module.exports = __webpack_require__(1);
+
+/***/ },
+/* 1 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	Object.defineProperty(exports, '__esModule', {
+	  value: true
+	});
+	var ngModuleName = 'formlyBootstrap';
+	var angular = __webpack_require__(2);
+	var ngModule = angular.module(ngModuleName, [__webpack_require__(4)]);
+	ngModule.constant('formlyBootstrapApiCheck', __webpack_require__(5)({
+	  output: {
+	    prefix: 'angular-formly-bootstrap'
+	  }
+	}));
+	ngModule.constant('formlyBootstrapVersion', ("6.1.4"));
+
+	__webpack_require__(6)(ngModule);
+	__webpack_require__(9)(ngModule);
+	__webpack_require__(19)(ngModule);
+
+	exports['default'] = ngModuleName;
+	module.exports = exports['default'];
+
+/***/ },
+/* 2 */
+/***/ function(module, exports, __webpack_require__) {
+
+	// some versions of angular don't export the angular module properly,
+	// so we get it from window in this case.
+	'use strict';
+
+	var angular = __webpack_require__(3);
+	if (!angular.version) {
+	  angular = window.angular;
+	}
+	module.exports = angular;
+
+/***/ },
+/* 3 */
+/***/ function(module, exports) {
+
+	module.exports = __WEBPACK_EXTERNAL_MODULE_3__;
+
+/***/ },
+/* 4 */
+/***/ function(module, exports) {
+
+	module.exports = __WEBPACK_EXTERNAL_MODULE_4__;
+
+/***/ },
+/* 5 */
+/***/ function(module, exports) {
+
+	module.exports = __WEBPACK_EXTERNAL_MODULE_5__;
+
+/***/ },
+/* 6 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	Object.defineProperty(exports, '__esModule', {
+	  value: true
+	});
+
+	exports['default'] = function (ngModule) {
+	  ngModule.config(addWrappers);
+
+	  function addWrappers(formlyConfigProvider) {
+	    formlyConfigProvider.setWrapper([{
+	      name: 'bootstrapLabel',
+	      template: __webpack_require__(7),
+	      apiCheck: function apiCheck(check) {
+	        return {
+	          templateOptions: {
+	            label: check.string,
+	            required: check.bool.optional,
+	            labelSrOnly: check.bool.optional
+	          }
+	        };
+	      }
+	    }, { name: 'bootstrapHasError', template: __webpack_require__(8) }]);
+	  }
+	  addWrappers.$inject = ["formlyConfigProvider"];
+	};
+
+	module.exports = exports['default'];
+
+/***/ },
+/* 7 */
+/***/ function(module, exports) {
+
+	module.exports = "<div>\n  <label for=\"{{id}}\" class=\"control-label {{to.labelSrOnly ? 'sr-only' : ''}}\" ng-if=\"to.label\">\n    {{to.label}}\n    {{to.required ? '*' : ''}}\n  </label>\n  <formly-transclude></formly-transclude>\n</div>\n"
+
+/***/ },
+/* 8 */
+/***/ function(module, exports) {
+
+	module.exports = "<div class=\"form-group\" ng-class=\"{'has-error': showError}\">\n  <formly-transclude></formly-transclude>\n</div>\n"
+
+/***/ },
+/* 9 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	Object.defineProperty(exports, '__esModule', {
+	  value: true
+	});
+
+	exports['default'] = function (ngModule) {
+	  __webpack_require__(10)(ngModule);
+	  __webpack_require__(12)(ngModule);
+	  __webpack_require__(14)(ngModule);
+	  __webpack_require__(15)(ngModule);
+	  __webpack_require__(17)(ngModule);
+	  __webpack_require__(18)(ngModule);
+	};
+
+	module.exports = exports['default'];
+
+/***/ },
+/* 10 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	Object.defineProperty(exports, '__esModule', {
+	  value: true
+	});
+
+	exports['default'] = function (ngModule) {
+	  ngModule.config(addCheckboxType);
+
+	  function addCheckboxType(formlyConfigProvider) {
+	    formlyConfigProvider.setType({
+	      name: 'checkbox',
+	      template: __webpack_require__(11),
+	      wrapper: ['bootstrapHasError'],
+	      apiCheck: function apiCheck(check) {
+	        return {
+	          templateOptions: {
+	            label: check.string
+	          }
+	        };
+	      }
+	    });
+	  }
+	  addCheckboxType.$inject = ["formlyConfigProvider"];
+	};
+
+	module.exports = exports['default'];
+
+/***/ },
+/* 11 */
+/***/ function(module, exports) {
+
+	module.exports = "<div class=\"checkbox\">\n\t<label>\n\t\t<input type=\"checkbox\"\n           class=\"formly-field-checkbox\"\n\t\t       ng-model=\"model[options.key]\">\n\t\t{{to.label}}\n\t\t{{to.required ? '*' : ''}}\n\t</label>\n</div>\n"
+
+/***/ },
+/* 12 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	Object.defineProperty(exports, '__esModule', {
+	  value: true
+	});
+
+	exports['default'] = function (ngModule) {
+	  ngModule.config(addCheckboxType);
+
+	  function addCheckboxType(formlyConfigProvider) {
+	    formlyConfigProvider.setType({
+	      name: 'multiCheckbox',
+	      template: __webpack_require__(13),
+	      wrapper: ['bootstrapLabel', 'bootstrapHasError'],
+	      apiCheck: function apiCheck(check) {
+	        return {
+	          templateOptions: {
+	            options: check.arrayOf(check.object),
+	            labelProp: check.string.optional,
+	            valueProp: check.string.optional
+	          }
+	        };
+	      },
+	      defaultOptions: {
+	        noFormControl: false,
+	        ngModelAttrs: {
+	          required: {
+	            attribute: '',
+	            bound: ''
+	          }
+	        }
+	      },
+	      controller: /* @ngInject */["$scope", function controller($scope) {
+	        var to = $scope.to;
+	        var opts = $scope.options;
+	        $scope.multiCheckbox = {
+	          checked: [],
+	          change: setModel
+	        };
+
+	        // initialize the checkboxes check property
+	        $scope.$watch('model', function modelWatcher(newModelValue) {
+	          var modelValue, valueProp;
+
+	          if (Object.keys(newModelValue).length) {
+	            modelValue = newModelValue[opts.key];
+
+	            $scope.$watch('to.options', function optionsWatcher(newOptionsValues) {
+	              if (newOptionsValues && Array.isArray(newOptionsValues) && Array.isArray(modelValue)) {
+	                valueProp = to.valueProp || 'value';
+	                for (var index = 0; index < newOptionsValues.length; index++) {
+	                  $scope.multiCheckbox.checked[index] = modelValue.indexOf(newOptionsValues[index][valueProp]) !== -1;
+	                }
+	              }
+	            });
+	          }
+	        }, true);
+
+	        function checkValidity(expressionValue) {
+	          var valid;
+
+	          if ($scope.to.required) {
+	            valid = angular.isArray($scope.model[opts.key]) && $scope.model[opts.key].length > 0 && expressionValue;
+
+	            $scope.fc.$setValidity('required', valid);
+	          }
+	        }
+
+	        function setModel() {
+	          $scope.model[opts.key] = [];
+	          angular.forEach($scope.multiCheckbox.checked, function (checkbox, index) {
+	            if (checkbox) {
+	              $scope.model[opts.key].push(to.options[index][to.valueProp || 'value']);
+	            }
+	          });
+
+	          // Must make sure we mark as touched because only the last checkbox due to a bug in angular.
+	          $scope.fc.$setTouched();
+	          checkValidity(true);
+	        }
+
+	        if (opts.expressionProperties && opts.expressionProperties['templateOptions.required']) {
+	          $scope.$watch(function () {
+	            return $scope.to.required;
+	          }, function (newValue) {
+	            checkValidity(newValue);
+	          });
+	        }
+
+	        if ($scope.to.required) {
+	          var unwatchFormControl = $scope.$watch('fc', function (newValue) {
+	            if (!newValue) {
+	              return;
+	            }
+	            checkValidity(true);
+	            unwatchFormControl();
+	          });
+	        }
+	      }]
+	    });
+	  }
+	  addCheckboxType.$inject = ["formlyConfigProvider"];
+	};
+
+	module.exports = exports['default'];
+
+/***/ },
+/* 13 */
+/***/ function(module, exports) {
+
+	module.exports = "<div class=\"radio-group\">\n  <div ng-repeat=\"(key, option) in to.options\" class=\"checkbox\">\n    <label>\n      <input type=\"checkbox\"\n             id=\"{{id + '_'+ $index}}\"\n             ng-model=\"multiCheckbox.checked[$index]\"\n             ng-change=\"multiCheckbox.change()\">\n      {{option[to.labelProp || 'name']}}\n    </label>\n  </div>\n</div>\n"
+
+/***/ },
+/* 14 */
+/***/ function(module, exports) {
+
+	'use strict';
+
+	Object.defineProperty(exports, '__esModule', {
+	  value: true
+	});
+
+	exports['default'] = function (ngModule) {
+	  ngModule.config(addInputType);
+
+	  function addInputType(formlyConfigProvider) {
+	    formlyConfigProvider.setType({
+	      name: 'input',
+	      template: '<input class="form-control" ng-model="model[options.key]">',
+	      wrapper: ['bootstrapLabel', 'bootstrapHasError']
+	    });
+	  }
+	  addInputType.$inject = ["formlyConfigProvider"];
+	};
+
+	module.exports = exports['default'];
+
+/***/ },
+/* 15 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	Object.defineProperty(exports, '__esModule', {
+	  value: true
+	});
+
+	exports['default'] = function (ngModule) {
+	  ngModule.config(addRadioType);
+
+	  function addRadioType(formlyConfigProvider) {
+	    formlyConfigProvider.setType({
+	      name: 'radio',
+	      template: __webpack_require__(16),
+	      wrapper: ['bootstrapLabel', 'bootstrapHasError'],
+	      defaultOptions: {
+	        noFormControl: false
+	      },
+	      apiCheck: function apiCheck(check) {
+	        return {
+	          templateOptions: {
+	            options: check.arrayOf(check.object),
+	            labelProp: check.string.optional,
+	            valueProp: check.string.optional
+	          }
+	        };
+	      }
+	    });
+	  }
+	  addRadioType.$inject = ["formlyConfigProvider"];
+	};
+
+	module.exports = exports['default'];
+
+/***/ },
+/* 16 */
+/***/ function(module, exports) {
+
+	module.exports = "<div class=\"radio-group\">\n  <div ng-repeat=\"(key, option) in to.options\" class=\"radio\">\n    <label>\n      <input type=\"radio\"\n             id=\"{{id + '_'+ $index}}\"\n             tabindex=\"0\"\n             ng-value=\"option[to.valueProp || 'value']\"\n             ng-model=\"model[options.key]\">\n      {{option[to.labelProp || 'name']}}\n    </label>\n  </div>\n</div>\n"
+
+/***/ },
+/* 17 */
+/***/ function(module, exports) {
+
+	'use strict';
+
+	Object.defineProperty(exports, '__esModule', {
+	  value: true
+	});
+
+	function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
+	exports['default'] = function (ngModule) {
+	  ngModule.config(addSelectType);
+
+	  var template = '<select class="form-control" ng-model="model[options.key]"></select>';
+
+	  function addSelectType(formlyConfigProvider) {
+	    formlyConfigProvider.setType({
+	      name: 'select',
+	      template: template,
+	      wrapper: ['bootstrapLabel', 'bootstrapHasError'],
+	      defaultOptions: function defaultOptions(options) {
+	        /* jshint maxlen:195 */
+	        var ngOptions = options.templateOptions.ngOptions || 'option[to.valueProp || \'value\'] as option[to.labelProp || \'name\'] group by option[to.groupProp || \'group\'] for option in to.options';
+	        return {
+	          ngModelAttrs: _defineProperty({}, ngOptions, {
+	            value: 'ng-options'
+	          })
+	        };
+	      },
+	      apiCheck: function apiCheck(check) {
+	        return {
+	          templateOptions: {
+	            options: check.arrayOf(check.object),
+	            labelProp: check.string.optional,
+	            valueProp: check.string.optional,
+	            groupProp: check.string.optional
+	          }
+	        };
+	      }
+	    });
+	  }
+	  addSelectType.$inject = ["formlyConfigProvider"];
+	};
+
+	module.exports = exports['default'];
+
+/***/ },
+/* 18 */
+/***/ function(module, exports) {
+
+	'use strict';
+
+	Object.defineProperty(exports, '__esModule', {
+	  value: true
+	});
+
+	exports['default'] = function (ngModule) {
+	  ngModule.config(addTextareaType);
+
+	  function addTextareaType(formlyConfigProvider) {
+	    formlyConfigProvider.setType({
+	      name: 'textarea',
+	      template: '<textarea class="form-control" ng-model="model[options.key]"></textarea>',
+	      wrapper: ['bootstrapLabel', 'bootstrapHasError'],
+	      defaultOptions: {
+	        ngModelAttrs: {
+	          rows: { attribute: 'rows' },
+	          cols: { attribute: 'cols' }
+	        }
+	      },
+	      apiCheck: function apiCheck(check) {
+	        return {
+	          templateOptions: {
+	            rows: check.number.optional,
+	            cols: check.number.optional
+	          }
+	        };
+	      }
+	    });
+	  }
+	  addTextareaType.$inject = ["formlyConfigProvider"];
+	};
+
+	module.exports = exports['default'];
+
+/***/ },
+/* 19 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	Object.defineProperty(exports, '__esModule', {
+	  value: true
+	});
+
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+
+	var _addons = __webpack_require__(20);
+
+	var _addons2 = _interopRequireDefault(_addons);
+
+	var _description = __webpack_require__(22);
+
+	var _description2 = _interopRequireDefault(_description);
+
+	exports['default'] = function (ngModule) {
+	  (0, _addons2['default'])(ngModule);
+	  (0, _description2['default'])(ngModule);
+	};
+
+	module.exports = exports['default'];
+
+/***/ },
+/* 20 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	Object.defineProperty(exports, '__esModule', {
+	  value: true
+	});
+
+	exports['default'] = function (ngModule) {
+	  ngModule.run(addAddonsManipulator);
+
+	  function addAddonsManipulator(formlyConfig, formlyBootstrapApiCheck) {
+	    var addonTemplate = __webpack_require__(21);
+	    var addonChecker = formlyBootstrapApiCheck.shape({
+	      'class': formlyBootstrapApiCheck.string.optional,
+	      text: formlyBootstrapApiCheck.string.optional,
+	      onClick: formlyBootstrapApiCheck.func.optional
+	    }).strict.optional;
+	    var api = formlyBootstrapApiCheck.shape({
+	      templateOptions: formlyBootstrapApiCheck.shape({
+	        addonLeft: addonChecker,
+	        addonRight: addonChecker
+	      })
+	    });
+	    formlyConfig.templateManipulators.preWrapper.push(function (template, options) {
+	      if (!options.templateOptions.addonLeft && !options.templateOptions.addonRight) {
+	        return template;
+	      }
+	      formlyBootstrapApiCheck.warn([api], [options]);
+	      return addonTemplate.replace('<formly-transclude></formly-transclude>', template);
+	    });
+	  }
+	  addAddonsManipulator.$inject = ["formlyConfig", "formlyBootstrapApiCheck"];
+	};
+
+	module.exports = exports['default'];
+
+/***/ },
+/* 21 */
+/***/ function(module, exports) {
+
+	module.exports = "<div ng-class=\"{'input-group': to.addonLeft || to.addonRight}\">\n    <div class=\"input-group-addon\"\n         ng-if=\"to.addonLeft\"\n         ng-style=\"{cursor: to.addonLeft.onClick ? 'pointer' : 'inherit'}\"\n         ng-click=\"to.addonLeft.onClick(options, this)\">\n        <i class=\"{{to.addonLeft.class}}\" ng-if=\"to.addonLeft.class\"></i>\n        <span ng-if=\"to.addonLeft.text\">{{to.addonLeft.text}}</span>\n    </div>\n    <formly-transclude></formly-transclude>\n    <div class=\"input-group-addon\"\n         ng-if=\"to.addonRight\"\n         ng-style=\"{cursor: to.addonRight.onClick ? 'pointer' : 'inherit'}\"\n         ng-click=\"to.addonRight.onClick(options, this)\">\n        <i class=\"{{to.addonRight.class}}\" ng-if=\"to.addonRight.class\"></i>\n        <span ng-if=\"to.addonRight.text\">{{to.addonRight.text}}</span>\n    </div>\n</div>\n"
+
+/***/ },
+/* 22 */
+/***/ function(module, exports) {
+
+	'use strict';
+
+	Object.defineProperty(exports, '__esModule', {
+	  value: true
+	});
+
+	exports['default'] = function (ngModule) {
+	  ngModule.run(addDescriptionManipulator);
+
+	  function addDescriptionManipulator(formlyConfig) {
+	    formlyConfig.templateManipulators.preWrapper.push(function ariaDescribedBy(template, options, scope) {
+	      if (angular.isDefined(options.templateOptions.description)) {
+	        var el = document.createElement('div');
+	        el.appendChild(angular.element(template)[0]);
+	        el.appendChild(angular.element('<p id="' + scope.id + '_description"' + 'class="help-block"' + 'ng-if="to.description">' + '{{to.description}}' + '</p>')[0]);
+	        var modelEls = angular.element(el.querySelectorAll('[ng-model]'));
+	        if (modelEls) {
+	          modelEls.attr('aria-describedby', scope.id + '_description');
+	        }
+	        return el.innerHTML;
+	      } else {
+	        return template;
+	      }
+	    });
+	  }
+	  addDescriptionManipulator.$inject = ["formlyConfig"];
+	};
+
+	module.exports = exports['default'];
+
+/***/ }
+/******/ ])
+});
+;
+/*!
+ * ui-select
+ * http://github.com/angular-ui/ui-select
+ * Version: 0.12.1 - 2015-07-28T03:50:59.076Z
+ * License: MIT
+ */
+
+
+(function () { 
+"use strict";
+
+var KEY = {
+    TAB: 9,
+    ENTER: 13,
+    ESC: 27,
+    SPACE: 32,
+    LEFT: 37,
+    UP: 38,
+    RIGHT: 39,
+    DOWN: 40,
+    SHIFT: 16,
+    CTRL: 17,
+    ALT: 18,
+    PAGE_UP: 33,
+    PAGE_DOWN: 34,
+    HOME: 36,
+    END: 35,
+    BACKSPACE: 8,
+    DELETE: 46,
+    COMMAND: 91,
+
+    MAP: { 91 : "COMMAND", 8 : "BACKSPACE" , 9 : "TAB" , 13 : "ENTER" , 16 : "SHIFT" , 17 : "CTRL" , 18 : "ALT" , 19 : "PAUSEBREAK" , 20 : "CAPSLOCK" , 27 : "ESC" , 32 : "SPACE" , 33 : "PAGE_UP", 34 : "PAGE_DOWN" , 35 : "END" , 36 : "HOME" , 37 : "LEFT" , 38 : "UP" , 39 : "RIGHT" , 40 : "DOWN" , 43 : "+" , 44 : "PRINTSCREEN" , 45 : "INSERT" , 46 : "DELETE", 48 : "0" , 49 : "1" , 50 : "2" , 51 : "3" , 52 : "4" , 53 : "5" , 54 : "6" , 55 : "7" , 56 : "8" , 57 : "9" , 59 : ";", 61 : "=" , 65 : "A" , 66 : "B" , 67 : "C" , 68 : "D" , 69 : "E" , 70 : "F" , 71 : "G" , 72 : "H" , 73 : "I" , 74 : "J" , 75 : "K" , 76 : "L", 77 : "M" , 78 : "N" , 79 : "O" , 80 : "P" , 81 : "Q" , 82 : "R" , 83 : "S" , 84 : "T" , 85 : "U" , 86 : "V" , 87 : "W" , 88 : "X" , 89 : "Y" , 90 : "Z", 96 : "0" , 97 : "1" , 98 : "2" , 99 : "3" , 100 : "4" , 101 : "5" , 102 : "6" , 103 : "7" , 104 : "8" , 105 : "9", 106 : "*" , 107 : "+" , 109 : "-" , 110 : "." , 111 : "/", 112 : "F1" , 113 : "F2" , 114 : "F3" , 115 : "F4" , 116 : "F5" , 117 : "F6" , 118 : "F7" , 119 : "F8" , 120 : "F9" , 121 : "F10" , 122 : "F11" , 123 : "F12", 144 : "NUMLOCK" , 145 : "SCROLLLOCK" , 186 : ";" , 187 : "=" , 188 : "," , 189 : "-" , 190 : "." , 191 : "/" , 192 : "`" , 219 : "[" , 220 : "\\" , 221 : "]" , 222 : "'"
+    },
+
+    isControl: function (e) {
+        var k = e.which;
+        switch (k) {
+        case KEY.COMMAND:
+        case KEY.SHIFT:
+        case KEY.CTRL:
+        case KEY.ALT:
+            return true;
+        }
+
+        if (e.metaKey) return true;
+
+        return false;
+    },
+    isFunctionKey: function (k) {
+        k = k.which ? k.which : k;
+        return k >= 112 && k <= 123;
+    },
+    isVerticalMovement: function (k){
+      return ~[KEY.UP, KEY.DOWN].indexOf(k);
+    },
+    isHorizontalMovement: function (k){
+      return ~[KEY.LEFT,KEY.RIGHT,KEY.BACKSPACE,KEY.DELETE].indexOf(k);
+    }
+  };
+
+/**
+ * Add querySelectorAll() to jqLite.
+ *
+ * jqLite find() is limited to lookups by tag name.
+ * TODO This will change with future versions of AngularJS, to be removed when this happens
+ *
+ * See jqLite.find - why not use querySelectorAll? https://github.com/angular/angular.js/issues/3586
+ * See feat(jqLite): use querySelectorAll instead of getElementsByTagName in jqLite.find https://github.com/angular/angular.js/pull/3598
+ */
+if (angular.element.prototype.querySelectorAll === undefined) {
+  angular.element.prototype.querySelectorAll = function(selector) {
+    return angular.element(this[0].querySelectorAll(selector));
+  };
+}
+
+/**
+ * Add closest() to jqLite.
+ */
+if (angular.element.prototype.closest === undefined) {
+  angular.element.prototype.closest = function( selector) {
+    var elem = this[0];
+    var matchesSelector = elem.matches || elem.webkitMatchesSelector || elem.mozMatchesSelector || elem.msMatchesSelector;
+
+    while (elem) {
+      if (matchesSelector.bind(elem)(selector)) {
+        return elem;
+      } else {
+        elem = elem.parentElement;
+      }
+    }
+    return false;
+  };
+}
+
+var latestId = 0;
+
+var uis = angular.module('ui.select', [])
+
+.constant('uiSelectConfig', {
+  theme: 'bootstrap',
+  searchEnabled: true,
+  sortable: false,
+  placeholder: '', // Empty by default, like HTML tag <select>
+  refreshDelay: 1000, // In milliseconds
+  closeOnSelect: true,
+  generateId: function() {
+    return latestId++;
+  },
+  appendToBody: false
+})
+
+// See Rename minErr and make it accessible from outside https://github.com/angular/angular.js/issues/6913
+.service('uiSelectMinErr', function() {
+  var minErr = angular.$$minErr('ui.select');
+  return function() {
+    var error = minErr.apply(this, arguments);
+    var message = error.message.replace(new RegExp('\nhttp://errors.angularjs.org/.*'), '');
+    return new Error(message);
+  };
+})
+
+// Recreates old behavior of ng-transclude. Used internally.
+.directive('uisTranscludeAppend', function () {
+  return {
+    link: function (scope, element, attrs, ctrl, transclude) {
+        transclude(scope, function (clone) {
+          element.append(clone);
+        });
+      }
+    };
+})
+
+/**
+ * Highlights text that matches $select.search.
+ *
+ * Taken from AngularUI Bootstrap Typeahead
+ * See https://github.com/angular-ui/bootstrap/blob/0.10.0/src/typeahead/typeahead.js#L340
+ */
+.filter('highlight', function() {
+  function escapeRegexp(queryToEscape) {
+    return queryToEscape.replace(/([.?*+^$[\]\\(){}|-])/g, '\\$1');
+  }
+
+  return function(matchItem, query) {
+    return query && matchItem ? matchItem.replace(new RegExp(escapeRegexp(query), 'gi'), '<span class="ui-select-highlight">$&</span>') : matchItem;
+  };
+})
+
+/**
+ * A read-only equivalent of jQuery's offset function: http://api.jquery.com/offset/
+ *
+ * Taken from AngularUI Bootstrap Position:
+ * See https://github.com/angular-ui/bootstrap/blob/master/src/position/position.js#L70
+ */
+.factory('uisOffset',
+  ['$document', '$window',
+  function ($document, $window) {
+
+  return function(element) {
+    var boundingClientRect = element[0].getBoundingClientRect();
+    return {
+      width: boundingClientRect.width || element.prop('offsetWidth'),
+      height: boundingClientRect.height || element.prop('offsetHeight'),
+      top: boundingClientRect.top + ($window.pageYOffset || $document[0].documentElement.scrollTop),
+      left: boundingClientRect.left + ($window.pageXOffset || $document[0].documentElement.scrollLeft)
+    };
+  };
+}]);
+
+uis.directive('uiSelectChoices',
+  ['uiSelectConfig', 'uisRepeatParser', 'uiSelectMinErr', '$compile',
+  function(uiSelectConfig, RepeatParser, uiSelectMinErr, $compile) {
+
+  return {
+    restrict: 'EA',
+    require: '^uiSelect',
+    replace: true,
+    transclude: true,
+    templateUrl: function(tElement) {
+      // Gets theme attribute from parent (ui-select)
+      var theme = tElement.parent().attr('theme') || uiSelectConfig.theme;
+      return theme + '/choices.tpl.html';
+    },
+
+    compile: function(tElement, tAttrs) {
+
+      if (!tAttrs.repeat) throw uiSelectMinErr('repeat', "Expected 'repeat' expression.");
+
+      return function link(scope, element, attrs, $select, transcludeFn) {
+
+        // var repeat = RepeatParser.parse(attrs.repeat);
+        var groupByExp = attrs.groupBy;
+        var groupFilterExp = attrs.groupFilter;
+
+        $select.parseRepeatAttr(attrs.repeat, groupByExp, groupFilterExp); //Result ready at $select.parserResult
+
+        $select.disableChoiceExpression = attrs.uiDisableChoice;
+        $select.onHighlightCallback = attrs.onHighlight;
+
+        if(groupByExp) {
+          var groups = element.querySelectorAll('.ui-select-choices-group');
+          if (groups.length !== 1) throw uiSelectMinErr('rows', "Expected 1 .ui-select-choices-group but got '{0}'.", groups.length);
+          groups.attr('ng-repeat', RepeatParser.getGroupNgRepeatExpression());
+        }
+
+        var choices = element.querySelectorAll('.ui-select-choices-row');
+        if (choices.length !== 1) {
+          throw uiSelectMinErr('rows', "Expected 1 .ui-select-choices-row but got '{0}'.", choices.length);
+        }
+
+        choices.attr('ng-repeat', RepeatParser.getNgRepeatExpression($select.parserResult.itemName, '$select.items', $select.parserResult.trackByExp, groupByExp))
+            .attr('ng-if', '$select.open') //Prevent unnecessary watches when dropdown is closed
+            .attr('ng-mouseenter', '$select.setActiveItem('+$select.parserResult.itemName +')')
+            .attr('ng-click', '$select.select(' + $select.parserResult.itemName + ',false,$event)');
+
+        var rowsInner = element.querySelectorAll('.ui-select-choices-row-inner');
+        if (rowsInner.length !== 1) throw uiSelectMinErr('rows', "Expected 1 .ui-select-choices-row-inner but got '{0}'.", rowsInner.length);
+        rowsInner.attr('uis-transclude-append', ''); //Adding uisTranscludeAppend directive to row element after choices element has ngRepeat
+
+        $compile(element, transcludeFn)(scope); //Passing current transcludeFn to be able to append elements correctly from uisTranscludeAppend
+
+        scope.$watch('$select.search', function(newValue) {
+          if(newValue && !$select.open && $select.multiple) $select.activate(false, true);
+          $select.activeIndex = $select.tagging.isActivated ? -1 : 0;
+          $select.refresh(attrs.refresh);
+        });
+
+        attrs.$observe('refreshDelay', function() {
+          // $eval() is needed otherwise we get a string instead of a number
+          var refreshDelay = scope.$eval(attrs.refreshDelay);
+          $select.refreshDelay = refreshDelay !== undefined ? refreshDelay : uiSelectConfig.refreshDelay;
+        });
+      };
+    }
+  };
+}]);
+
+/**
+ * Contains ui-select "intelligence".
+ *
+ * The goal is to limit dependency on the DOM whenever possible and
+ * put as much logic in the controller (instead of the link functions) as possible so it can be easily tested.
+ */
+uis.controller('uiSelectCtrl',
+  ['$scope', '$element', '$timeout', '$filter', 'uisRepeatParser', 'uiSelectMinErr', 'uiSelectConfig',
+  function($scope, $element, $timeout, $filter, RepeatParser, uiSelectMinErr, uiSelectConfig) {
+
+  var ctrl = this;
+
+  var EMPTY_SEARCH = '';
+
+  ctrl.placeholder = uiSelectConfig.placeholder;
+  ctrl.searchEnabled = uiSelectConfig.searchEnabled;
+  ctrl.sortable = uiSelectConfig.sortable;
+  ctrl.refreshDelay = uiSelectConfig.refreshDelay;
+
+  ctrl.removeSelected = false; //If selected item(s) should be removed from dropdown list
+  ctrl.closeOnSelect = true; //Initialized inside uiSelect directive link function
+  ctrl.search = EMPTY_SEARCH;
+
+  ctrl.activeIndex = 0; //Dropdown of choices
+  ctrl.items = []; //All available choices
+
+  ctrl.open = false;
+  ctrl.focus = false;
+  ctrl.disabled = false;
+  ctrl.selected = undefined;
+
+  ctrl.focusser = undefined; //Reference to input element used to handle focus events
+  ctrl.resetSearchInput = true;
+  ctrl.multiple = undefined; // Initialized inside uiSelect directive link function
+  ctrl.disableChoiceExpression = undefined; // Initialized inside uiSelectChoices directive link function
+  ctrl.tagging = {isActivated: false, fct: undefined};
+  ctrl.taggingTokens = {isActivated: false, tokens: undefined};
+  ctrl.lockChoiceExpression = undefined; // Initialized inside uiSelectMatch directive link function
+  ctrl.clickTriggeredSelect = false;
+  ctrl.$filter = $filter;
+
+  ctrl.searchInput = $element.querySelectorAll('input.ui-select-search');
+  if (ctrl.searchInput.length !== 1) {
+    throw uiSelectMinErr('searchInput', "Expected 1 input.ui-select-search but got '{0}'.", ctrl.searchInput.length);
+  }
+  
+  ctrl.isEmpty = function() {
+    return angular.isUndefined(ctrl.selected) || ctrl.selected === null || ctrl.selected === '';
+  };
+
+  // Most of the time the user does not want to empty the search input when in typeahead mode
+  function _resetSearchInput() {
+    if (ctrl.resetSearchInput || (ctrl.resetSearchInput === undefined && uiSelectConfig.resetSearchInput)) {
+      ctrl.search = EMPTY_SEARCH;
+      //reset activeIndex
+      if (ctrl.selected && ctrl.items.length && !ctrl.multiple) {
+        ctrl.activeIndex = ctrl.items.indexOf(ctrl.selected);
+      }
+    }
+  }
+
+    function _groupsFilter(groups, groupNames) {
+      var i, j, result = [];
+      for(i = 0; i < groupNames.length ;i++){
+        for(j = 0; j < groups.length ;j++){
+          if(groups[j].name == [groupNames[i]]){
+            result.push(groups[j]);
+          }
+        }
+      }
+      return result;
+    }
+
+  // When the user clicks on ui-select, displays the dropdown list
+  ctrl.activate = function(initSearchValue, avoidReset) {
+    if (!ctrl.disabled  && !ctrl.open) {
+      if(!avoidReset) _resetSearchInput();
+
+      $scope.$broadcast('uis:activate');
+
+      ctrl.open = true;
+
+      ctrl.activeIndex = ctrl.activeIndex >= ctrl.items.length ? 0 : ctrl.activeIndex;
+
+      // ensure that the index is set to zero for tagging variants
+      // that where first option is auto-selected
+      if ( ctrl.activeIndex === -1 && ctrl.taggingLabel !== false ) {
+        ctrl.activeIndex = 0;
+      }
+
+      // Give it time to appear before focus
+      $timeout(function() {
+        ctrl.search = initSearchValue || ctrl.search;
+        ctrl.searchInput[0].focus();
+      });
+    }
+  };
+
+  ctrl.findGroupByName = function(name) {
+    return ctrl.groups && ctrl.groups.filter(function(group) {
+      return group.name === name;
+    })[0];
+  };
+
+  ctrl.parseRepeatAttr = function(repeatAttr, groupByExp, groupFilterExp) {
+    function updateGroups(items) {
+      var groupFn = $scope.$eval(groupByExp);
+      ctrl.groups = [];
+      angular.forEach(items, function(item) {
+        var groupName = angular.isFunction(groupFn) ? groupFn(item) : item[groupFn];
+        var group = ctrl.findGroupByName(groupName);
+        if(group) {
+          group.items.push(item);
+        }
+        else {
+          ctrl.groups.push({name: groupName, items: [item]});
+        }
+      });
+      if(groupFilterExp){
+        var groupFilterFn = $scope.$eval(groupFilterExp);
+        if( angular.isFunction(groupFilterFn)){
+          ctrl.groups = groupFilterFn(ctrl.groups);
+        } else if(angular.isArray(groupFilterFn)){
+          ctrl.groups = _groupsFilter(ctrl.groups, groupFilterFn);
+        }
+      }
+      ctrl.items = [];
+      ctrl.groups.forEach(function(group) {
+        ctrl.items = ctrl.items.concat(group.items);
+      });
+    }
+
+    function setPlainItems(items) {
+      ctrl.items = items;
+    }
+
+    ctrl.setItemsFn = groupByExp ? updateGroups : setPlainItems;
+
+    ctrl.parserResult = RepeatParser.parse(repeatAttr);
+
+    ctrl.isGrouped = !!groupByExp;
+    ctrl.itemProperty = ctrl.parserResult.itemName;
+
+    ctrl.refreshItems = function (data){
+      data = data || ctrl.parserResult.source($scope);
+      var selectedItems = ctrl.selected;
+      //TODO should implement for single mode removeSelected
+      if ((angular.isArray(selectedItems) && !selectedItems.length) || !ctrl.removeSelected) {
+        ctrl.setItemsFn(data);
+      }else{
+        if ( data !== undefined ) {
+          var filteredItems = data.filter(function(i) {return selectedItems.indexOf(i) < 0;});
+          ctrl.setItemsFn(filteredItems);
+        }
+      }
+    };
+
+    // See https://github.com/angular/angular.js/blob/v1.2.15/src/ng/directive/ngRepeat.js#L259
+    $scope.$watchCollection(ctrl.parserResult.source, function(items) {
+      if (items === undefined || items === null) {
+        // If the user specifies undefined or null => reset the collection
+        // Special case: items can be undefined if the user did not initialized the collection on the scope
+        // i.e $scope.addresses = [] is missing
+        ctrl.items = [];
+      } else {
+        if (!angular.isArray(items)) {
+          throw uiSelectMinErr('items', "Expected an array but got '{0}'.", items);
+        } else {
+          //Remove already selected items (ex: while searching)
+          //TODO Should add a test
+          ctrl.refreshItems(items);
+          ctrl.ngModel.$modelValue = null; //Force scope model value and ngModel value to be out of sync to re-run formatters
+        }
+      }
+    });
+
+  };
+
+  var _refreshDelayPromise;
+
+  /**
+   * Typeahead mode: lets the user refresh the collection using his own function.
+   *
+   * See Expose $select.search for external / remote filtering https://github.com/angular-ui/ui-select/pull/31
+   */
+  ctrl.refresh = function(refreshAttr) {
+    if (refreshAttr !== undefined) {
+
+      // Debounce
+      // See https://github.com/angular-ui/bootstrap/blob/0.10.0/src/typeahead/typeahead.js#L155
+      // FYI AngularStrap typeahead does not have debouncing: https://github.com/mgcrea/angular-strap/blob/v2.0.0-rc.4/src/typeahead/typeahead.js#L177
+      if (_refreshDelayPromise) {
+        $timeout.cancel(_refreshDelayPromise);
+      }
+      _refreshDelayPromise = $timeout(function() {
+        $scope.$eval(refreshAttr);
+      }, ctrl.refreshDelay);
+    }
+  };
+
+  ctrl.setActiveItem = function(item) {
+    ctrl.activeIndex = ctrl.items.indexOf(item);
+  };
+
+  ctrl.isActive = function(itemScope) {
+    if ( !ctrl.open ) {
+      return false;
+    }
+    var itemIndex = ctrl.items.indexOf(itemScope[ctrl.itemProperty]);
+    var isActive =  itemIndex === ctrl.activeIndex;
+
+    if ( !isActive || ( itemIndex < 0 && ctrl.taggingLabel !== false ) ||( itemIndex < 0 && ctrl.taggingLabel === false) ) {
+      return false;
+    }
+
+    if (isActive && !angular.isUndefined(ctrl.onHighlightCallback)) {
+      itemScope.$eval(ctrl.onHighlightCallback);
+    }
+
+    return isActive;
+  };
+
+  ctrl.isDisabled = function(itemScope) {
+
+    if (!ctrl.open) return;
+
+    var itemIndex = ctrl.items.indexOf(itemScope[ctrl.itemProperty]);
+    var isDisabled = false;
+    var item;
+
+    if (itemIndex >= 0 && !angular.isUndefined(ctrl.disableChoiceExpression)) {
+      item = ctrl.items[itemIndex];
+      isDisabled = !!(itemScope.$eval(ctrl.disableChoiceExpression)); // force the boolean value
+      item._uiSelectChoiceDisabled = isDisabled; // store this for later reference
+    }
+
+    return isDisabled;
+  };
+
+
+  // When the user selects an item with ENTER or clicks the dropdown
+  ctrl.select = function(item, skipFocusser, $event) {
+    if (item === undefined || !item._uiSelectChoiceDisabled) {
+
+      if ( ! ctrl.items && ! ctrl.search ) return;
+
+      if (!item || !item._uiSelectChoiceDisabled) {
+        if(ctrl.tagging.isActivated) {
+          // if taggingLabel is disabled, we pull from ctrl.search val
+          if ( ctrl.taggingLabel === false ) {
+            if ( ctrl.activeIndex < 0 ) {
+              item = ctrl.tagging.fct !== undefined ? ctrl.tagging.fct(ctrl.search) : ctrl.search;
+              if (!item || angular.equals( ctrl.items[0], item ) ) {
+                return;
+              }
+            } else {
+              // keyboard nav happened first, user selected from dropdown
+              item = ctrl.items[ctrl.activeIndex];
+            }
+          } else {
+            // tagging always operates at index zero, taggingLabel === false pushes
+            // the ctrl.search value without having it injected
+            if ( ctrl.activeIndex === 0 ) {
+              // ctrl.tagging pushes items to ctrl.items, so we only have empty val
+              // for `item` if it is a detected duplicate
+              if ( item === undefined ) return;
+
+              // create new item on the fly if we don't already have one;
+              // use tagging function if we have one
+              if ( ctrl.tagging.fct !== undefined && typeof item === 'string' ) {
+                item = ctrl.tagging.fct(ctrl.search);
+                if (!item) return;
+              // if item type is 'string', apply the tagging label
+              } else if ( typeof item === 'string' ) {
+                // trim the trailing space
+                item = item.replace(ctrl.taggingLabel,'').trim();
+              }
+            }
+          }
+          // search ctrl.selected for dupes potentially caused by tagging and return early if found
+          if ( ctrl.selected && angular.isArray(ctrl.selected) && ctrl.selected.filter( function (selection) { return angular.equals(selection, item); }).length > 0 ) {
+            ctrl.close(skipFocusser);
+            return;
+          }
+        }
+
+        $scope.$broadcast('uis:select', item);
+
+        var locals = {};
+        locals[ctrl.parserResult.itemName] = item;
+
+        $timeout(function(){
+          ctrl.onSelectCallback($scope, {
+            $item: item,
+            $model: ctrl.parserResult.modelMapper($scope, locals)
+          });
+        });
+
+        if (ctrl.closeOnSelect) {
+          ctrl.close(skipFocusser);
+        }
+        if ($event && $event.type === 'click') {
+          ctrl.clickTriggeredSelect = true;
+        }
+      }
+    }
+  };
+
+  // Closes the dropdown
+  ctrl.close = function(skipFocusser) {
+    if (!ctrl.open) return;
+    if (ctrl.ngModel && ctrl.ngModel.$setTouched) ctrl.ngModel.$setTouched();
+    _resetSearchInput();
+    ctrl.open = false;
+
+    $scope.$broadcast('uis:close', skipFocusser);
+
+  };
+
+  ctrl.setFocus = function(){
+    if (!ctrl.focus) ctrl.focusInput[0].focus();
+  };
+
+  ctrl.clear = function($event) {
+    ctrl.select(undefined);
+    $event.stopPropagation();
+    $timeout(function() {
+      ctrl.focusser[0].focus();
+    }, 0, false);
+  };
+
+  // Toggle dropdown
+  ctrl.toggle = function(e) {
+    if (ctrl.open) {
+      ctrl.close();
+      e.preventDefault();
+      e.stopPropagation();
+    } else {
+      ctrl.activate();
+    }
+  };
+
+  ctrl.isLocked = function(itemScope, itemIndex) {
+      var isLocked, item = ctrl.selected[itemIndex];
+
+      if (item && !angular.isUndefined(ctrl.lockChoiceExpression)) {
+          isLocked = !!(itemScope.$eval(ctrl.lockChoiceExpression)); // force the boolean value
+          item._uiSelectChoiceLocked = isLocked; // store this for later reference
+      }
+
+      return isLocked;
+  };
+
+  var sizeWatch = null;
+  ctrl.sizeSearchInput = function() {
+
+    var input = ctrl.searchInput[0],
+        container = ctrl.searchInput.parent().parent()[0],
+        calculateContainerWidth = function() {
+          // Return the container width only if the search input is visible
+          return container.clientWidth * !!input.offsetParent;
+        },
+        updateIfVisible = function(containerWidth) {
+          if (containerWidth === 0) {
+            return false;
+          }
+          var inputWidth = containerWidth - input.offsetLeft - 10;
+          if (inputWidth < 50) inputWidth = containerWidth;
+          ctrl.searchInput.css('width', inputWidth+'px');
+          return true;
+        };
+
+    ctrl.searchInput.css('width', '10px');
+    $timeout(function() { //Give tags time to render correctly
+      if (sizeWatch === null && !updateIfVisible(calculateContainerWidth())) {
+        sizeWatch = $scope.$watch(calculateContainerWidth, function(containerWidth) {
+          if (updateIfVisible(containerWidth)) {
+            sizeWatch();
+            sizeWatch = null;
+          }
+        });
+      }
+    });
+  };
+
+  function _handleDropDownSelection(key) {
+    var processed = true;
+    switch (key) {
+      case KEY.DOWN:
+        if (!ctrl.open && ctrl.multiple) ctrl.activate(false, true); //In case its the search input in 'multiple' mode
+        else if (ctrl.activeIndex < ctrl.items.length - 1) { ctrl.activeIndex++; }
+        break;
+      case KEY.UP:
+        if (!ctrl.open && ctrl.multiple) ctrl.activate(false, true); //In case its the search input in 'multiple' mode
+        else if (ctrl.activeIndex > 0 || (ctrl.search.length === 0 && ctrl.tagging.isActivated && ctrl.activeIndex > -1)) { ctrl.activeIndex--; }
+        break;
+      case KEY.TAB:
+        if (!ctrl.multiple || ctrl.open) ctrl.select(ctrl.items[ctrl.activeIndex], true);
+        break;
+      case KEY.ENTER:
+        if(ctrl.open && (ctrl.tagging.isActivated || ctrl.activeIndex >= 0)){
+          ctrl.select(ctrl.items[ctrl.activeIndex]); // Make sure at least one dropdown item is highlighted before adding if not in tagging mode
+        } else {
+          ctrl.activate(false, true); //In case its the search input in 'multiple' mode
+        }
+        break;
+      case KEY.ESC:
+        ctrl.close();
+        break;
+      default:
+        processed = false;
+    }
+    return processed;
+  }
+
+  // Bind to keyboard shortcuts
+  ctrl.searchInput.on('keydown', function(e) {
+
+    var key = e.which;
+
+    // if(~[KEY.ESC,KEY.TAB].indexOf(key)){
+    //   //TODO: SEGURO?
+    //   ctrl.close();
+    // }
+
+    $scope.$apply(function() {
+
+      var tagged = false;
+
+      if (ctrl.items.length > 0 || ctrl.tagging.isActivated) {
+        _handleDropDownSelection(key);
+        if ( ctrl.taggingTokens.isActivated ) {
+          for (var i = 0; i < ctrl.taggingTokens.tokens.length; i++) {
+            if ( ctrl.taggingTokens.tokens[i] === KEY.MAP[e.keyCode] ) {
+              // make sure there is a new value to push via tagging
+              if ( ctrl.search.length > 0 ) {
+                tagged = true;
+              }
+            }
+          }
+          if ( tagged ) {
+            $timeout(function() {
+              ctrl.searchInput.triggerHandler('tagged');
+              var newItem = ctrl.search.replace(KEY.MAP[e.keyCode],'').trim();
+              if ( ctrl.tagging.fct ) {
+                newItem = ctrl.tagging.fct( newItem );
+              }
+              if (newItem) ctrl.select(newItem, true);
+            });
+          }
+        }
+      }
+
+    });
+
+    if(KEY.isVerticalMovement(key) && ctrl.items.length > 0){
+      _ensureHighlightVisible();
+    }
+
+    if (key === KEY.ENTER || key === KEY.ESC) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
+  });
+
+  // If tagging try to split by tokens and add items
+  ctrl.searchInput.on('paste', function (e) {
+    var data = e.originalEvent.clipboardData.getData('text/plain');
+    if (data && data.length > 0 && ctrl.taggingTokens.isActivated && ctrl.tagging.fct) {
+      var items = data.split(ctrl.taggingTokens.tokens[0]); // split by first token only
+      if (items && items.length > 0) {
+        angular.forEach(items, function (item) {
+          var newItem = ctrl.tagging.fct(item);
+          if (newItem) {
+            ctrl.select(newItem, true);
+          }
+        });
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    }
+  });
+
+  ctrl.searchInput.on('tagged', function() {
+    $timeout(function() {
+      _resetSearchInput();
+    });
+  });
+
+  // See https://github.com/ivaynberg/select2/blob/3.4.6/select2.js#L1431
+  function _ensureHighlightVisible() {
+    var container = $element.querySelectorAll('.ui-select-choices-content');
+    var choices = container.querySelectorAll('.ui-select-choices-row');
+    if (choices.length < 1) {
+      throw uiSelectMinErr('choices', "Expected multiple .ui-select-choices-row but got '{0}'.", choices.length);
+    }
+
+    if (ctrl.activeIndex < 0) {
+      return;
+    }
+
+    var highlighted = choices[ctrl.activeIndex];
+    var posY = highlighted.offsetTop + highlighted.clientHeight - container[0].scrollTop;
+    var height = container[0].offsetHeight;
+
+    if (posY > height) {
+      container[0].scrollTop += posY - height;
+    } else if (posY < highlighted.clientHeight) {
+      if (ctrl.isGrouped && ctrl.activeIndex === 0)
+        container[0].scrollTop = 0; //To make group header visible when going all the way up
+      else
+        container[0].scrollTop -= highlighted.clientHeight - posY;
+    }
+  }
+
+  $scope.$on('$destroy', function() {
+    ctrl.searchInput.off('keyup keydown tagged blur paste');
+  });
+
+}]);
+
+uis.directive('uiSelect',
+  ['$document', 'uiSelectConfig', 'uiSelectMinErr', 'uisOffset', '$compile', '$parse', '$timeout',
+  function($document, uiSelectConfig, uiSelectMinErr, uisOffset, $compile, $parse, $timeout) {
+
+  return {
+    restrict: 'EA',
+    templateUrl: function(tElement, tAttrs) {
+      var theme = tAttrs.theme || uiSelectConfig.theme;
+      return theme + (angular.isDefined(tAttrs.multiple) ? '/select-multiple.tpl.html' : '/select.tpl.html');
+    },
+    replace: true,
+    transclude: true,
+    require: ['uiSelect', '^ngModel'],
+    scope: true,
+
+    controller: 'uiSelectCtrl',
+    controllerAs: '$select',
+    compile: function(tElement, tAttrs) {
+
+      //Multiple or Single depending if multiple attribute presence
+      if (angular.isDefined(tAttrs.multiple))
+        tElement.append("<ui-select-multiple/>").removeAttr('multiple');
+      else
+        tElement.append("<ui-select-single/>");       
+
+      return function(scope, element, attrs, ctrls, transcludeFn) {
+
+        var $select = ctrls[0];
+        var ngModel = ctrls[1];
+
+        $select.generatedId = uiSelectConfig.generateId();
+        $select.baseTitle = attrs.title || 'Select box';
+        $select.focusserTitle = $select.baseTitle + ' focus';
+        $select.focusserId = 'focusser-' + $select.generatedId;
+
+        $select.closeOnSelect = function() {
+          if (angular.isDefined(attrs.closeOnSelect)) {
+            return $parse(attrs.closeOnSelect)();
+          } else {
+            return uiSelectConfig.closeOnSelect;
+          }
+        }();
+
+        $select.onSelectCallback = $parse(attrs.onSelect);
+        $select.onRemoveCallback = $parse(attrs.onRemove);
+        
+        //Set reference to ngModel from uiSelectCtrl
+        $select.ngModel = ngModel;
+
+        $select.choiceGrouped = function(group){
+          return $select.isGrouped && group && group.name;
+        };
+
+        if(attrs.tabindex){
+          attrs.$observe('tabindex', function(value) {
+            $select.focusInput.attr("tabindex", value);
+            element.removeAttr("tabindex");
+          });
+        }
+
+        scope.$watch('searchEnabled', function() {
+            var searchEnabled = scope.$eval(attrs.searchEnabled);
+            $select.searchEnabled = searchEnabled !== undefined ? searchEnabled : uiSelectConfig.searchEnabled;
+        });
+
+        scope.$watch('sortable', function() {
+            var sortable = scope.$eval(attrs.sortable);
+            $select.sortable = sortable !== undefined ? sortable : uiSelectConfig.sortable;
+        });
+
+        attrs.$observe('disabled', function() {
+          // No need to use $eval() (thanks to ng-disabled) since we already get a boolean instead of a string
+          $select.disabled = attrs.disabled !== undefined ? attrs.disabled : false;
+        });
+
+        attrs.$observe('resetSearchInput', function() {
+          // $eval() is needed otherwise we get a string instead of a boolean
+          var resetSearchInput = scope.$eval(attrs.resetSearchInput);
+          $select.resetSearchInput = resetSearchInput !== undefined ? resetSearchInput : true;
+        });
+
+        attrs.$observe('tagging', function() {
+          if(attrs.tagging !== undefined)
+          {
+            // $eval() is needed otherwise we get a string instead of a boolean
+            var taggingEval = scope.$eval(attrs.tagging);
+            $select.tagging = {isActivated: true, fct: taggingEval !== true ? taggingEval : undefined};
+          }
+          else
+          {
+            $select.tagging = {isActivated: false, fct: undefined};
+          }
+        });
+
+        attrs.$observe('taggingLabel', function() {
+          if(attrs.tagging !== undefined )
+          {
+            // check eval for FALSE, in this case, we disable the labels
+            // associated with tagging
+            if ( attrs.taggingLabel === 'false' ) {
+              $select.taggingLabel = false;
+            }
+            else
+            {
+              $select.taggingLabel = attrs.taggingLabel !== undefined ? attrs.taggingLabel : '(new)';
+            }
+          }
+        });
+
+        attrs.$observe('taggingTokens', function() {
+          if (attrs.tagging !== undefined) {
+            var tokens = attrs.taggingTokens !== undefined ? attrs.taggingTokens.split('|') : [',','ENTER'];
+            $select.taggingTokens = {isActivated: true, tokens: tokens };
+          }
+        });
+
+        //Automatically gets focus when loaded
+        if (angular.isDefined(attrs.autofocus)){
+          $timeout(function(){
+            $select.setFocus();
+          });
+        }
+
+        //Gets focus based on scope event name (e.g. focus-on='SomeEventName')
+        if (angular.isDefined(attrs.focusOn)){
+          scope.$on(attrs.focusOn, function() {
+              $timeout(function(){
+                $select.setFocus();
+              });
+          });
+        }
+
+        function onDocumentClick(e) {
+          if (!$select.open) return; //Skip it if dropdown is close
+
+          var contains = false;
+
+          if (window.jQuery) {
+            // Firefox 3.6 does not support element.contains()
+            // See Node.contains https://developer.mozilla.org/en-US/docs/Web/API/Node.contains
+            contains = window.jQuery.contains(element[0], e.target);
+          } else {
+            contains = element[0].contains(e.target);
+          }
+
+          if (!contains && !$select.clickTriggeredSelect) {
+            //Will lose focus only with certain targets
+            var focusableControls = ['input','button','textarea'];
+            var targetScope = angular.element(e.target).scope(); //To check if target is other ui-select
+            var skipFocusser = targetScope && targetScope.$select && targetScope.$select !== $select; //To check if target is other ui-select
+            if (!skipFocusser) skipFocusser =  ~focusableControls.indexOf(e.target.tagName.toLowerCase()); //Check if target is input, button or textarea
+            $select.close(skipFocusser);
+            scope.$digest();
+          }
+          $select.clickTriggeredSelect = false;
+        }
+
+        // See Click everywhere but here event http://stackoverflow.com/questions/12931369
+        $document.on('click', onDocumentClick);
+
+        scope.$on('$destroy', function() {
+          $document.off('click', onDocumentClick);
+        });
+
+        // Move transcluded elements to their correct position in main template
+        transcludeFn(scope, function(clone) {
+          // See Transclude in AngularJS http://blog.omkarpatil.com/2012/11/transclude-in-angularjs.html
+
+          // One day jqLite will be replaced by jQuery and we will be able to write:
+          // var transcludedElement = clone.filter('.my-class')
+          // instead of creating a hackish DOM element:
+          var transcluded = angular.element('<div>').append(clone);
+
+          var transcludedMatch = transcluded.querySelectorAll('.ui-select-match');
+          transcludedMatch.removeAttr('ui-select-match'); //To avoid loop in case directive as attr
+          transcludedMatch.removeAttr('data-ui-select-match'); // Properly handle HTML5 data-attributes
+          if (transcludedMatch.length !== 1) {
+            throw uiSelectMinErr('transcluded', "Expected 1 .ui-select-match but got '{0}'.", transcludedMatch.length);
+          }
+          element.querySelectorAll('.ui-select-match').replaceWith(transcludedMatch);
+
+          var transcludedChoices = transcluded.querySelectorAll('.ui-select-choices');
+          transcludedChoices.removeAttr('ui-select-choices'); //To avoid loop in case directive as attr
+          transcludedChoices.removeAttr('data-ui-select-choices'); // Properly handle HTML5 data-attributes
+          if (transcludedChoices.length !== 1) {
+            throw uiSelectMinErr('transcluded', "Expected 1 .ui-select-choices but got '{0}'.", transcludedChoices.length);
+          }
+          element.querySelectorAll('.ui-select-choices').replaceWith(transcludedChoices);
+        });
+
+        // Support for appending the select field to the body when its open
+        var appendToBody = scope.$eval(attrs.appendToBody);
+        if (appendToBody !== undefined ? appendToBody : uiSelectConfig.appendToBody) {
+          scope.$watch('$select.open', function(isOpen) {
+            if (isOpen) {
+              positionDropdown();
+            } else {
+              resetDropdown();
+            }
+          });
+
+          // Move the dropdown back to its original location when the scope is destroyed. Otherwise
+          // it might stick around when the user routes away or the select field is otherwise removed
+          scope.$on('$destroy', function() {
+            resetDropdown();
+          });
+        }
+
+        // Hold on to a reference to the .ui-select-container element for appendToBody support
+        var placeholder = null,
+            originalWidth = '';
+
+        function positionDropdown() {
+          // Remember the absolute position of the element
+          var offset = uisOffset(element);
+
+          // Clone the element into a placeholder element to take its original place in the DOM
+          placeholder = angular.element('<div class="ui-select-placeholder"></div>');
+          placeholder[0].style.width = offset.width + 'px';
+          placeholder[0].style.height = offset.height + 'px';
+          element.after(placeholder);
+
+          // Remember the original value of the element width inline style, so it can be restored
+          // when the dropdown is closed
+          originalWidth = element[0].style.width;
+
+          // Now move the actual dropdown element to the end of the body
+          $document.find('body').append(element);
+
+          element[0].style.position = 'absolute';
+          element[0].style.left = offset.left + 'px';
+          element[0].style.top = offset.top + 'px';
+          element[0].style.width = offset.width + 'px';
+        }
+
+        function resetDropdown() {
+          if (placeholder === null) {
+            // The dropdown has not actually been display yet, so there's nothing to reset
+            return;
+          }
+
+          // Move the dropdown element back to its original location in the DOM
+          placeholder.replaceWith(element);
+          placeholder = null;
+
+          element[0].style.position = '';
+          element[0].style.left = '';
+          element[0].style.top = '';
+          element[0].style.width = originalWidth;
+        }
+
+        // Hold on to a reference to the .ui-select-dropdown element for direction support.
+        var dropdown = null,
+            directionUpClassName = 'direction-up';
+
+        // Support changing the direction of the dropdown if there isn't enough space to render it.
+        scope.$watch('$select.open', function(isOpen) {
+          if (isOpen) {
+            dropdown = angular.element(element).querySelectorAll('.ui-select-dropdown');
+            if (dropdown === null) {
+              return;
+            }
+
+            // Hide the dropdown so there is no flicker until $timeout is done executing.
+            dropdown[0].style.opacity = 0;
+
+            // Delay positioning the dropdown until all choices have been added so its height is correct.
+            $timeout(function(){
+              var offset = uisOffset(element);
+              var offsetDropdown = uisOffset(dropdown);
+
+              // Determine if the direction of the dropdown needs to be changed.
+              if (offset.top + offset.height + offsetDropdown.height > $document[0].documentElement.scrollTop + $document[0].documentElement.clientHeight) {
+                dropdown[0].style.position = 'absolute';
+                dropdown[0].style.top = (offsetDropdown.height * -1) + 'px';
+                element.addClass(directionUpClassName);
+              }
+
+              // Display the dropdown once it has been positioned.
+              dropdown[0].style.opacity = 1;
+            });
+          } else {
+              if (dropdown === null) {
+                return;
+              }
+
+              // Reset the position of the dropdown.
+              dropdown[0].style.position = '';
+              dropdown[0].style.top = '';
+              element.removeClass(directionUpClassName);
+          }
+        });
+      };
+    }
+  };
+}]);
+
+uis.directive('uiSelectMatch', ['uiSelectConfig', function(uiSelectConfig) {
+  return {
+    restrict: 'EA',
+    require: '^uiSelect',
+    replace: true,
+    transclude: true,
+    templateUrl: function(tElement) {
+      // Gets theme attribute from parent (ui-select)
+      var theme = tElement.parent().attr('theme') || uiSelectConfig.theme;
+      var multi = tElement.parent().attr('multiple');
+      return theme + (multi ? '/match-multiple.tpl.html' : '/match.tpl.html');
+    },
+    link: function(scope, element, attrs, $select) {
+      $select.lockChoiceExpression = attrs.uiLockChoice;
+      attrs.$observe('placeholder', function(placeholder) {
+        $select.placeholder = placeholder !== undefined ? placeholder : uiSelectConfig.placeholder;
+      });
+
+      function setAllowClear(allow) {
+        $select.allowClear = (angular.isDefined(allow)) ? (allow === '') ? true : (allow.toLowerCase() === 'true') : false;
+      }
+
+      attrs.$observe('allowClear', setAllowClear);
+      setAllowClear(attrs.allowClear);
+
+      if($select.multiple){
+        $select.sizeSearchInput();
+      }
+
+    }
+  };
+}]);
+
+uis.directive('uiSelectMultiple', ['uiSelectMinErr','$timeout', function(uiSelectMinErr, $timeout) {
+  return {
+    restrict: 'EA',
+    require: ['^uiSelect', '^ngModel'],
+
+    controller: ['$scope','$timeout', function($scope, $timeout){
+
+      var ctrl = this,
+          $select = $scope.$select,
+          ngModel;
+
+      //Wait for link fn to inject it 
+      $scope.$evalAsync(function(){ ngModel = $scope.ngModel; });
+
+      ctrl.activeMatchIndex = -1;
+
+      ctrl.updateModel = function(){
+        ngModel.$setViewValue(Date.now()); //Set timestamp as a unique string to force changes
+        ctrl.refreshComponent();
+      };
+
+      ctrl.refreshComponent = function(){
+        //Remove already selected items
+        //e.g. When user clicks on a selection, the selected array changes and 
+        //the dropdown should remove that item
+        $select.refreshItems();
+        $select.sizeSearchInput();
+      };
+
+      // Remove item from multiple select
+      ctrl.removeChoice = function(index){
+
+        var removedChoice = $select.selected[index];
+
+        // if the choice is locked, can't remove it
+        if(removedChoice._uiSelectChoiceLocked) return;
+
+        var locals = {};
+        locals[$select.parserResult.itemName] = removedChoice;
+
+        $select.selected.splice(index, 1);
+        ctrl.activeMatchIndex = -1;
+        $select.sizeSearchInput();
+
+        // Give some time for scope propagation.
+        $timeout(function(){
+          $select.onRemoveCallback($scope, {
+            $item: removedChoice,
+            $model: $select.parserResult.modelMapper($scope, locals)
+          });
+        });
+
+        ctrl.updateModel();
+
+      };
+
+      ctrl.getPlaceholder = function(){
+        //Refactor single?
+        if($select.selected.length) return;
+        return $select.placeholder;
+      };
+
+
+    }],
+    controllerAs: '$selectMultiple',
+
+    link: function(scope, element, attrs, ctrls) {
+
+      var $select = ctrls[0];
+      var ngModel = scope.ngModel = ctrls[1];
+      var $selectMultiple = scope.$selectMultiple;
+
+      //$select.selected = raw selected objects (ignoring any property binding)
+
+      $select.multiple = true;
+      $select.removeSelected = true;
+
+      //Input that will handle focus
+      $select.focusInput = $select.searchInput;
+
+      //From view --> model
+      ngModel.$parsers.unshift(function () {
+        var locals = {},
+            result,
+            resultMultiple = [];
+        for (var j = $select.selected.length - 1; j >= 0; j--) {
+          locals = {};
+          locals[$select.parserResult.itemName] = $select.selected[j];
+          result = $select.parserResult.modelMapper(scope, locals);
+          resultMultiple.unshift(result);
+        }
+        return resultMultiple;
+      });
+
+      // From model --> view
+      ngModel.$formatters.unshift(function (inputValue) {
+        var data = $select.parserResult.source (scope, { $select : {search:''}}), //Overwrite $search
+            locals = {},
+            result;
+        if (!data) return inputValue;
+        var resultMultiple = [];
+        var checkFnMultiple = function(list, value){
+          if (!list || !list.length) return;
+          for (var p = list.length - 1; p >= 0; p--) {
+            locals[$select.parserResult.itemName] = list[p];
+            result = $select.parserResult.modelMapper(scope, locals);
+            if($select.parserResult.trackByExp){
+                var matches = /\.(.+)/.exec($select.parserResult.trackByExp);
+                if(matches.length>0 && result[matches[1]] == value[matches[1]]){
+                    resultMultiple.unshift(list[p]);
+                    return true;
+                }
+            }
+            if (angular.equals(result,value)){
+              resultMultiple.unshift(list[p]);
+              return true;
+            }
+          }
+          return false;
+        };
+        if (!inputValue) return resultMultiple; //If ngModel was undefined
+        for (var k = inputValue.length - 1; k >= 0; k--) {
+          //Check model array of currently selected items 
+          if (!checkFnMultiple($select.selected, inputValue[k])){
+            //Check model array of all items available
+            if (!checkFnMultiple(data, inputValue[k])){
+              //If not found on previous lists, just add it directly to resultMultiple
+              resultMultiple.unshift(inputValue[k]);
+            }
+          }
+        }
+        return resultMultiple;
+      });
+      
+      //Watch for external model changes 
+      scope.$watchCollection(function(){ return ngModel.$modelValue; }, function(newValue, oldValue) {
+        if (oldValue != newValue){
+          ngModel.$modelValue = null; //Force scope model value and ngModel value to be out of sync to re-run formatters
+          $selectMultiple.refreshComponent();
+        }
+      });
+
+      ngModel.$render = function() {
+        // Make sure that model value is array
+        if(!angular.isArray(ngModel.$viewValue)){
+          // Have tolerance for null or undefined values
+          if(angular.isUndefined(ngModel.$viewValue) || ngModel.$viewValue === null){
+            $select.selected = [];
+          } else {
+            throw uiSelectMinErr('multiarr', "Expected model value to be array but got '{0}'", ngModel.$viewValue);
+          }
+        }
+        $select.selected = ngModel.$viewValue;
+        scope.$evalAsync(); //To force $digest
+      };
+
+      scope.$on('uis:select', function (event, item) {
+        $select.selected.push(item);
+        $selectMultiple.updateModel();
+      });
+
+      scope.$on('uis:activate', function () {
+        $selectMultiple.activeMatchIndex = -1;
+      });
+
+      scope.$watch('$select.disabled', function(newValue, oldValue) {
+        // As the search input field may now become visible, it may be necessary to recompute its size
+        if (oldValue && !newValue) $select.sizeSearchInput();
+      });
+
+      $select.searchInput.on('keydown', function(e) {
+        var key = e.which;
+        scope.$apply(function() {
+          var processed = false;
+          // var tagged = false; //Checkme
+          if(KEY.isHorizontalMovement(key)){
+            processed = _handleMatchSelection(key);
+          }
+          if (processed  && key != KEY.TAB) {
+            //TODO Check si el tab selecciona aun correctamente
+            //Crear test
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        });
+      });
+      function _getCaretPosition(el) {
+        if(angular.isNumber(el.selectionStart)) return el.selectionStart;
+        // selectionStart is not supported in IE8 and we don't want hacky workarounds so we compromise
+        else return el.value.length;
+      }
+      // Handles selected options in "multiple" mode
+      function _handleMatchSelection(key){
+        var caretPosition = _getCaretPosition($select.searchInput[0]),
+            length = $select.selected.length,
+            // none  = -1,
+            first = 0,
+            last  = length-1,
+            curr  = $selectMultiple.activeMatchIndex,
+            next  = $selectMultiple.activeMatchIndex+1,
+            prev  = $selectMultiple.activeMatchIndex-1,
+            newIndex = curr;
+
+        if(caretPosition > 0 || ($select.search.length && key == KEY.RIGHT)) return false;
+
+        $select.close();
+
+        function getNewActiveMatchIndex(){
+          switch(key){
+            case KEY.LEFT:
+              // Select previous/first item
+              if(~$selectMultiple.activeMatchIndex) return prev;
+              // Select last item
+              else return last;
+              break;
+            case KEY.RIGHT:
+              // Open drop-down
+              if(!~$selectMultiple.activeMatchIndex || curr === last){
+                $select.activate();
+                return false;
+              }
+              // Select next/last item
+              else return next;
+              break;
+            case KEY.BACKSPACE:
+              // Remove selected item and select previous/first
+              if(~$selectMultiple.activeMatchIndex){
+                $selectMultiple.removeChoice(curr);
+                return prev;
+              }
+              // Select last item
+              else return last;
+              break;
+            case KEY.DELETE:
+              // Remove selected item and select next item
+              if(~$selectMultiple.activeMatchIndex){
+                $selectMultiple.removeChoice($selectMultiple.activeMatchIndex);
+                return curr;
+              }
+              else return false;
+          }
+        }
+
+        newIndex = getNewActiveMatchIndex();
+
+        if(!$select.selected.length || newIndex === false) $selectMultiple.activeMatchIndex = -1;
+        else $selectMultiple.activeMatchIndex = Math.min(last,Math.max(first,newIndex));
+
+        return true;
+      }
+
+      $select.searchInput.on('keyup', function(e) {
+
+        if ( ! KEY.isVerticalMovement(e.which) ) {
+          scope.$evalAsync( function () {
+            $select.activeIndex = $select.taggingLabel === false ? -1 : 0;
+          });
+        }
+        // Push a "create new" item into array if there is a search string
+        if ( $select.tagging.isActivated && $select.search.length > 0 ) {
+
+          // return early with these keys
+          if (e.which === KEY.TAB || KEY.isControl(e) || KEY.isFunctionKey(e) || e.which === KEY.ESC || KEY.isVerticalMovement(e.which) ) {
+            return;
+          }
+          // always reset the activeIndex to the first item when tagging
+          $select.activeIndex = $select.taggingLabel === false ? -1 : 0;
+          // taggingLabel === false bypasses all of this
+          if ($select.taggingLabel === false) return;
+
+          var items = angular.copy( $select.items );
+          var stashArr = angular.copy( $select.items );
+          var newItem;
+          var item;
+          var hasTag = false;
+          var dupeIndex = -1;
+          var tagItems;
+          var tagItem;
+
+          // case for object tagging via transform `$select.tagging.fct` function
+          if ( $select.tagging.fct !== undefined) {
+            tagItems = $select.$filter('filter')(items,{'isTag': true});
+            if ( tagItems.length > 0 ) {
+              tagItem = tagItems[0];
+            }
+            // remove the first element, if it has the `isTag` prop we generate a new one with each keyup, shaving the previous
+            if ( items.length > 0 && tagItem ) {
+              hasTag = true;
+              items = items.slice(1,items.length);
+              stashArr = stashArr.slice(1,stashArr.length);
+            }
+            newItem = $select.tagging.fct($select.search);
+            newItem.isTag = true;
+            // verify the the tag doesn't match the value of an existing item
+            if ( stashArr.filter( function (origItem) { return angular.equals( origItem, $select.tagging.fct($select.search) ); } ).length > 0 ) {
+              return;
+            }
+            newItem.isTag = true;
+          // handle newItem string and stripping dupes in tagging string context
+          } else {
+            // find any tagging items already in the $select.items array and store them
+            tagItems = $select.$filter('filter')(items,function (item) {
+              return item.match($select.taggingLabel);
+            });
+            if ( tagItems.length > 0 ) {
+              tagItem = tagItems[0];
+            }
+            item = items[0];
+            // remove existing tag item if found (should only ever be one tag item)
+            if ( item !== undefined && items.length > 0 && tagItem ) {
+              hasTag = true;
+              items = items.slice(1,items.length);
+              stashArr = stashArr.slice(1,stashArr.length);
+            }
+            newItem = $select.search+' '+$select.taggingLabel;
+            if ( _findApproxDupe($select.selected, $select.search) > -1 ) {
+              return;
+            }
+            // verify the the tag doesn't match the value of an existing item from
+            // the searched data set or the items already selected
+            if ( _findCaseInsensitiveDupe(stashArr.concat($select.selected)) ) {
+              // if there is a tag from prev iteration, strip it / queue the change
+              // and return early
+              if ( hasTag ) {
+                items = stashArr;
+                scope.$evalAsync( function () {
+                  $select.activeIndex = 0;
+                  $select.items = items;
+                });
+              }
+              return;
+            }
+            if ( _findCaseInsensitiveDupe(stashArr) ) {
+              // if there is a tag from prev iteration, strip it
+              if ( hasTag ) {
+                $select.items = stashArr.slice(1,stashArr.length);
+              }
+              return;
+            }
+          }
+          if ( hasTag ) dupeIndex = _findApproxDupe($select.selected, newItem);
+          // dupe found, shave the first item
+          if ( dupeIndex > -1 ) {
+            items = items.slice(dupeIndex+1,items.length-1);
+          } else {
+            items = [];
+            items.push(newItem);
+            items = items.concat(stashArr);
+          }
+          scope.$evalAsync( function () {
+            $select.activeIndex = 0;
+            $select.items = items;
+          });
+        }
+      });
+      function _findCaseInsensitiveDupe(arr) {
+        if ( arr === undefined || $select.search === undefined ) {
+          return false;
+        }
+        var hasDupe = arr.filter( function (origItem) {
+          if ( $select.search.toUpperCase() === undefined || origItem === undefined ) {
+            return false;
+          }
+          return origItem.toUpperCase() === $select.search.toUpperCase();
+        }).length > 0;
+
+        return hasDupe;
+      }
+      function _findApproxDupe(haystack, needle) {
+        var dupeIndex = -1;
+        if(angular.isArray(haystack)) {
+          var tempArr = angular.copy(haystack);
+          for (var i = 0; i <tempArr.length; i++) {
+            // handle the simple string version of tagging
+            if ( $select.tagging.fct === undefined ) {
+              // search the array for the match
+              if ( tempArr[i]+' '+$select.taggingLabel === needle ) {
+              dupeIndex = i;
+              }
+            // handle the object tagging implementation
+            } else {
+              var mockObj = tempArr[i];
+              mockObj.isTag = true;
+              if ( angular.equals(mockObj, needle) ) {
+              dupeIndex = i;
+              }
+            }
+          }
+        }
+        return dupeIndex;
+      }
+
+      $select.searchInput.on('blur', function() {
+        $timeout(function() {
+          $selectMultiple.activeMatchIndex = -1;
+        });
+      });
+
+    }
+  };
+}]);
+uis.directive('uiSelectSingle', ['$timeout','$compile', function($timeout, $compile) {
+  return {
+    restrict: 'EA',
+    require: ['^uiSelect', '^ngModel'],
+    link: function(scope, element, attrs, ctrls) {
+
+      var $select = ctrls[0];
+      var ngModel = ctrls[1];
+
+      //From view --> model
+      ngModel.$parsers.unshift(function (inputValue) {
+        var locals = {},
+            result;
+        locals[$select.parserResult.itemName] = inputValue;
+        result = $select.parserResult.modelMapper(scope, locals);
+        return result;
+      });
+
+      //From model --> view
+      ngModel.$formatters.unshift(function (inputValue) {
+        var data = $select.parserResult.source (scope, { $select : {search:''}}), //Overwrite $search
+            locals = {},
+            result;
+        if (data){
+          var checkFnSingle = function(d){
+            locals[$select.parserResult.itemName] = d;
+            result = $select.parserResult.modelMapper(scope, locals);
+            return result == inputValue;
+          };
+          //If possible pass same object stored in $select.selected
+          if ($select.selected && checkFnSingle($select.selected)) {
+            return $select.selected;
+          }
+          for (var i = data.length - 1; i >= 0; i--) {
+            if (checkFnSingle(data[i])) return data[i];
+          }
+        }
+        return inputValue;
+      });
+
+      //Update viewValue if model change
+      scope.$watch('$select.selected', function(newValue) {
+        if (ngModel.$viewValue !== newValue) {
+          ngModel.$setViewValue(newValue);
+        }
+      });
+
+      ngModel.$render = function() {
+        $select.selected = ngModel.$viewValue;
+      };
+
+      scope.$on('uis:select', function (event, item) {
+        $select.selected = item;
+      });
+
+      scope.$on('uis:close', function (event, skipFocusser) {
+        $timeout(function(){
+          $select.focusser.prop('disabled', false);
+          if (!skipFocusser) $select.focusser[0].focus();
+        },0,false);
+      });
+
+      scope.$on('uis:activate', function () {
+        focusser.prop('disabled', true); //Will reactivate it on .close()
+      });
+
+      //Idea from: https://github.com/ivaynberg/select2/blob/79b5bf6db918d7560bdd959109b7bcfb47edaf43/select2.js#L1954
+      var focusser = angular.element("<input ng-disabled='$select.disabled' class='ui-select-focusser ui-select-offscreen' type='text' id='{{ $select.focusserId }}' aria-label='{{ $select.focusserTitle }}' aria-haspopup='true' role='button' />");
+      $compile(focusser)(scope);
+      $select.focusser = focusser;
+
+      //Input that will handle focus
+      $select.focusInput = focusser;
+
+      element.parent().append(focusser);
+      focusser.bind("focus", function(){
+        scope.$evalAsync(function(){
+          $select.focus = true;
+        });
+      });
+      focusser.bind("blur", function(){
+        scope.$evalAsync(function(){
+          $select.focus = false;
+        });
+      });
+      focusser.bind("keydown", function(e){
+
+        if (e.which === KEY.BACKSPACE) {
+          e.preventDefault();
+          e.stopPropagation();
+          $select.select(undefined);
+          scope.$apply();
+          return;
+        }
+
+        if (e.which === KEY.TAB || KEY.isControl(e) || KEY.isFunctionKey(e) || e.which === KEY.ESC) {
+          return;
+        }
+
+        if (e.which == KEY.DOWN  || e.which == KEY.UP || e.which == KEY.ENTER || e.which == KEY.SPACE){
+          e.preventDefault();
+          e.stopPropagation();
+          $select.activate();
+        }
+
+        scope.$digest();
+      });
+
+      focusser.bind("keyup input", function(e){
+
+        if (e.which === KEY.TAB || KEY.isControl(e) || KEY.isFunctionKey(e) || e.which === KEY.ESC || e.which == KEY.ENTER || e.which === KEY.BACKSPACE) {
+          return;
+        }
+
+        $select.activate(focusser.val()); //User pressed some regular key, so we pass it to the search input
+        focusser.val('');
+        scope.$digest();
+
+      });
+
+
+    }
+  };
+}]);
+// Make multiple matches sortable
+uis.directive('uiSelectSort', ['$timeout', 'uiSelectConfig', 'uiSelectMinErr', function($timeout, uiSelectConfig, uiSelectMinErr) {
+  return {
+    require: '^uiSelect',
+    link: function(scope, element, attrs, $select) {
+      if (scope[attrs.uiSelectSort] === null) {
+        throw uiSelectMinErr('sort', "Expected a list to sort");
+      }
+
+      var options = angular.extend({
+          axis: 'horizontal'
+        },
+        scope.$eval(attrs.uiSelectSortOptions));
+
+      var axis = options.axis,
+        draggingClassName = 'dragging',
+        droppingClassName = 'dropping',
+        droppingBeforeClassName = 'dropping-before',
+        droppingAfterClassName = 'dropping-after';
+
+      scope.$watch(function(){
+        return $select.sortable;
+      }, function(n){
+        if (n) {
+          element.attr('draggable', true);
+        } else {
+          element.removeAttr('draggable');
+        }
+      });
+
+      element.on('dragstart', function(e) {
+        element.addClass(draggingClassName);
+
+        (e.dataTransfer || e.originalEvent.dataTransfer).setData('text/plain', scope.$index);
+      });
+
+      element.on('dragend', function() {
+        element.removeClass(draggingClassName);
+      });
+
+      var move = function(from, to) {
+        /*jshint validthis: true */
+        this.splice(to, 0, this.splice(from, 1)[0]);
+      };
+
+      var dragOverHandler = function(e) {
+        e.preventDefault();
+
+        var offset = axis === 'vertical' ? e.offsetY || e.layerY || (e.originalEvent ? e.originalEvent.offsetY : 0) : e.offsetX || e.layerX || (e.originalEvent ? e.originalEvent.offsetX : 0);
+
+        if (offset < (this[axis === 'vertical' ? 'offsetHeight' : 'offsetWidth'] / 2)) {
+          element.removeClass(droppingAfterClassName);
+          element.addClass(droppingBeforeClassName);
+
+        } else {
+          element.removeClass(droppingBeforeClassName);
+          element.addClass(droppingAfterClassName);
+        }
+      };
+
+      var dropTimeout;
+
+      var dropHandler = function(e) {
+        e.preventDefault();
+
+        var droppedItemIndex = parseInt((e.dataTransfer || e.originalEvent.dataTransfer).getData('text/plain'), 10);
+
+        // prevent event firing multiple times in firefox
+        $timeout.cancel(dropTimeout);
+        dropTimeout = $timeout(function() {
+          _dropHandler(droppedItemIndex);
+        }, 20);
+      };
+
+      var _dropHandler = function(droppedItemIndex) {
+        var theList = scope.$eval(attrs.uiSelectSort),
+          itemToMove = theList[droppedItemIndex],
+          newIndex = null;
+
+        if (element.hasClass(droppingBeforeClassName)) {
+          if (droppedItemIndex < scope.$index) {
+            newIndex = scope.$index - 1;
+          } else {
+            newIndex = scope.$index;
+          }
+        } else {
+          if (droppedItemIndex < scope.$index) {
+            newIndex = scope.$index;
+          } else {
+            newIndex = scope.$index + 1;
+          }
+        }
+
+        move.apply(theList, [droppedItemIndex, newIndex]);
+
+        scope.$apply(function() {
+          scope.$emit('uiSelectSort:change', {
+            array: theList,
+            item: itemToMove,
+            from: droppedItemIndex,
+            to: newIndex
+          });
+        });
+
+        element.removeClass(droppingClassName);
+        element.removeClass(droppingBeforeClassName);
+        element.removeClass(droppingAfterClassName);
+
+        element.off('drop', dropHandler);
+      };
+
+      element.on('dragenter', function() {
+        if (element.hasClass(draggingClassName)) {
+          return;
+        }
+
+        element.addClass(droppingClassName);
+
+        element.on('dragover', dragOverHandler);
+        element.on('drop', dropHandler);
+      });
+
+      element.on('dragleave', function(e) {
+        if (e.target != element) {
+          return;
+        }
+        element.removeClass(droppingClassName);
+        element.removeClass(droppingBeforeClassName);
+        element.removeClass(droppingAfterClassName);
+
+        element.off('dragover', dragOverHandler);
+        element.off('drop', dropHandler);
+      });
+    }
+  };
+}]);
+
+/**
+ * Parses "repeat" attribute.
+ *
+ * Taken from AngularJS ngRepeat source code
+ * See https://github.com/angular/angular.js/blob/v1.2.15/src/ng/directive/ngRepeat.js#L211
+ *
+ * Original discussion about parsing "repeat" attribute instead of fully relying on ng-repeat:
+ * https://github.com/angular-ui/ui-select/commit/5dd63ad#commitcomment-5504697
+ */
+
+uis.service('uisRepeatParser', ['uiSelectMinErr','$parse', function(uiSelectMinErr, $parse) {
+  var self = this;
+
+  /**
+   * Example:
+   * expression = "address in addresses | filter: {street: $select.search} track by $index"
+   * itemName = "address",
+   * source = "addresses | filter: {street: $select.search}",
+   * trackByExp = "$index",
+   */
+  self.parse = function(expression) {
+
+    var match = expression.match(/^\s*(?:([\s\S]+?)\s+as\s+)?([\S]+?)\s+in\s+([\s\S]+?)(?:\s+track\s+by\s+([\s\S]+?))?\s*$/);
+
+    if (!match) {
+      throw uiSelectMinErr('iexp', "Expected expression in form of '_item_ in _collection_[ track by _id_]' but got '{0}'.",
+              expression);
+    }
+
+    return {
+      itemName: match[2], // (lhs) Left-hand side,
+      source: $parse(match[3]),
+      trackByExp: match[4],
+      modelMapper: $parse(match[1] || match[2])
+    };
+
+  };
+
+  self.getGroupNgRepeatExpression = function() {
+    return '$group in $select.groups';
+  };
+
+  self.getNgRepeatExpression = function(itemName, source, trackByExp, grouped) {
+    var expression = itemName + ' in ' + (grouped ? '$group.items' : source);
+    if (trackByExp) {
+      expression += ' track by ' + trackByExp;
+    }
+    return expression;
+  };
+}]);
+
+}());
+angular.module("ui.select").run(["$templateCache", function($templateCache) {$templateCache.put("bootstrap/choices.tpl.html","<ul class=\"ui-select-choices ui-select-choices-content ui-select-dropdown dropdown-menu\" role=\"listbox\" ng-show=\"$select.items.length > 0\"><li class=\"ui-select-choices-group\" id=\"ui-select-choices-{{ $select.generatedId }}\"><div class=\"divider\" ng-show=\"$select.isGrouped && $index > 0\"></div><div ng-show=\"$select.isGrouped\" class=\"ui-select-choices-group-label dropdown-header\" ng-bind=\"$group.name\"></div><div id=\"ui-select-choices-row-{{ $select.generatedId }}-{{$index}}\" class=\"ui-select-choices-row\" ng-class=\"{active: $select.isActive(this), disabled: $select.isDisabled(this)}\" role=\"option\"><a href=\"javascript:void(0)\" class=\"ui-select-choices-row-inner\"></a></div></li></ul>");
+$templateCache.put("bootstrap/match-multiple.tpl.html","<span class=\"ui-select-match\"><span ng-repeat=\"$item in $select.selected\"><span class=\"ui-select-match-item btn btn-default btn-xs\" tabindex=\"-1\" type=\"button\" ng-disabled=\"$select.disabled\" ng-click=\"$selectMultiple.activeMatchIndex = $index;\" ng-class=\"{\'btn-primary\':$selectMultiple.activeMatchIndex === $index, \'select-locked\':$select.isLocked(this, $index)}\" ui-select-sort=\"$select.selected\"><span class=\"close ui-select-match-close\" ng-hide=\"$select.disabled\" ng-click=\"$selectMultiple.removeChoice($index)\">&nbsp;&times;</span> <span uis-transclude-append=\"\"></span></span></span></span>");
+$templateCache.put("bootstrap/match.tpl.html","<div class=\"ui-select-match\" ng-hide=\"$select.open\" ng-disabled=\"$select.disabled\" ng-class=\"{\'btn-default-focus\':$select.focus}\"><span tabindex=\"-1\" class=\"btn btn-default form-control ui-select-toggle\" aria-label=\"{{ $select.baseTitle }} activate\" ng-disabled=\"$select.disabled\" ng-click=\"$select.activate()\" style=\"outline: 0;\"><span ng-show=\"$select.isEmpty()\" class=\"ui-select-placeholder text-muted\">{{$select.placeholder}}</span> <span ng-hide=\"$select.isEmpty()\" class=\"ui-select-match-text pull-left\" ng-class=\"{\'ui-select-allow-clear\': $select.allowClear && !$select.isEmpty()}\" ng-transclude=\"\"></span> <i class=\"caret pull-right\" ng-click=\"$select.toggle($event)\"></i> <a ng-show=\"$select.allowClear && !$select.isEmpty()\" aria-label=\"{{ $select.baseTitle }} clear\" style=\"margin-right: 10px\" ng-click=\"$select.clear($event)\" class=\"btn btn-xs btn-link pull-right\"><i class=\"glyphicon glyphicon-remove\" aria-hidden=\"true\"></i></a></span></div>");
+$templateCache.put("bootstrap/select-multiple.tpl.html","<div class=\"ui-select-container ui-select-multiple ui-select-bootstrap dropdown form-control\" ng-class=\"{open: $select.open}\"><div><div class=\"ui-select-match\"></div><input type=\"text\" autocomplete=\"off\" autocorrect=\"off\" autocapitalize=\"off\" spellcheck=\"false\" class=\"ui-select-search input-xs\" placeholder=\"{{$selectMultiple.getPlaceholder()}}\" ng-disabled=\"$select.disabled\" ng-hide=\"$select.disabled\" ng-click=\"$select.activate()\" ng-model=\"$select.search\" role=\"combobox\" aria-label=\"{{ $select.baseTitle }}\" ondrop=\"return false;\"></div><div class=\"ui-select-choices\"></div></div>");
+$templateCache.put("bootstrap/select.tpl.html","<div class=\"ui-select-container ui-select-bootstrap dropdown\" ng-class=\"{open: $select.open}\"><div class=\"ui-select-match\"></div><input type=\"text\" autocomplete=\"off\" tabindex=\"-1\" aria-expanded=\"true\" aria-label=\"{{ $select.baseTitle }}\" aria-owns=\"ui-select-choices-{{ $select.generatedId }}\" aria-activedescendant=\"ui-select-choices-row-{{ $select.generatedId }}-{{ $select.activeIndex }}\" class=\"form-control ui-select-search\" placeholder=\"{{$select.placeholder}}\" ng-model=\"$select.search\" ng-show=\"$select.searchEnabled && $select.open\"><div class=\"ui-select-choices\"></div></div>");
+$templateCache.put("select2/choices.tpl.html","<ul class=\"ui-select-choices ui-select-choices-content select2-results\"><li class=\"ui-select-choices-group\" ng-class=\"{\'select2-result-with-children\': $select.choiceGrouped($group) }\"><div ng-show=\"$select.choiceGrouped($group)\" class=\"ui-select-choices-group-label select2-result-label\" ng-bind=\"$group.name\"></div><ul role=\"listbox\" id=\"ui-select-choices-{{ $select.generatedId }}\" ng-class=\"{\'select2-result-sub\': $select.choiceGrouped($group), \'select2-result-single\': !$select.choiceGrouped($group) }\"><li role=\"option\" id=\"ui-select-choices-row-{{ $select.generatedId }}-{{$index}}\" class=\"ui-select-choices-row\" ng-class=\"{\'select2-highlighted\': $select.isActive(this), \'select2-disabled\': $select.isDisabled(this)}\"><div class=\"select2-result-label ui-select-choices-row-inner\"></div></li></ul></li></ul>");
+$templateCache.put("select2/match-multiple.tpl.html","<span class=\"ui-select-match\"><li class=\"ui-select-match-item select2-search-choice\" ng-repeat=\"$item in $select.selected\" ng-class=\"{\'select2-search-choice-focus\':$selectMultiple.activeMatchIndex === $index, \'select2-locked\':$select.isLocked(this, $index)}\" ui-select-sort=\"$select.selected\"><span uis-transclude-append=\"\"></span> <a href=\"javascript:;\" class=\"ui-select-match-close select2-search-choice-close\" ng-click=\"$selectMultiple.removeChoice($index)\" tabindex=\"-1\"></a></li></span>");
+$templateCache.put("select2/match.tpl.html","<a class=\"select2-choice ui-select-match\" ng-class=\"{\'select2-default\': $select.isEmpty()}\" ng-click=\"$select.toggle($event)\" aria-label=\"{{ $select.baseTitle }} select\"><span ng-show=\"$select.isEmpty()\" class=\"select2-chosen\">{{$select.placeholder}}</span> <span ng-hide=\"$select.isEmpty()\" class=\"select2-chosen\" ng-transclude=\"\"></span> <abbr ng-if=\"$select.allowClear && !$select.isEmpty()\" class=\"select2-search-choice-close\" ng-click=\"$select.clear($event)\"></abbr> <span class=\"select2-arrow ui-select-toggle\"><b></b></span></a>");
+$templateCache.put("select2/select-multiple.tpl.html","<div class=\"ui-select-container ui-select-multiple select2 select2-container select2-container-multi\" ng-class=\"{\'select2-container-active select2-dropdown-open open\': $select.open, \'select2-container-disabled\': $select.disabled}\"><ul class=\"select2-choices\"><span class=\"ui-select-match\"></span><li class=\"select2-search-field\"><input type=\"text\" autocomplete=\"off\" autocorrect=\"off\" autocapitalize=\"off\" spellcheck=\"false\" role=\"combobox\" aria-expanded=\"true\" aria-owns=\"ui-select-choices-{{ $select.generatedId }}\" aria-label=\"{{ $select.baseTitle }}\" aria-activedescendant=\"ui-select-choices-row-{{ $select.generatedId }}-{{ $select.activeIndex }}\" class=\"select2-input ui-select-search\" placeholder=\"{{$selectMultiple.getPlaceholder()}}\" ng-disabled=\"$select.disabled\" ng-hide=\"$select.disabled\" ng-model=\"$select.search\" ng-click=\"$select.activate()\" style=\"width: 34px;\" ondrop=\"return false;\"></li></ul><div class=\"ui-select-dropdown select2-drop select2-with-searchbox select2-drop-active\" ng-class=\"{\'select2-display-none\': !$select.open}\"><div class=\"ui-select-choices\"></div></div></div>");
+$templateCache.put("select2/select.tpl.html","<div class=\"ui-select-container select2 select2-container\" ng-class=\"{\'select2-container-active select2-dropdown-open open\': $select.open, \'select2-container-disabled\': $select.disabled, \'select2-container-active\': $select.focus, \'select2-allowclear\': $select.allowClear && !$select.isEmpty()}\"><div class=\"ui-select-match\"></div><div class=\"ui-select-dropdown select2-drop select2-with-searchbox select2-drop-active\" ng-class=\"{\'select2-display-none\': !$select.open}\"><div class=\"select2-search\" ng-show=\"$select.searchEnabled\"><input type=\"text\" autocomplete=\"off\" autocorrect=\"off\" autocapitalize=\"off\" spellcheck=\"false\" role=\"combobox\" aria-expanded=\"true\" aria-owns=\"ui-select-choices-{{ $select.generatedId }}\" aria-label=\"{{ $select.baseTitle }}\" aria-activedescendant=\"ui-select-choices-row-{{ $select.generatedId }}-{{ $select.activeIndex }}\" class=\"ui-select-search select2-input\" ng-model=\"$select.search\"></div><div class=\"ui-select-choices\"></div></div></div>");
+$templateCache.put("selectize/choices.tpl.html","<div ng-show=\"$select.open\" class=\"ui-select-choices ui-select-dropdown selectize-dropdown single\"><div class=\"ui-select-choices-content selectize-dropdown-content\"><div class=\"ui-select-choices-group optgroup\" role=\"listbox\"><div ng-show=\"$select.isGrouped\" class=\"ui-select-choices-group-label optgroup-header\" ng-bind=\"$group.name\"></div><div role=\"option\" class=\"ui-select-choices-row\" ng-class=\"{active: $select.isActive(this), disabled: $select.isDisabled(this)}\"><div class=\"option ui-select-choices-row-inner\" data-selectable=\"\"></div></div></div></div></div>");
+$templateCache.put("selectize/match.tpl.html","<div ng-hide=\"($select.open || $select.isEmpty())\" class=\"ui-select-match\" ng-transclude=\"\"></div>");
+$templateCache.put("selectize/select.tpl.html","<div class=\"ui-select-container selectize-control single\" ng-class=\"{\'open\': $select.open}\"><div class=\"selectize-input\" ng-class=\"{\'focus\': $select.open, \'disabled\': $select.disabled, \'selectize-focus\' : $select.focus}\" ng-click=\"$select.activate()\"><div class=\"ui-select-match\"></div><input type=\"text\" autocomplete=\"off\" tabindex=\"-1\" class=\"ui-select-search ui-select-toggle\" ng-click=\"$select.toggle($event)\" placeholder=\"{{$select.placeholder}}\" ng-model=\"$select.search\" ng-hide=\"!$select.searchEnabled || ($select.selected && !$select.open)\" ng-disabled=\"$select.disabled\" aria-label=\"{{ $select.baseTitle }}\"></div><div class=\"ui-select-choices\"></div></div>");}]);
+/*
+ * angular-ui-bootstrap
+ * http://angular-ui.github.io/bootstrap/
+
+ * Version: 0.13.4 - 2015-09-03
+ * License: MIT
+ */
+angular.module("ui.bootstrap", ["ui.bootstrap.tpls", "ui.bootstrap.collapse","ui.bootstrap.accordion","ui.bootstrap.alert","ui.bootstrap.bindHtml","ui.bootstrap.buttons","ui.bootstrap.carousel","ui.bootstrap.dateparser","ui.bootstrap.position","ui.bootstrap.datepicker","ui.bootstrap.dropdown","ui.bootstrap.modal","ui.bootstrap.pagination","ui.bootstrap.tooltip","ui.bootstrap.popover","ui.bootstrap.progressbar","ui.bootstrap.rating","ui.bootstrap.tabs","ui.bootstrap.timepicker","ui.bootstrap.transition","ui.bootstrap.typeahead"]);
+angular.module("ui.bootstrap.tpls", ["template/accordion/accordion-group.html","template/accordion/accordion.html","template/alert/alert.html","template/carousel/carousel.html","template/carousel/slide.html","template/datepicker/datepicker.html","template/datepicker/day.html","template/datepicker/month.html","template/datepicker/popup.html","template/datepicker/year.html","template/modal/backdrop.html","template/modal/window.html","template/pagination/pager.html","template/pagination/pagination.html","template/tooltip/tooltip-html-popup.html","template/tooltip/tooltip-html-unsafe-popup.html","template/tooltip/tooltip-popup.html","template/tooltip/tooltip-template-popup.html","template/popover/popover-html.html","template/popover/popover-template.html","template/popover/popover.html","template/progressbar/bar.html","template/progressbar/progress.html","template/progressbar/progressbar.html","template/rating/rating.html","template/tabs/tab.html","template/tabs/tabset.html","template/timepicker/timepicker.html","template/typeahead/typeahead-match.html","template/typeahead/typeahead-popup.html"]);
+angular.module('ui.bootstrap.collapse', [])
+
+  .directive('collapse', ['$animate', function($animate) {
+    return {
+      link: function(scope, element, attrs) {
+        function expand() {
+          element.removeClass('collapse')
+            .addClass('collapsing')
+            .attr('aria-expanded', true)
+            .attr('aria-hidden', false);
+
+          $animate.addClass(element, 'in', {
+            to: { height: element[0].scrollHeight + 'px' }
+          }).then(expandDone);
+        }
+
+        function expandDone() {
+          element.removeClass('collapsing');
+          element.css({height: 'auto'});
+        }
+
+        function collapse() {
+          if (!element.hasClass('collapse') && !element.hasClass('in')) {
+            return collapseDone();
+          }
+
+          element
+            // IMPORTANT: The height must be set before adding "collapsing" class.
+            // Otherwise, the browser attempts to animate from height 0 (in
+            // collapsing class) to the given height here.
+            .css({height: element[0].scrollHeight + 'px'})
+            // initially all panel collapse have the collapse class, this removal
+            // prevents the animation from jumping to collapsed state
+            .removeClass('collapse')
+            .addClass('collapsing')
+            .attr('aria-expanded', false)
+            .attr('aria-hidden', true);
+
+          $animate.removeClass(element, 'in', {
+            to: {height: '0'}
+          }).then(collapseDone);
+        }
+
+        function collapseDone() {
+          element.css({height: '0'}); // Required so that collapse works when animation is disabled
+          element.removeClass('collapsing');
+          element.addClass('collapse');
+        }
+
+        scope.$watch(attrs.collapse, function(shouldCollapse) {
+          if (shouldCollapse) {
+            collapse();
+          } else {
+            expand();
+          }
+        });
+      }
+    };
+  }]);
+
+angular.module('ui.bootstrap.accordion', ['ui.bootstrap.collapse'])
+
+.constant('accordionConfig', {
+  closeOthers: true
+})
+
+.controller('AccordionController', ['$scope', '$attrs', 'accordionConfig', function($scope, $attrs, accordionConfig) {
+  // This array keeps track of the accordion groups
+  this.groups = [];
+
+  // Ensure that all the groups in this accordion are closed, unless close-others explicitly says not to
+  this.closeOthers = function(openGroup) {
+    var closeOthers = angular.isDefined($attrs.closeOthers) ?
+      $scope.$eval($attrs.closeOthers) : accordionConfig.closeOthers;
+    if (closeOthers) {
+      angular.forEach(this.groups, function(group) {
+        if (group !== openGroup) {
+          group.isOpen = false;
+        }
+      });
+    }
+  };
+
+  // This is called from the accordion-group directive to add itself to the accordion
+  this.addGroup = function(groupScope) {
+    var that = this;
+    this.groups.push(groupScope);
+
+    groupScope.$on('$destroy', function(event) {
+      that.removeGroup(groupScope);
+    });
+  };
+
+  // This is called from the accordion-group directive when to remove itself
+  this.removeGroup = function(group) {
+    var index = this.groups.indexOf(group);
+    if (index !== -1) {
+      this.groups.splice(index, 1);
+    }
+  };
+
+}])
+
+// The accordion directive simply sets up the directive controller
+// and adds an accordion CSS class to itself element.
+.directive('accordion', function() {
+  return {
+    restrict: 'EA',
+    controller: 'AccordionController',
+    controllerAs: 'accordion',
+    transclude: true,
+    replace: false,
+    templateUrl: function(element, attrs) {
+      return attrs.templateUrl || 'template/accordion/accordion.html';
+    }
+  };
+})
+
+// The accordion-group directive indicates a block of html that will expand and collapse in an accordion
+.directive('accordionGroup', function() {
+  return {
+    require: '^accordion',         // We need this directive to be inside an accordion
+    restrict: 'EA',
+    transclude: true,              // It transcludes the contents of the directive into the template
+    replace: true,                // The element containing the directive will be replaced with the template
+    templateUrl: function(element, attrs) {
+      return attrs.templateUrl || 'template/accordion/accordion-group.html';
+    },
+    scope: {
+      heading: '@',               // Interpolate the heading attribute onto this scope
+      isOpen: '=?',
+      isDisabled: '=?'
+    },
+    controller: function() {
+      this.setHeading = function(element) {
+        this.heading = element;
+      };
+    },
+    link: function(scope, element, attrs, accordionCtrl) {
+      accordionCtrl.addGroup(scope);
+
+      scope.openClass = attrs.openClass || 'panel-open';
+      scope.panelClass = attrs.panelClass;
+      scope.$watch('isOpen', function(value) {
+        element.toggleClass(scope.openClass, value);
+        if (value) {
+          accordionCtrl.closeOthers(scope);
+        }
+      });
+
+      scope.toggleOpen = function($event) {
+        if (!scope.isDisabled) {
+          if (!$event || $event.which === 32) {
+            scope.isOpen = !scope.isOpen;
+          }
+        }
+      };
+    }
+  };
+})
+
+// Use accordion-heading below an accordion-group to provide a heading containing HTML
+// <accordion-group>
+//   <accordion-heading>Heading containing HTML - <img src="..."></accordion-heading>
+// </accordion-group>
+.directive('accordionHeading', function() {
+  return {
+    restrict: 'EA',
+    transclude: true,   // Grab the contents to be used as the heading
+    template: '',       // In effect remove this element!
+    replace: true,
+    require: '^accordionGroup',
+    link: function(scope, element, attr, accordionGroupCtrl, transclude) {
+      // Pass the heading to the accordion-group controller
+      // so that it can be transcluded into the right place in the template
+      // [The second parameter to transclude causes the elements to be cloned so that they work in ng-repeat]
+      accordionGroupCtrl.setHeading(transclude(scope, angular.noop));
+    }
+  };
+})
+
+// Use in the accordion-group template to indicate where you want the heading to be transcluded
+// You must provide the property on the accordion-group controller that will hold the transcluded element
+// <div class="accordion-group">
+//   <div class="accordion-heading" ><a ... accordion-transclude="heading">...</a></div>
+//   ...
+// </div>
+.directive('accordionTransclude', function() {
+  return {
+    require: '^accordionGroup',
+    link: function(scope, element, attr, controller) {
+      scope.$watch(function() { return controller[attr.accordionTransclude]; }, function(heading) {
+        if (heading) {
+          element.find('span').html('');
+          element.find('span').append(heading);
+        }
+      });
+    }
+  };
+})
+
+;
+
+angular.module('ui.bootstrap.alert', [])
+
+.controller('AlertController', ['$scope', '$attrs', function($scope, $attrs) {
+  $scope.closeable = !!$attrs.close;
+  this.close = $scope.close;
+}])
+
+.directive('alert', function() {
+  return {
+    controller: 'AlertController',
+    controllerAs: 'alert',
+    templateUrl: function(element, attrs) {
+      return attrs.templateUrl || 'template/alert/alert.html';
+    },
+    transclude: true,
+    replace: true,
+    scope: {
+      type: '@',
+      close: '&'
+    }
+  };
+})
+
+.directive('dismissOnTimeout', ['$timeout', function($timeout) {
+  return {
+    require: 'alert',
+    link: function(scope, element, attrs, alertCtrl) {
+      $timeout(function() {
+        alertCtrl.close();
+      }, parseInt(attrs.dismissOnTimeout, 10));
+    }
+  };
+}]);
+
+angular.module('ui.bootstrap.bindHtml', [])
+
+  .value('$bindHtmlUnsafeSuppressDeprecated', false)
+
+  .directive('bindHtmlUnsafe', ['$log', '$bindHtmlUnsafeSuppressDeprecated', function ($log, $bindHtmlUnsafeSuppressDeprecated) {
+    return function (scope, element, attr) {
+      if (!$bindHtmlUnsafeSuppressDeprecated) {
+        $log.warn('bindHtmlUnsafe is now deprecated. Use ngBindHtml instead');
+      }
+      element.addClass('ng-binding').data('$binding', attr.bindHtmlUnsafe);
+      scope.$watch(attr.bindHtmlUnsafe, function bindHtmlUnsafeWatchAction(value) {
+        element.html(value || '');
+      });
+    };
+  }]);
+angular.module('ui.bootstrap.buttons', [])
+
+.constant('buttonConfig', {
+  activeClass: 'active',
+  toggleEvent: 'click'
+})
+
+.controller('ButtonsController', ['buttonConfig', function(buttonConfig) {
+  this.activeClass = buttonConfig.activeClass || 'active';
+  this.toggleEvent = buttonConfig.toggleEvent || 'click';
+}])
+
+.directive('btnRadio', function() {
+  return {
+    require: ['btnRadio', 'ngModel'],
+    controller: 'ButtonsController',
+    controllerAs: 'buttons',
+    link: function(scope, element, attrs, ctrls) {
+      var buttonsCtrl = ctrls[0], ngModelCtrl = ctrls[1];
+
+      element.find('input').css({display: 'none'});
+
+      //model -> UI
+      ngModelCtrl.$render = function() {
+        element.toggleClass(buttonsCtrl.activeClass, angular.equals(ngModelCtrl.$modelValue, scope.$eval(attrs.btnRadio)));
+      };
+
+      //ui->model
+      element.bind(buttonsCtrl.toggleEvent, function() {
+        if (attrs.disabled) {
+          return;
+        }
+
+        var isActive = element.hasClass(buttonsCtrl.activeClass);
+
+        if (!isActive || angular.isDefined(attrs.uncheckable)) {
+          scope.$apply(function() {
+            ngModelCtrl.$setViewValue(isActive ? null : scope.$eval(attrs.btnRadio));
+            ngModelCtrl.$render();
+          });
+        }
+      });
+    }
+  };
+})
+
+.directive('btnCheckbox', ['$document', function($document) {
+  return {
+    require: ['btnCheckbox', 'ngModel'],
+    controller: 'ButtonsController',
+    controllerAs: 'button',
+    link: function(scope, element, attrs, ctrls) {
+      var buttonsCtrl = ctrls[0], ngModelCtrl = ctrls[1];
+
+      element.find('input').css({display: 'none'});
+
+      function getTrueValue() {
+        return getCheckboxValue(attrs.btnCheckboxTrue, true);
+      }
+
+      function getFalseValue() {
+        return getCheckboxValue(attrs.btnCheckboxFalse, false);
+      }
+
+      function getCheckboxValue(attributeValue, defaultValue) {
+        var val = scope.$eval(attributeValue);
+        return angular.isDefined(val) ? val : defaultValue;
+      }
+
+      //model -> UI
+      ngModelCtrl.$render = function() {
+        element.toggleClass(buttonsCtrl.activeClass, angular.equals(ngModelCtrl.$modelValue, getTrueValue()));
+      };
+
+      //ui->model
+      element.bind(buttonsCtrl.toggleEvent, function() {
+        if (attrs.disabled) {
+          return;
+        }
+
+        scope.$apply(function() {
+          ngModelCtrl.$setViewValue(element.hasClass(buttonsCtrl.activeClass) ? getFalseValue() : getTrueValue());
+          ngModelCtrl.$render();
+        });
+      });
+
+      //accessibility
+      element.on('keypress', function(e) {
+        if (attrs.disabled || e.which !== 32 || $document[0].activeElement !== element[0]) {
+          return;
+        }
+
+        scope.$apply(function() {
+          ngModelCtrl.$setViewValue(element.hasClass(buttonsCtrl.activeClass) ? getFalseValue() : getTrueValue());
+          ngModelCtrl.$render();
+        });
+      });
+    }
+  };
+}]);
+
+/**
+* @ngdoc overview
+* @name ui.bootstrap.carousel
+*
+* @description
+* AngularJS version of an image carousel.
+*
+*/
+angular.module('ui.bootstrap.carousel', [])
+.controller('CarouselController', ['$scope', '$element', '$interval', '$animate', function ($scope, $element, $interval, $animate) {
+  var self = this,
+    slides = self.slides = $scope.slides = [],
+    NEW_ANIMATE = angular.version.minor >= 4,
+    NO_TRANSITION = 'uib-noTransition',
+    SLIDE_DIRECTION = 'uib-slideDirection',
+    currentIndex = -1,
+    currentInterval, isPlaying;
+  self.currentSlide = null;
+
+  var destroyed = false;
+  /* direction: "prev" or "next" */
+  self.select = $scope.select = function(nextSlide, direction) {
+    var nextIndex = $scope.indexOfSlide(nextSlide);
+    //Decide direction if it's not given
+    if (direction === undefined) {
+      direction = nextIndex > self.getCurrentIndex() ? 'next' : 'prev';
+    }
+    //Prevent this user-triggered transition from occurring if there is already one in progress
+    if (nextSlide && nextSlide !== self.currentSlide && !$scope.$currentTransition) {
+      goNext(nextSlide, nextIndex, direction);
+    }
+  };
+
+  function goNext(slide, index, direction) {
+    // Scope has been destroyed, stop here.
+    if (destroyed) { return; }
+
+    angular.extend(slide, {direction: direction, active: true});
+    angular.extend(self.currentSlide || {}, {direction: direction, active: false});
+    if ($animate.enabled() && !$scope.noTransition && !$scope.$currentTransition &&
+      slide.$element && self.slides.length > 1) {
+      slide.$element.data(SLIDE_DIRECTION, slide.direction);
+      if (self.currentSlide && self.currentSlide.$element) {
+        self.currentSlide.$element.data(SLIDE_DIRECTION, slide.direction);
+      }
+
+      $scope.$currentTransition = true;
+      if (NEW_ANIMATE) {
+        $animate.on('addClass', slide.$element, function (element, phase) {
+          if (phase === 'close') {
+            $scope.$currentTransition = null;
+            $animate.off('addClass', element);
+          }
+        });
+      } else {
+        slide.$element.one('$animate:close', function closeFn() {
+          $scope.$currentTransition = null;
+        });
+      }
+    }
+
+    self.currentSlide = slide;
+    currentIndex = index;
+
+    //every time you change slides, reset the timer
+    restartTimer();
+  }
+
+  $scope.$on('$destroy', function () {
+    destroyed = true;
+  });
+
+  function getSlideByIndex(index) {
+    if (angular.isUndefined(slides[index].index)) {
+      return slides[index];
+    }
+    var i, len = slides.length;
+    for (i = 0; i < slides.length; ++i) {
+      if (slides[i].index == index) {
+        return slides[i];
+      }
+    }
+  }
+
+  self.getCurrentIndex = function() {
+    if (self.currentSlide && angular.isDefined(self.currentSlide.index)) {
+      return +self.currentSlide.index;
+    }
+    return currentIndex;
+  };
+
+  /* Allow outside people to call indexOf on slides array */
+  $scope.indexOfSlide = function(slide) {
+    return angular.isDefined(slide.index) ? +slide.index : slides.indexOf(slide);
+  };
+
+  $scope.next = function() {
+    var newIndex = (self.getCurrentIndex() + 1) % slides.length;
+
+    if (newIndex === 0 && $scope.noWrap()) {
+      $scope.pause();
+      return;
+    }
+
+    return self.select(getSlideByIndex(newIndex), 'next');
+  };
+
+  $scope.prev = function() {
+    var newIndex = self.getCurrentIndex() - 1 < 0 ? slides.length - 1 : self.getCurrentIndex() - 1;
+
+    if ($scope.noWrap() && newIndex === slides.length - 1){
+      $scope.pause();
+      return;
+    }
+
+    return self.select(getSlideByIndex(newIndex), 'prev');
+  };
+
+  $scope.isActive = function(slide) {
+     return self.currentSlide === slide;
+  };
+
+  $scope.$watch('interval', restartTimer);
+  $scope.$on('$destroy', resetTimer);
+
+  function restartTimer() {
+    resetTimer();
+    var interval = +$scope.interval;
+    if (!isNaN(interval) && interval > 0) {
+      currentInterval = $interval(timerFn, interval);
+    }
+  }
+
+  function resetTimer() {
+    if (currentInterval) {
+      $interval.cancel(currentInterval);
+      currentInterval = null;
+    }
+  }
+
+  function timerFn() {
+    var interval = +$scope.interval;
+    if (isPlaying && !isNaN(interval) && interval > 0 && slides.length) {
+      $scope.next();
+    } else {
+      $scope.pause();
+    }
+  }
+
+  $scope.play = function() {
+    if (!isPlaying) {
+      isPlaying = true;
+      restartTimer();
+    }
+  };
+  $scope.pause = function() {
+    if (!$scope.noPause) {
+      isPlaying = false;
+      resetTimer();
+    }
+  };
+
+  self.addSlide = function(slide, element) {
+    slide.$element = element;
+    slides.push(slide);
+    //if this is the first slide or the slide is set to active, select it
+    if(slides.length === 1 || slide.active) {
+      self.select(slides[slides.length-1]);
+      if (slides.length == 1) {
+        $scope.play();
+      }
+    } else {
+      slide.active = false;
+    }
+  };
+
+  self.removeSlide = function(slide) {
+    if (angular.isDefined(slide.index)) {
+      slides.sort(function(a, b) {
+        return +a.index > +b.index;
+      });
+    }
+    //get the index of the slide inside the carousel
+    var index = slides.indexOf(slide);
+    slides.splice(index, 1);
+    if (slides.length > 0 && slide.active) {
+      if (index >= slides.length) {
+        self.select(slides[index-1]);
+      } else {
+        self.select(slides[index]);
+      }
+    } else if (currentIndex > index) {
+      currentIndex--;
+    }
+    
+    //clean the currentSlide when no more slide
+    if (slides.length === 0) {
+      self.currentSlide = null;
+    }
+  };
+
+  $scope.$watch('noTransition', function(noTransition) {
+    $element.data(NO_TRANSITION, noTransition);
+  });
+
+}])
+
+/**
+ * @ngdoc directive
+ * @name ui.bootstrap.carousel.directive:carousel
+ * @restrict EA
+ *
+ * @description
+ * Carousel is the outer container for a set of image 'slides' to showcase.
+ *
+ * @param {number=} interval The time, in milliseconds, that it will take the carousel to go to the next slide.
+ * @param {boolean=} noTransition Whether to disable transitions on the carousel.
+ * @param {boolean=} noPause Whether to disable pausing on the carousel (by default, the carousel interval pauses on hover).
+ *
+ * @example
+<example module="ui.bootstrap">
+  <file name="index.html">
+    <carousel>
+      <slide>
+        <img src="http://placekitten.com/150/150" style="margin:auto;">
+        <div class="carousel-caption">
+          <p>Beautiful!</p>
+        </div>
+      </slide>
+      <slide>
+        <img src="http://placekitten.com/100/150" style="margin:auto;">
+        <div class="carousel-caption">
+          <p>D'aww!</p>
+        </div>
+      </slide>
+    </carousel>
+  </file>
+  <file name="demo.css">
+    .carousel-indicators {
+      top: auto;
+      bottom: 15px;
+    }
+  </file>
+</example>
+ */
+.directive('carousel', [function() {
+  return {
+    restrict: 'EA',
+    transclude: true,
+    replace: true,
+    controller: 'CarouselController',
+    controllerAs: 'carousel',
+    require: 'carousel',
+    templateUrl: function(element, attrs) {
+      return attrs.templateUrl || 'template/carousel/carousel.html';
+    },
+    scope: {
+      interval: '=',
+      noTransition: '=',
+      noPause: '=',
+      noWrap: '&'
+    }
+  };
+}])
+
+/**
+ * @ngdoc directive
+ * @name ui.bootstrap.carousel.directive:slide
+ * @restrict EA
+ *
+ * @description
+ * Creates a slide inside a {@link ui.bootstrap.carousel.directive:carousel carousel}.  Must be placed as a child of a carousel element.
+ *
+ * @param {boolean=} active Model binding, whether or not this slide is currently active.
+ * @param {number=} index The index of the slide. The slides will be sorted by this parameter.
+ *
+ * @example
+<example module="ui.bootstrap">
+  <file name="index.html">
+<div ng-controller="CarouselDemoCtrl">
+  <carousel>
+    <slide ng-repeat="slide in slides" active="slide.active" index="$index">
+      <img ng-src="{{slide.image}}" style="margin:auto;">
+      <div class="carousel-caption">
+        <h4>Slide {{$index}}</h4>
+        <p>{{slide.text}}</p>
+      </div>
+    </slide>
+  </carousel>
+  Interval, in milliseconds: <input type="number" ng-model="myInterval">
+  <br />Enter a negative number to stop the interval.
+</div>
+  </file>
+  <file name="script.js">
+function CarouselDemoCtrl($scope) {
+  $scope.myInterval = 5000;
+}
+  </file>
+  <file name="demo.css">
+    .carousel-indicators {
+      top: auto;
+      bottom: 15px;
+    }
+  </file>
+</example>
+*/
+
+.directive('slide', function() {
+  return {
+    require: '^carousel',
+    restrict: 'EA',
+    transclude: true,
+    replace: true,
+    templateUrl: function(element, attrs) {
+      return attrs.templateUrl || 'template/carousel/slide.html';
+    },
+    scope: {
+      active: '=?',
+      actual: '=?',
+      index: '=?'
+    },
+    link: function (scope, element, attrs, carouselCtrl) {
+      carouselCtrl.addSlide(scope, element);
+      //when the scope is destroyed then remove the slide from the current slides array
+      scope.$on('$destroy', function() {
+        carouselCtrl.removeSlide(scope);
+      });
+
+      scope.$watch('active', function(active) {
+        if (active) {
+          carouselCtrl.select(scope);
+        }
+      });
+    }
+  };
+})
+
+.animation('.item', [
+         '$injector', '$animate',
+function ($injector, $animate) {
+  var NO_TRANSITION = 'uib-noTransition',
+    SLIDE_DIRECTION = 'uib-slideDirection',
+    $animateCss = null;
+
+  if ($injector.has('$animateCss')) {
+    $animateCss = $injector.get('$animateCss');
+  }
+
+  function removeClass(element, className, callback) {
+    element.removeClass(className);
+    if (callback) {
+      callback();
+    }
+  }
+
+  return {
+    beforeAddClass: function (element, className, done) {
+      // Due to transclusion, noTransition property is on parent's scope
+      if (className == 'active' && element.parent() &&
+          !element.parent().data(NO_TRANSITION)) {
+        var stopped = false;
+        var direction = element.data(SLIDE_DIRECTION);
+        var directionClass = direction == 'next' ? 'left' : 'right';
+        var removeClassFn = removeClass.bind(this, element,
+          directionClass + ' ' + direction, done);
+        element.addClass(direction);
+
+        if ($animateCss) {
+          $animateCss(element, {addClass: directionClass})
+            .start()
+            .done(removeClassFn);
+        } else {
+          $animate.addClass(element, directionClass).then(function () {
+            if (!stopped) {
+              removeClassFn();
+            }
+            done();
+          });
+        }
+
+        return function () {
+          stopped = true;
+        };
+      }
+      done();
+    },
+    beforeRemoveClass: function (element, className, done) {
+      // Due to transclusion, noTransition property is on parent's scope
+      if (className === 'active' && element.parent() &&
+          !element.parent().data(NO_TRANSITION)) {
+        var stopped = false;
+        var direction = element.data(SLIDE_DIRECTION);
+        var directionClass = direction == 'next' ? 'left' : 'right';
+        var removeClassFn = removeClass.bind(this, element, directionClass, done);
+
+        if ($animateCss) {
+          $animateCss(element, {addClass: directionClass})
+            .start()
+            .done(removeClassFn);
+        } else {
+          $animate.addClass(element, directionClass).then(function () {
+            if (!stopped) {
+              removeClassFn();
+            }
+            done();
+          });
+        }
+        return function () {
+          stopped = true;
+        };
+      }
+      done();
+    }
+  };
+
+}])
+
+
+;
+
+angular.module('ui.bootstrap.dateparser', [])
+
+.service('dateParser', ['$log', '$locale', 'orderByFilter', function($log, $locale, orderByFilter) {
+  // Pulled from https://github.com/mbostock/d3/blob/master/src/format/requote.js
+  var SPECIAL_CHARACTERS_REGEXP = /[\\\^\$\*\+\?\|\[\]\(\)\.\{\}]/g;
+
+  this.parsers = {};
+
+  var formatCodeToRegex = {
+    'yyyy': {
+      regex: '\\d{4}',
+      apply: function(value) { this.year = +value; }
+    },
+    'yy': {
+      regex: '\\d{2}',
+      apply: function(value) { this.year = +value + 2000; }
+    },
+    'y': {
+      regex: '\\d{1,4}',
+      apply: function(value) { this.year = +value; }
+    },
+    'MMMM': {
+      regex: $locale.DATETIME_FORMATS.MONTH.join('|'),
+      apply: function(value) { this.month = $locale.DATETIME_FORMATS.MONTH.indexOf(value); }
+    },
+    'MMM': {
+      regex: $locale.DATETIME_FORMATS.SHORTMONTH.join('|'),
+      apply: function(value) { this.month = $locale.DATETIME_FORMATS.SHORTMONTH.indexOf(value); }
+    },
+    'MM': {
+      regex: '0[1-9]|1[0-2]',
+      apply: function(value) { this.month = value - 1; }
+    },
+    'M': {
+      regex: '[1-9]|1[0-2]',
+      apply: function(value) { this.month = value - 1; }
+    },
+    'dd': {
+      regex: '[0-2][0-9]{1}|3[0-1]{1}',
+      apply: function(value) { this.date = +value; }
+    },
+    'd': {
+      regex: '[1-2]?[0-9]{1}|3[0-1]{1}',
+      apply: function(value) { this.date = +value; }
+    },
+    'EEEE': {
+      regex: $locale.DATETIME_FORMATS.DAY.join('|')
+    },
+    'EEE': {
+      regex: $locale.DATETIME_FORMATS.SHORTDAY.join('|')
+    },
+    'HH': {
+      regex: '(?:0|1)[0-9]|2[0-3]',
+      apply: function(value) { this.hours = +value; }
+    },
+    'hh': {
+      regex: '0[0-9]|1[0-2]',
+      apply: function(value) { this.hours = +value; }
+    },
+    'H': {
+      regex: '1?[0-9]|2[0-3]',
+      apply: function(value) { this.hours = +value; }
+    },
+    'h': {
+      regex: '[0-9]|1[0-2]',
+      apply: function(value) { this.hours = +value; }
+    },
+    'mm': {
+      regex: '[0-5][0-9]',
+      apply: function(value) { this.minutes = +value; }
+    },
+    'm': {
+      regex: '[0-9]|[1-5][0-9]',
+      apply: function(value) { this.minutes = +value; }
+    },
+    'sss': {
+      regex: '[0-9][0-9][0-9]',
+      apply: function(value) { this.milliseconds = +value; }
+    },
+    'ss': {
+      regex: '[0-5][0-9]',
+      apply: function(value) { this.seconds = +value; }
+    },
+    's': {
+      regex: '[0-9]|[1-5][0-9]',
+      apply: function(value) { this.seconds = +value; }
+    },
+    'a': {
+      regex: $locale.DATETIME_FORMATS.AMPMS.join('|'),
+      apply: function(value) {
+        if (this.hours === 12) {
+          this.hours = 0;
+        }
+
+        if (value === 'PM') {
+          this.hours += 12;
+        }
+      }
+    }
+  };
+
+  function createParser(format) {
+    var map = [], regex = format.split('');
+
+    angular.forEach(formatCodeToRegex, function(data, code) {
+      var index = format.indexOf(code);
+
+      if (index > -1) {
+        format = format.split('');
+
+        regex[index] = '(' + data.regex + ')';
+        format[index] = '$'; // Custom symbol to define consumed part of format
+        for (var i = index + 1, n = index + code.length; i < n; i++) {
+          regex[i] = '';
+          format[i] = '$';
+        }
+        format = format.join('');
+
+        map.push({ index: index, apply: data.apply });
+      }
+    });
+
+    return {
+      regex: new RegExp('^' + regex.join('') + '$'),
+      map: orderByFilter(map, 'index')
+    };
+  }
+
+  this.parse = function(input, format, baseDate) {
+    if (!angular.isString(input) || !format) {
+      return input;
+    }
+
+    format = $locale.DATETIME_FORMATS[format] || format;
+    format = format.replace(SPECIAL_CHARACTERS_REGEXP, '\\$&');
+
+    if (!this.parsers[format]) {
+      this.parsers[format] = createParser(format);
+    }
+
+    var parser = this.parsers[format],
+        regex = parser.regex,
+        map = parser.map,
+        results = input.match(regex);
+
+    if (results && results.length) {
+      var fields, dt;
+      if (angular.isDate(baseDate) && !isNaN(baseDate.getTime())) {
+        fields = {
+          year: baseDate.getFullYear(),
+          month: baseDate.getMonth(),
+          date: baseDate.getDate(),
+          hours: baseDate.getHours(),
+          minutes: baseDate.getMinutes(),
+          seconds: baseDate.getSeconds(),
+          milliseconds: baseDate.getMilliseconds()
+        };
+      } else {
+        if (baseDate) {
+          $log.warn('dateparser:', 'baseDate is not a valid date');
+        }
+        fields = { year: 1900, month: 0, date: 1, hours: 0, minutes: 0, seconds: 0, milliseconds: 0 };
+      }
+
+      for (var i = 1, n = results.length; i < n; i++) {
+        var mapper = map[i-1];
+        if (mapper.apply) {
+          mapper.apply.call(fields, results[i]);
+        }
+      }
+
+      if (isValid(fields.year, fields.month, fields.date)) {
+        dt = new Date(fields.year, fields.month, fields.date,
+          fields.hours, fields.minutes, fields.seconds,
+          fields.milliseconds || 0);
+      }
+
+      return dt;
+    }
+  };
+
+  // Check if date is valid for specific month (and year for February).
+  // Month: 0 = Jan, 1 = Feb, etc
+  function isValid(year, month, date) {
+    if (date < 1) {
+      return false;
+    }
+
+    if (month === 1 && date > 28) {
+      return date === 29 && ((year % 4 === 0 && year % 100 !== 0) || year % 400 === 0);
+    }
+
+    if (month === 3 || month === 5 || month === 8 || month === 10) {
+      return date < 31;
+    }
+
+    return true;
+  }
+}]);
+
+angular.module('ui.bootstrap.position', [])
+
+/**
+ * A set of utility methods that can be use to retrieve position of DOM elements.
+ * It is meant to be used where we need to absolute-position DOM elements in
+ * relation to other, existing elements (this is the case for tooltips, popovers,
+ * typeahead suggestions etc.).
+ */
+  .factory('$position', ['$document', '$window', function($document, $window) {
+    function getStyle(el, cssprop) {
+      if (el.currentStyle) { //IE
+        return el.currentStyle[cssprop];
+      } else if ($window.getComputedStyle) {
+        return $window.getComputedStyle(el)[cssprop];
+      }
+      // finally try and get inline style
+      return el.style[cssprop];
+    }
+
+    /**
+     * Checks if a given element is statically positioned
+     * @param element - raw DOM element
+     */
+    function isStaticPositioned(element) {
+      return (getStyle(element, 'position') || 'static' ) === 'static';
+    }
+
+    /**
+     * returns the closest, non-statically positioned parentOffset of a given element
+     * @param element
+     */
+    var parentOffsetEl = function(element) {
+      var docDomEl = $document[0];
+      var offsetParent = element.offsetParent || docDomEl;
+      while (offsetParent && offsetParent !== docDomEl && isStaticPositioned(offsetParent) ) {
+        offsetParent = offsetParent.offsetParent;
+      }
+      return offsetParent || docDomEl;
+    };
+
+    return {
+      /**
+       * Provides read-only equivalent of jQuery's position function:
+       * http://api.jquery.com/position/
+       */
+      position: function(element) {
+        var elBCR = this.offset(element);
+        var offsetParentBCR = { top: 0, left: 0 };
+        var offsetParentEl = parentOffsetEl(element[0]);
+        if (offsetParentEl != $document[0]) {
+          offsetParentBCR = this.offset(angular.element(offsetParentEl));
+          offsetParentBCR.top += offsetParentEl.clientTop - offsetParentEl.scrollTop;
+          offsetParentBCR.left += offsetParentEl.clientLeft - offsetParentEl.scrollLeft;
+        }
+
+        var boundingClientRect = element[0].getBoundingClientRect();
+        return {
+          width: boundingClientRect.width || element.prop('offsetWidth'),
+          height: boundingClientRect.height || element.prop('offsetHeight'),
+          top: elBCR.top - offsetParentBCR.top,
+          left: elBCR.left - offsetParentBCR.left
+        };
+      },
+
+      /**
+       * Provides read-only equivalent of jQuery's offset function:
+       * http://api.jquery.com/offset/
+       */
+      offset: function(element) {
+        var boundingClientRect = element[0].getBoundingClientRect();
+        return {
+          width: boundingClientRect.width || element.prop('offsetWidth'),
+          height: boundingClientRect.height || element.prop('offsetHeight'),
+          top: boundingClientRect.top + ($window.pageYOffset || $document[0].documentElement.scrollTop),
+          left: boundingClientRect.left + ($window.pageXOffset || $document[0].documentElement.scrollLeft)
+        };
+      },
+
+      /**
+       * Provides coordinates for the targetEl in relation to hostEl
+       */
+      positionElements: function(hostEl, targetEl, positionStr, appendToBody) {
+        var positionStrParts = positionStr.split('-');
+        var pos0 = positionStrParts[0], pos1 = positionStrParts[1] || 'center';
+
+        var hostElPos,
+          targetElWidth,
+          targetElHeight,
+          targetElPos;
+
+        hostElPos = appendToBody ? this.offset(hostEl) : this.position(hostEl);
+
+        targetElWidth = targetEl.prop('offsetWidth');
+        targetElHeight = targetEl.prop('offsetHeight');
+
+        var shiftWidth = {
+          center: function() {
+            return hostElPos.left + hostElPos.width / 2 - targetElWidth / 2;
+          },
+          left: function() {
+            return hostElPos.left;
+          },
+          right: function() {
+            return hostElPos.left + hostElPos.width;
+          }
+        };
+
+        var shiftHeight = {
+          center: function() {
+            return hostElPos.top + hostElPos.height / 2 - targetElHeight / 2;
+          },
+          top: function() {
+            return hostElPos.top;
+          },
+          bottom: function() {
+            return hostElPos.top + hostElPos.height;
+          }
+        };
+
+        switch (pos0) {
+          case 'right':
+            targetElPos = {
+              top: shiftHeight[pos1](),
+              left: shiftWidth[pos0]()
+            };
+            break;
+          case 'left':
+            targetElPos = {
+              top: shiftHeight[pos1](),
+              left: hostElPos.left - targetElWidth
+            };
+            break;
+          case 'bottom':
+            targetElPos = {
+              top: shiftHeight[pos0](),
+              left: shiftWidth[pos1]()
+            };
+            break;
+          default:
+            targetElPos = {
+              top: hostElPos.top - targetElHeight,
+              left: shiftWidth[pos1]()
+            };
+            break;
+        }
+
+        return targetElPos;
+      }
+    };
+  }]);
+
+angular.module('ui.bootstrap.datepicker', ['ui.bootstrap.dateparser', 'ui.bootstrap.position'])
+
+.value('$datepickerSuppressError', false)
+
+.constant('datepickerConfig', {
+  formatDay: 'dd',
+  formatMonth: 'MMMM',
+  formatYear: 'yyyy',
+  formatDayHeader: 'EEE',
+  formatDayTitle: 'MMMM yyyy',
+  formatMonthTitle: 'yyyy',
+  datepickerMode: 'day',
+  minMode: 'day',
+  maxMode: 'year',
+  showWeeks: true,
+  startingDay: 0,
+  yearRange: 20,
+  minDate: null,
+  maxDate: null,
+  shortcutPropagation: false
+})
+
+.controller('DatepickerController', ['$scope', '$attrs', '$parse', '$interpolate', '$log', 'dateFilter', 'datepickerConfig', '$datepickerSuppressError', function($scope, $attrs, $parse, $interpolate, $log, dateFilter, datepickerConfig, $datepickerSuppressError) {
+  var self = this,
+      ngModelCtrl = { $setViewValue: angular.noop }; // nullModelCtrl;
+
+  // Modes chain
+  this.modes = ['day', 'month', 'year'];
+
+  // Configuration attributes
+  angular.forEach(['formatDay', 'formatMonth', 'formatYear', 'formatDayHeader', 'formatDayTitle', 'formatMonthTitle',
+                   'showWeeks', 'startingDay', 'yearRange', 'shortcutPropagation'], function(key, index) {
+    self[key] = angular.isDefined($attrs[key]) ? (index < 6 ? $interpolate($attrs[key])($scope.$parent) : $scope.$parent.$eval($attrs[key])) : datepickerConfig[key];
+  });
+
+  // Watchable date attributes
+  angular.forEach(['minDate', 'maxDate'], function(key) {
+    if ($attrs[key]) {
+      $scope.$parent.$watch($parse($attrs[key]), function(value) {
+        self[key] = value ? new Date(value) : null;
+        self.refreshView();
+      });
+    } else {
+      self[key] = datepickerConfig[key] ? new Date(datepickerConfig[key]) : null;
+    }
+  });
+
+  angular.forEach(['minMode', 'maxMode'], function(key) {
+    if ($attrs[key]) {
+      $scope.$parent.$watch($parse($attrs[key]), function(value) {
+        self[key] = angular.isDefined(value) ? value : $attrs[key];
+        $scope[key] = self[key];
+        if ((key == 'minMode' && self.modes.indexOf($scope.datepickerMode) < self.modes.indexOf(self[key])) || (key == 'maxMode' && self.modes.indexOf($scope.datepickerMode) > self.modes.indexOf(self[key]))) {
+          $scope.datepickerMode = self[key];
+        }
+      });
+    } else {
+      self[key] = datepickerConfig[key] || null;
+      $scope[key] = self[key];
+    }
+  });
+
+  $scope.datepickerMode = $scope.datepickerMode || datepickerConfig.datepickerMode;
+  $scope.uniqueId = 'datepicker-' + $scope.$id + '-' + Math.floor(Math.random() * 10000);
+
+  if (angular.isDefined($attrs.initDate)) {
+    this.activeDate = $scope.$parent.$eval($attrs.initDate) || new Date();
+    $scope.$parent.$watch($attrs.initDate, function(initDate) {
+      if (initDate && (ngModelCtrl.$isEmpty(ngModelCtrl.$modelValue) || ngModelCtrl.$invalid)) {
+        self.activeDate = initDate;
+        self.refreshView();
+      }
+    });
+  } else {
+    this.activeDate = new Date();
+  }
+
+  $scope.isActive = function(dateObject) {
+    if (self.compare(dateObject.date, self.activeDate) === 0) {
+      $scope.activeDateId = dateObject.uid;
+      return true;
+    }
+    return false;
+  };
+
+  this.init = function(ngModelCtrl_) {
+    ngModelCtrl = ngModelCtrl_;
+
+    ngModelCtrl.$render = function() {
+      self.render();
+    };
+  };
+
+  this.render = function() {
+    if (ngModelCtrl.$viewValue) {
+      var date = new Date(ngModelCtrl.$viewValue),
+          isValid = !isNaN(date);
+
+      if (isValid) {
+        this.activeDate = date;
+      } else if (!$datepickerSuppressError) {
+        $log.error('Datepicker directive: "ng-model" value must be a Date object, a number of milliseconds since 01.01.1970 or a string representing an RFC2822 or ISO 8601 date.');
+      }
+    }
+    this.refreshView();
+  };
+
+  this.refreshView = function() {
+    if (this.element) {
+      this._refreshView();
+
+      var date = ngModelCtrl.$viewValue ? new Date(ngModelCtrl.$viewValue) : null;
+      ngModelCtrl.$setValidity('dateDisabled', !date || (this.element && !this.isDisabled(date)));
+    }
+  };
+
+  this.createDateObject = function(date, format) {
+    var model = ngModelCtrl.$viewValue ? new Date(ngModelCtrl.$viewValue) : null;
+    return {
+      date: date,
+      label: dateFilter(date, format),
+      selected: model && this.compare(date, model) === 0,
+      disabled: this.isDisabled(date),
+      current: this.compare(date, new Date()) === 0,
+      customClass: this.customClass(date)
+    };
+  };
+
+  this.isDisabled = function(date) {
+    return ((this.minDate && this.compare(date, this.minDate) < 0) || (this.maxDate && this.compare(date, this.maxDate) > 0) || ($attrs.dateDisabled && $scope.dateDisabled({date: date, mode: $scope.datepickerMode})));
+  };
+
+  this.customClass = function(date) {
+    return $scope.customClass({date: date, mode: $scope.datepickerMode});
+  };
+
+  // Split array into smaller arrays
+  this.split = function(arr, size) {
+    var arrays = [];
+    while (arr.length > 0) {
+      arrays.push(arr.splice(0, size));
+    }
+    return arrays;
+  };
+
+  // Fix a hard-reprodusible bug with timezones
+  // The bug depends on OS, browser, current timezone and current date
+  // i.e.
+  // var date = new Date(2014, 0, 1);
+  // console.log(date.getFullYear(), date.getMonth(), date.getDate(), date.getHours());
+  // can result in "2013 11 31 23" because of the bug.
+  this.fixTimeZone = function(date) {
+    var hours = date.getHours();
+    date.setHours(hours === 23 ? hours + 2 : 0);
+  };
+
+  $scope.select = function(date) {
+    if ($scope.datepickerMode === self.minMode) {
+      var dt = ngModelCtrl.$viewValue ? new Date(ngModelCtrl.$viewValue) : new Date(0, 0, 0, 0, 0, 0, 0);
+      dt.setFullYear(date.getFullYear(), date.getMonth(), date.getDate());
+      ngModelCtrl.$setViewValue(dt);
+      ngModelCtrl.$render();
+    } else {
+      self.activeDate = date;
+      $scope.datepickerMode = self.modes[self.modes.indexOf($scope.datepickerMode) - 1];
+    }
+  };
+
+  $scope.move = function(direction) {
+    var year = self.activeDate.getFullYear() + direction * (self.step.years || 0),
+        month = self.activeDate.getMonth() + direction * (self.step.months || 0);
+    self.activeDate.setFullYear(year, month, 1);
+    self.refreshView();
+  };
+
+  $scope.toggleMode = function(direction) {
+    direction = direction || 1;
+
+    if (($scope.datepickerMode === self.maxMode && direction === 1) || ($scope.datepickerMode === self.minMode && direction === -1)) {
+      return;
+    }
+
+    $scope.datepickerMode = self.modes[self.modes.indexOf($scope.datepickerMode) + direction];
+  };
+
+  // Key event mapper
+  $scope.keys = { 13: 'enter', 32: 'space', 33: 'pageup', 34: 'pagedown', 35: 'end', 36: 'home', 37: 'left', 38: 'up', 39: 'right', 40: 'down' };
+
+  var focusElement = function() {
+    self.element[0].focus();
+  };
+
+  // Listen for focus requests from popup directive
+  $scope.$on('datepicker.focus', focusElement);
+
+  $scope.keydown = function(evt) {
+    var key = $scope.keys[evt.which];
+
+    if (!key || evt.shiftKey || evt.altKey) {
+      return;
+    }
+
+    evt.preventDefault();
+    if (!self.shortcutPropagation) {
+      evt.stopPropagation();
+    }
+
+    if (key === 'enter' || key === 'space') {
+      if (self.isDisabled(self.activeDate)) {
+        return; // do nothing
+      }
+      $scope.select(self.activeDate);
+      focusElement();
+    } else if (evt.ctrlKey && (key === 'up' || key === 'down')) {
+      $scope.toggleMode(key === 'up' ? 1 : -1);
+      focusElement();
+    } else {
+      self.handleKeyDown(key, evt);
+      self.refreshView();
+    }
+  };
+}])
+
+.directive('datepicker', function() {
+  return {
+    restrict: 'EA',
+    replace: true,
+    templateUrl: function(element, attrs) {
+      return attrs.templateUrl || 'template/datepicker/datepicker.html';
+    },
+    scope: {
+      datepickerMode: '=?',
+      dateDisabled: '&',
+      customClass: '&',
+      shortcutPropagation: '&?'
+    },
+    require: ['datepicker', '^ngModel'],
+    controller: 'DatepickerController',
+    controllerAs: 'datepicker',
+    link: function(scope, element, attrs, ctrls) {
+      var datepickerCtrl = ctrls[0], ngModelCtrl = ctrls[1];
+
+      datepickerCtrl.init(ngModelCtrl);
+    }
+  };
+})
+
+.directive('daypicker', ['dateFilter', function(dateFilter) {
+  return {
+    restrict: 'EA',
+    replace: true,
+    templateUrl: 'template/datepicker/day.html',
+    require: '^datepicker',
+    link: function(scope, element, attrs, ctrl) {
+      scope.showWeeks = ctrl.showWeeks;
+
+      ctrl.step = { months: 1 };
+      ctrl.element = element;
+
+      var DAYS_IN_MONTH = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+      function getDaysInMonth(year, month) {
+        return ((month === 1) && (year % 4 === 0) && ((year % 100 !== 0) || (year % 400 === 0))) ? 29 : DAYS_IN_MONTH[month];
+      }
+
+      function getDates(startDate, n) {
+        var dates = new Array(n), current = new Date(startDate), i = 0, date;
+        while (i < n) {
+          date = new Date(current);
+          ctrl.fixTimeZone(date);
+          dates[i++] = date;
+          current.setDate(current.getDate() + 1);
+        }
+        return dates;
+      }
+
+      ctrl._refreshView = function() {
+        var year = ctrl.activeDate.getFullYear(),
+          month = ctrl.activeDate.getMonth(),
+          firstDayOfMonth = new Date(year, month, 1),
+          difference = ctrl.startingDay - firstDayOfMonth.getDay(),
+          numDisplayedFromPreviousMonth = (difference > 0) ? 7 - difference : - difference,
+          firstDate = new Date(firstDayOfMonth);
+
+        if (numDisplayedFromPreviousMonth > 0) {
+          firstDate.setDate(-numDisplayedFromPreviousMonth + 1);
+        }
+
+        // 42 is the number of days on a six-month calendar
+        var days = getDates(firstDate, 42);
+        for (var i = 0; i < 42; i ++) {
+          days[i] = angular.extend(ctrl.createDateObject(days[i], ctrl.formatDay), {
+            secondary: days[i].getMonth() !== month,
+            uid: scope.uniqueId + '-' + i
+          });
+        }
+
+        scope.labels = new Array(7);
+        for (var j = 0; j < 7; j++) {
+          scope.labels[j] = {
+            abbr: dateFilter(days[j].date, ctrl.formatDayHeader),
+            full: dateFilter(days[j].date, 'EEEE')
+          };
+        }
+
+        scope.title = dateFilter(ctrl.activeDate, ctrl.formatDayTitle);
+        scope.rows = ctrl.split(days, 7);
+
+        if (scope.showWeeks) {
+          scope.weekNumbers = [];
+          var thursdayIndex = (4 + 7 - ctrl.startingDay) % 7,
+              numWeeks = scope.rows.length;
+          for (var curWeek = 0; curWeek < numWeeks; curWeek++) {
+            scope.weekNumbers.push(
+              getISO8601WeekNumber(scope.rows[curWeek][thursdayIndex].date));
+          }
+        }
+      };
+
+      ctrl.compare = function(date1, date2) {
+        return (new Date(date1.getFullYear(), date1.getMonth(), date1.getDate()) - new Date(date2.getFullYear(), date2.getMonth(), date2.getDate()));
+      };
+
+      function getISO8601WeekNumber(date) {
+        var checkDate = new Date(date);
+        checkDate.setDate(checkDate.getDate() + 4 - (checkDate.getDay() || 7)); // Thursday
+        var time = checkDate.getTime();
+        checkDate.setMonth(0); // Compare with Jan 1
+        checkDate.setDate(1);
+        return Math.floor(Math.round((time - checkDate) / 86400000) / 7) + 1;
+      }
+
+      ctrl.handleKeyDown = function(key, evt) {
+        var date = ctrl.activeDate.getDate();
+
+        if (key === 'left') {
+          date = date - 1;   // up
+        } else if (key === 'up') {
+          date = date - 7;   // down
+        } else if (key === 'right') {
+          date = date + 1;   // down
+        } else if (key === 'down') {
+          date = date + 7;
+        } else if (key === 'pageup' || key === 'pagedown') {
+          var month = ctrl.activeDate.getMonth() + (key === 'pageup' ? - 1 : 1);
+          ctrl.activeDate.setMonth(month, 1);
+          date = Math.min(getDaysInMonth(ctrl.activeDate.getFullYear(), ctrl.activeDate.getMonth()), date);
+        } else if (key === 'home') {
+          date = 1;
+        } else if (key === 'end') {
+          date = getDaysInMonth(ctrl.activeDate.getFullYear(), ctrl.activeDate.getMonth());
+        }
+        ctrl.activeDate.setDate(date);
+      };
+
+      ctrl.refreshView();
+    }
+  };
+}])
+
+.directive('monthpicker', ['dateFilter', function(dateFilter) {
+  return {
+    restrict: 'EA',
+    replace: true,
+    templateUrl: 'template/datepicker/month.html',
+    require: '^datepicker',
+    link: function(scope, element, attrs, ctrl) {
+      ctrl.step = { years: 1 };
+      ctrl.element = element;
+
+      ctrl._refreshView = function() {
+        var months = new Array(12),
+            year = ctrl.activeDate.getFullYear(),
+            date;
+
+        for (var i = 0; i < 12; i++) {
+          date = new Date(year, i, 1);
+          ctrl.fixTimeZone(date);
+          months[i] = angular.extend(ctrl.createDateObject(date, ctrl.formatMonth), {
+            uid: scope.uniqueId + '-' + i
+          });
+        }
+
+        scope.title = dateFilter(ctrl.activeDate, ctrl.formatMonthTitle);
+        scope.rows = ctrl.split(months, 3);
+      };
+
+      ctrl.compare = function(date1, date2) {
+        return new Date(date1.getFullYear(), date1.getMonth()) - new Date(date2.getFullYear(), date2.getMonth());
+      };
+
+      ctrl.handleKeyDown = function(key, evt) {
+        var date = ctrl.activeDate.getMonth();
+
+        if (key === 'left') {
+          date = date - 1;   // up
+        } else if (key === 'up') {
+          date = date - 3;   // down
+        } else if (key === 'right') {
+          date = date + 1;   // down
+        } else if (key === 'down') {
+          date = date + 3;
+        } else if (key === 'pageup' || key === 'pagedown') {
+          var year = ctrl.activeDate.getFullYear() + (key === 'pageup' ? - 1 : 1);
+          ctrl.activeDate.setFullYear(year);
+        } else if (key === 'home') {
+          date = 0;
+        } else if (key === 'end') {
+          date = 11;
+        }
+        ctrl.activeDate.setMonth(date);
+      };
+
+      ctrl.refreshView();
+    }
+  };
+}])
+
+.directive('yearpicker', ['dateFilter', function(dateFilter) {
+  return {
+    restrict: 'EA',
+    replace: true,
+    templateUrl: 'template/datepicker/year.html',
+    require: '^datepicker',
+    link: function(scope, element, attrs, ctrl) {
+      var range = ctrl.yearRange;
+
+      ctrl.step = { years: range };
+      ctrl.element = element;
+
+      function getStartingYear( year ) {
+        return parseInt((year - 1) / range, 10) * range + 1;
+      }
+
+      ctrl._refreshView = function() {
+        var years = new Array(range), date;
+
+        for (var i = 0, start = getStartingYear(ctrl.activeDate.getFullYear()); i < range; i++) {
+          date = new Date(start + i, 0, 1);
+          ctrl.fixTimeZone(date);
+          years[i] = angular.extend(ctrl.createDateObject(date, ctrl.formatYear), {
+            uid: scope.uniqueId + '-' + i
+          });
+        }
+
+        scope.title = [years[0].label, years[range - 1].label].join(' - ');
+        scope.rows = ctrl.split(years, 5);
+      };
+
+      ctrl.compare = function(date1, date2) {
+        return date1.getFullYear() - date2.getFullYear();
+      };
+
+      ctrl.handleKeyDown = function(key, evt) {
+        var date = ctrl.activeDate.getFullYear();
+
+        if (key === 'left') {
+          date = date - 1;   // up
+        } else if (key === 'up') {
+          date = date - 5;   // down
+        } else if (key === 'right') {
+          date = date + 1;   // down
+        } else if (key === 'down') {
+          date = date + 5;
+        } else if (key === 'pageup' || key === 'pagedown') {
+          date += (key === 'pageup' ? - 1 : 1) * ctrl.step.years;
+        } else if (key === 'home') {
+          date = getStartingYear(ctrl.activeDate.getFullYear());
+        } else if (key === 'end') {
+          date = getStartingYear(ctrl.activeDate.getFullYear()) + range - 1;
+        }
+        ctrl.activeDate.setFullYear(date);
+      };
+
+      ctrl.refreshView();
+    }
+  };
+}])
+
+.constant('datepickerPopupConfig', {
+  datepickerPopup: 'yyyy-MM-dd',
+  datepickerPopupTemplateUrl: 'template/datepicker/popup.html',
+  datepickerTemplateUrl: 'template/datepicker/datepicker.html',
+  html5Types: {
+    date: 'yyyy-MM-dd',
+    'datetime-local': 'yyyy-MM-ddTHH:mm:ss.sss',
+    'month': 'yyyy-MM'
+  },
+  currentText: 'Today',
+  clearText: 'Clear',
+  closeText: 'Done',
+  closeOnDateSelection: true,
+  appendToBody: false,
+  showButtonBar: true,
+  onOpenFocus: true
+})
+
+.directive('datepickerPopup', ['$compile', '$parse', '$document', '$rootScope', '$position', 'dateFilter', 'dateParser', 'datepickerPopupConfig', '$timeout',
+function($compile, $parse, $document, $rootScope, $position, dateFilter, dateParser, datepickerPopupConfig, $timeout) {
+  return {
+    restrict: 'EA',
+    require: 'ngModel',
+    scope: {
+      isOpen: '=?',
+      currentText: '@',
+      clearText: '@',
+      closeText: '@',
+      dateDisabled: '&',
+      customClass: '&'
+    },
+    link: function(scope, element, attrs, ngModel) {
+      var dateFormat,
+          closeOnDateSelection = angular.isDefined(attrs.closeOnDateSelection) ? scope.$parent.$eval(attrs.closeOnDateSelection) : datepickerPopupConfig.closeOnDateSelection,
+          appendToBody = angular.isDefined(attrs.datepickerAppendToBody) ? scope.$parent.$eval(attrs.datepickerAppendToBody) : datepickerPopupConfig.appendToBody,
+          onOpenFocus = angular.isDefined(attrs.onOpenFocus) ? scope.$parent.$eval(attrs.onOpenFocus) : datepickerPopupConfig.onOpenFocus,
+          datepickerPopupTemplateUrl = angular.isDefined(attrs.datepickerPopupTemplateUrl) ? attrs.datepickerPopupTemplateUrl : datepickerPopupConfig.datepickerPopupTemplateUrl,
+          datepickerTemplateUrl = angular.isDefined(attrs.datepickerTemplateUrl) ? attrs.datepickerTemplateUrl : datepickerPopupConfig.datepickerTemplateUrl,
+          cache = {};
+
+      scope.showButtonBar = angular.isDefined(attrs.showButtonBar) ? scope.$parent.$eval(attrs.showButtonBar) : datepickerPopupConfig.showButtonBar;
+
+      scope.getText = function(key) {
+        return scope[key + 'Text'] || datepickerPopupConfig[key + 'Text'];
+      };
+
+      scope.isDisabled = function(date) {
+        if (date === 'today') {
+          date = new Date();
+        }
+
+        return ((scope.watchData.minDate && scope.compare(date, cache.minDate) < 0) ||
+          (scope.watchData.maxDate && scope.compare(date, cache.maxDate) > 0));
+      };
+
+      scope.compare = function(date1, date2) {
+        return (new Date(date1.getFullYear(), date1.getMonth(), date1.getDate()) - new Date(date2.getFullYear(), date2.getMonth(), date2.getDate()));
+      };
+
+      var isHtml5DateInput = false;
+      if (datepickerPopupConfig.html5Types[attrs.type]) {
+        dateFormat = datepickerPopupConfig.html5Types[attrs.type];
+        isHtml5DateInput = true;
+      } else {
+        dateFormat = attrs.datepickerPopup || datepickerPopupConfig.datepickerPopup;
+        attrs.$observe('datepickerPopup', function(value, oldValue) {
+            var newDateFormat = value || datepickerPopupConfig.datepickerPopup;
+            // Invalidate the $modelValue to ensure that formatters re-run
+            // FIXME: Refactor when PR is merged: https://github.com/angular/angular.js/pull/10764
+            if (newDateFormat !== dateFormat) {
+              dateFormat = newDateFormat;
+              ngModel.$modelValue = null;
+
+              if (!dateFormat) {
+                throw new Error('datepickerPopup must have a date format specified.');
+              }
+            }
+        });
+      }
+
+      if (!dateFormat) {
+        throw new Error('datepickerPopup must have a date format specified.');
+      }
+
+      if (isHtml5DateInput && attrs.datepickerPopup) {
+        throw new Error('HTML5 date input types do not support custom formats.');
+      }
+
+      // popup element used to display calendar
+      var popupEl = angular.element('<div datepicker-popup-wrap><div datepicker></div></div>');
+      popupEl.attr({
+        'ng-model': 'date',
+        'ng-change': 'dateSelection(date)',
+        'template-url': datepickerPopupTemplateUrl
+      });
+
+      function cameltoDash(string) {
+        return string.replace(/([A-Z])/g, function($1) { return '-' + $1.toLowerCase(); });
+      }
+
+      // datepicker element
+      var datepickerEl = angular.element(popupEl.children()[0]);
+      datepickerEl.attr('template-url', datepickerTemplateUrl);
+
+      if (isHtml5DateInput) {
+        if (attrs.type === 'month') {
+          datepickerEl.attr('datepicker-mode', '"month"');
+          datepickerEl.attr('min-mode', 'month');
+        }
+      }
+
+      if (attrs.datepickerOptions) {
+        var options = scope.$parent.$eval(attrs.datepickerOptions);
+        if (options && options.initDate) {
+          scope.initDate = options.initDate;
+          datepickerEl.attr('init-date', 'initDate');
+          delete options.initDate;
+        }
+        angular.forEach(options, function(value, option) {
+          datepickerEl.attr( cameltoDash(option), value );
+        });
+      }
+
+      scope.watchData = {};
+      angular.forEach(['minMode', 'maxMode', 'minDate', 'maxDate', 'datepickerMode', 'initDate', 'shortcutPropagation'], function(key) {
+        if (attrs[key]) {
+          var getAttribute = $parse(attrs[key]);
+          scope.$parent.$watch(getAttribute, function(value) {
+            scope.watchData[key] = value;
+            if (key === 'minDate' || key === 'maxDate') {
+              cache[key] = new Date(value);
+            }
+          });
+          datepickerEl.attr(cameltoDash(key), 'watchData.' + key);
+
+          // Propagate changes from datepicker to outside
+          if (key === 'datepickerMode') {
+            var setAttribute = getAttribute.assign;
+            scope.$watch('watchData.' + key, function(value, oldvalue) {
+              if (angular.isFunction(setAttribute) && value !== oldvalue) {
+                setAttribute(scope.$parent, value);
+              }
+            });
+          }
+        }
+      });
+      if (attrs.dateDisabled) {
+        datepickerEl.attr('date-disabled', 'dateDisabled({ date: date, mode: mode })');
+      }
+
+      if (attrs.showWeeks) {
+        datepickerEl.attr('show-weeks', attrs.showWeeks);
+      }
+
+      if (attrs.customClass) {
+        datepickerEl.attr('custom-class', 'customClass({ date: date, mode: mode })');
+      }
+
+      function parseDate(viewValue) {
+        if (angular.isNumber(viewValue)) {
+          // presumably timestamp to date object
+          viewValue = new Date(viewValue);
+        }
+
+        if (!viewValue) {
+          return null;
+        } else if (angular.isDate(viewValue) && !isNaN(viewValue)) {
+          return viewValue;
+        } else if (angular.isString(viewValue)) {
+          var date = dateParser.parse(viewValue, dateFormat, scope.date);
+          if (isNaN(date)) {
+            return undefined;
+          } else {
+            return date;
+          }
+        } else {
+          return undefined;
+        }
+      }
+
+      function validator(modelValue, viewValue) {
+        var value = modelValue || viewValue;
+
+        if (!attrs.ngRequired && !value) {
+          return true;
+        }
+
+        if (angular.isNumber(value)) {
+          value = new Date(value);
+        }
+        if (!value) {
+          return true;
+        } else if (angular.isDate(value) && !isNaN(value)) {
+          return true;
+        } else if (angular.isString(value)) {
+          var date = dateParser.parse(value, dateFormat);
+          return !isNaN(date);
+        } else {
+          return false;
+        }
+      }
+
+      if (!isHtml5DateInput) {
+        // Internal API to maintain the correct ng-invalid-[key] class
+        ngModel.$$parserName = 'date';
+        ngModel.$validators.date = validator;
+        ngModel.$parsers.unshift(parseDate);
+        ngModel.$formatters.push(function(value) {
+          scope.date = value;
+          return ngModel.$isEmpty(value) ? value : dateFilter(value, dateFormat);
+        });
+      } else {
+        ngModel.$formatters.push(function(value) {
+          scope.date = value;
+          return value;
+        });
+      }
+
+      // Inner change
+      scope.dateSelection = function(dt) {
+        if (angular.isDefined(dt)) {
+          scope.date = dt;
+        }
+        var date = scope.date ? dateFilter(scope.date, dateFormat) : null; // Setting to NULL is necessary for form validators to function
+        element.val(date);
+        ngModel.$setViewValue(date);
+
+        if (closeOnDateSelection) {
+          scope.isOpen = false;
+          element[0].focus();
+        }
+      };
+
+      // Detect changes in the view from the text box
+      ngModel.$viewChangeListeners.push(function() {
+        scope.date = dateParser.parse(ngModel.$viewValue, dateFormat, scope.date);
+      });
+
+      var documentClickBind = function(event) {
+        if (scope.isOpen && !(element[0].contains(event.target) || popupEl[0].contains(event.target))) {
+          scope.$apply(function() {
+            scope.isOpen = false;
+          });
+        }
+      };
+
+      var inputKeydownBind = function(evt) {
+        if (evt.which === 27 && scope.isOpen) {
+          evt.preventDefault();
+          evt.stopPropagation();
+          scope.$apply(function() {
+            scope.isOpen = false;
+          });
+          element[0].focus();
+        } else if (evt.which === 40 && !scope.isOpen) {
+          evt.preventDefault();
+          evt.stopPropagation();
+          scope.$apply(function() {
+            scope.isOpen = true;
+          });
+        }
+      };
+      element.bind('keydown', inputKeydownBind);
+
+      scope.keydown = function(evt) {
+        if (evt.which === 27) {
+          scope.isOpen = false;
+          element[0].focus();
+        }
+      };
+
+      scope.$watch('isOpen', function(value) {
+        if (value) {
+          scope.position = appendToBody ? $position.offset(element) : $position.position(element);
+          scope.position.top = scope.position.top + element.prop('offsetHeight');
+
+          $timeout(function() {
+            if (onOpenFocus) {
+              scope.$broadcast('datepicker.focus');
+            }
+            $document.bind('click', documentClickBind);
+          }, 0, false);
+        } else {
+          $document.unbind('click', documentClickBind);
+        }
+      });
+
+      scope.select = function(date) {
+        if (date === 'today') {
+          var today = new Date();
+          if (angular.isDate(scope.date)) {
+            date = new Date(scope.date);
+            date.setFullYear(today.getFullYear(), today.getMonth(), today.getDate());
+          } else {
+            date = new Date(today.setHours(0, 0, 0, 0));
+          }
+        }
+        scope.dateSelection(date);
+      };
+
+      scope.close = function() {
+        scope.isOpen = false;
+        element[0].focus();
+      };
+
+      var $popup = $compile(popupEl)(scope);
+      // Prevent jQuery cache memory leak (template is now redundant after linking)
+      popupEl.remove();
+
+      if (appendToBody) {
+        $document.find('body').append($popup);
+      } else {
+        element.after($popup);
+      }
+
+      scope.$on('$destroy', function() {
+        if (scope.isOpen === true) {
+          if (!$rootScope.$$phase) {
+            scope.$apply(function() {
+              scope.isOpen = false;
+            });
+          }
+        }
+
+        $popup.remove();
+        element.unbind('keydown', inputKeydownBind);
+        $document.unbind('click', documentClickBind);
+      });
+    }
+  };
+}])
+
+.directive('datepickerPopupWrap', function() {
+  return {
+    restrict:'EA',
+    replace: true,
+    transclude: true,
+    templateUrl: function(element, attrs) {
+      return attrs.templateUrl || 'template/datepicker/popup.html';
+    }
+  };
+});
+
+angular.module('ui.bootstrap.dropdown', ['ui.bootstrap.position'])
+
+.constant('dropdownConfig', {
+  openClass: 'open'
+})
+
+.service('dropdownService', ['$document', '$rootScope', function($document, $rootScope) {
+  var openScope = null;
+
+  this.open = function(dropdownScope) {
+    if (!openScope) {
+      $document.bind('click', closeDropdown);
+      $document.bind('keydown', keybindFilter);
+    }
+
+    if (openScope && openScope !== dropdownScope) {
+      openScope.isOpen = false;
+    }
+
+    openScope = dropdownScope;
+  };
+
+  this.close = function(dropdownScope) {
+    if (openScope === dropdownScope) {
+      openScope = null;
+      $document.unbind('click', closeDropdown);
+      $document.unbind('keydown', keybindFilter);
+    }
+  };
+
+  var closeDropdown = function(evt) {
+    // This method may still be called during the same mouse event that
+    // unbound this event handler. So check openScope before proceeding.
+    if (!openScope) { return; }
+
+    if (evt && openScope.getAutoClose() === 'disabled')  { return ; }
+
+    var toggleElement = openScope.getToggleElement();
+    if (evt && toggleElement && toggleElement[0].contains(evt.target)) {
+      return;
+    }
+
+    var dropdownElement = openScope.getDropdownElement();
+    if (evt && openScope.getAutoClose() === 'outsideClick' &&
+      dropdownElement && dropdownElement[0].contains(evt.target)) {
+      return;
+    }
+
+    openScope.isOpen = false;
+
+    if (!$rootScope.$$phase) {
+      openScope.$apply();
+    }
+  };
+
+  var keybindFilter = function(evt) {
+    if (evt.which === 27) {
+      openScope.focusToggleElement();
+      closeDropdown();
+    } else if (openScope.isKeynavEnabled() && /(38|40)/.test(evt.which) && openScope.isOpen) {
+      evt.preventDefault();
+      evt.stopPropagation();
+      openScope.focusDropdownEntry(evt.which);
+    }
+  };
+}])
+
+.controller('DropdownController', ['$scope', '$attrs', '$parse', 'dropdownConfig', 'dropdownService', '$animate', '$position', '$document', '$compile', '$templateRequest', function($scope, $attrs, $parse, dropdownConfig, dropdownService, $animate, $position, $document, $compile, $templateRequest) {
+  var self = this,
+    scope = $scope.$new(), // create a child scope so we are not polluting original one
+    templateScope,
+    openClass = dropdownConfig.openClass,
+    getIsOpen,
+    setIsOpen = angular.noop,
+    toggleInvoker = $attrs.onToggle ? $parse($attrs.onToggle) : angular.noop,
+    appendToBody = false,
+    keynavEnabled = false,
+    selectedOption = null,
+    body = $document.find('body');
+
+  this.init = function(element) {
+    self.$element = element;
+
+    if ($attrs.isOpen) {
+      getIsOpen = $parse($attrs.isOpen);
+      setIsOpen = getIsOpen.assign;
+
+      $scope.$watch(getIsOpen, function(value) {
+        scope.isOpen = !!value;
+      });
+    }
+
+    appendToBody = angular.isDefined($attrs.dropdownAppendToBody);
+    keynavEnabled = angular.isDefined($attrs.keyboardNav);
+
+    if (appendToBody && self.dropdownMenu) {
+      body.append(self.dropdownMenu);
+      body.addClass('dropdown');
+      element.on('$destroy', function handleDestroyEvent() {
+        self.dropdownMenu.remove();
+      });
+    }
+  };
+
+  this.toggle = function(open) {
+    return scope.isOpen = arguments.length ? !!open : !scope.isOpen;
+  };
+
+  // Allow other directives to watch status
+  this.isOpen = function() {
+    return scope.isOpen;
+  };
+
+  scope.getToggleElement = function() {
+    return self.toggleElement;
+  };
+
+  scope.getAutoClose = function() {
+    return $attrs.autoClose || 'always'; //or 'outsideClick' or 'disabled'
+  };
+
+  scope.getElement = function() {
+    return self.$element;
+  };
+
+  scope.isKeynavEnabled = function() {
+    return keynavEnabled;
+  };
+
+  scope.focusDropdownEntry = function(keyCode) {
+    var elems = self.dropdownMenu ? //If append to body is used.
+      (angular.element(self.dropdownMenu).find('a')) :
+      (angular.element(self.$element).find('ul').eq(0).find('a'));
+
+    switch (keyCode) {
+      case (40): {
+        if (!angular.isNumber(self.selectedOption)) {
+          self.selectedOption = 0;
+        } else {
+          self.selectedOption = (self.selectedOption === elems.length -1 ?
+            self.selectedOption :
+            self.selectedOption + 1);
+        }
+        break;
+      }
+      case (38): {
+        if (!angular.isNumber(self.selectedOption)) {
+          self.selectedOption = elems.length - 1;
+        } else {
+          self.selectedOption = self.selectedOption === 0 ?
+            0 : self.selectedOption - 1;
+        }
+        break;
+      }
+    }
+    elems[self.selectedOption].focus();
+  };
+
+  scope.getDropdownElement = function() {
+    return self.dropdownMenu;
+  };
+
+  scope.focusToggleElement = function() {
+    if (self.toggleElement) {
+      self.toggleElement[0].focus();
+    }
+  };
+
+  scope.$watch('isOpen', function(isOpen, wasOpen) {
+    if (appendToBody && self.dropdownMenu) {
+      var pos = $position.positionElements(self.$element, self.dropdownMenu, 'bottom-left', true);
+      var css = {
+        top: pos.top + 'px',
+        display: isOpen ? 'block' : 'none'
+      };
+
+      var rightalign = self.dropdownMenu.hasClass('dropdown-menu-right');
+      if (!rightalign) {
+        css.left = pos.left + 'px';
+        css.right = 'auto';
+      } else {
+        css.left = 'auto';
+        css.right = (window.innerWidth - (pos.left + self.$element.prop('offsetWidth'))) + 'px';
+      }
+
+      self.dropdownMenu.css(css);
+    }
+
+    var openContainer = appendToBody ? body : self.$element;
+
+    $animate[isOpen ? 'addClass' : 'removeClass'](openContainer, openClass).then(function() {
+      if (angular.isDefined(isOpen) && isOpen !== wasOpen) {
+        toggleInvoker($scope, { open: !!isOpen });
+      }
+    });
+
+    if (isOpen) {
+      if (self.dropdownMenuTemplateUrl) {
+        $templateRequest(self.dropdownMenuTemplateUrl).then(function(tplContent) {
+          templateScope = scope.$new();
+          $compile(tplContent.trim())(templateScope, function(dropdownElement) {
+            var newEl = dropdownElement;
+            self.dropdownMenu.replaceWith(newEl);
+            self.dropdownMenu = newEl;
+          });
+        });
+      }
+
+      scope.focusToggleElement();
+      dropdownService.open(scope);
+    } else {
+      if (self.dropdownMenuTemplateUrl) {
+        if (templateScope) {
+          templateScope.$destroy();
+        }
+        var newEl = angular.element('<ul class="dropdown-menu"></ul>');
+        self.dropdownMenu.replaceWith(newEl);
+        self.dropdownMenu = newEl;
+      }
+
+      dropdownService.close(scope);
+      self.selectedOption = null;
+    }
+
+    if (angular.isFunction(setIsOpen)) {
+      setIsOpen($scope, isOpen);
+    }
+  });
+
+  $scope.$on('$locationChangeSuccess', function() {
+    if (scope.getAutoClose() !== 'disabled') {
+      scope.isOpen = false;
+    }
+  });
+
+  var offDestroy = $scope.$on('$destroy', function() {
+    scope.$destroy();
+  });
+  scope.$on('$destroy', offDestroy);
+}])
+
+.directive('dropdown', function() {
+  return {
+    controller: 'DropdownController',
+    link: function(scope, element, attrs, dropdownCtrl) {
+      dropdownCtrl.init( element );
+      element.addClass('dropdown');
+    }
+  };
+})
+
+.directive('dropdownMenu', function() {
+  return {
+    restrict: 'AC',
+    require: '?^dropdown',
+    link: function(scope, element, attrs, dropdownCtrl) {
+      if (!dropdownCtrl) {
+        return;
+      }
+      var tplUrl = attrs.templateUrl;
+      if (tplUrl) {
+        dropdownCtrl.dropdownMenuTemplateUrl = tplUrl;
+      }
+      if (!dropdownCtrl.dropdownMenu) {
+        dropdownCtrl.dropdownMenu = element;
+      }
+    }
+  };
+})
+
+.directive('keyboardNav', function() {
+  return {
+    restrict: 'A',
+    require: '?^dropdown',
+    link: function (scope, element, attrs, dropdownCtrl) {
+
+      element.bind('keydown', function(e) {
+        if ([38, 40].indexOf(e.which) !== -1) {
+          e.preventDefault();
+          e.stopPropagation();
+
+          var elems = dropdownCtrl.dropdownMenu.find('a');
+
+          switch (e.which) {
+            case (40): { // Down
+              if (!angular.isNumber(dropdownCtrl.selectedOption)) {
+                dropdownCtrl.selectedOption = 0;
+              } else {
+                dropdownCtrl.selectedOption = dropdownCtrl.selectedOption === elems.length -1 ?
+                  dropdownCtrl.selectedOption : dropdownCtrl.selectedOption + 1;
+              }
+              break;
+            }
+            case (38): { // Up
+              if (!angular.isNumber(dropdownCtrl.selectedOption)) {
+                dropdownCtrl.selectedOption = elems.length - 1;
+              } else {
+                dropdownCtrl.selectedOption = dropdownCtrl.selectedOption === 0 ?
+                  0 : dropdownCtrl.selectedOption - 1;
+              }
+              break;
+            }
+          }
+          elems[dropdownCtrl.selectedOption].focus();
+        }
+      });
+    }
+  };
+})
+
+.directive('dropdownToggle', function() {
+  return {
+    require: '?^dropdown',
+    link: function(scope, element, attrs, dropdownCtrl) {
+      if (!dropdownCtrl) {
+        return;
+      }
+
+      element.addClass('dropdown-toggle');
+
+      dropdownCtrl.toggleElement = element;
+
+      var toggleDropdown = function(event) {
+        event.preventDefault();
+
+        if (!element.hasClass('disabled') && !attrs.disabled) {
+          scope.$apply(function() {
+            dropdownCtrl.toggle();
+          });
+        }
+      };
+
+      element.bind('click', toggleDropdown);
+
+      // WAI-ARIA
+      element.attr({ 'aria-haspopup': true, 'aria-expanded': false });
+      scope.$watch(dropdownCtrl.isOpen, function( isOpen ) {
+        element.attr('aria-expanded', !!isOpen);
+      });
+
+      scope.$on('$destroy', function() {
+        element.unbind('click', toggleDropdown);
+      });
+    }
+  };
+});
+
+angular.module('ui.bootstrap.modal', [])
+
+/**
+ * A helper, internal data structure that acts as a map but also allows getting / removing
+ * elements in the LIFO order
+ */
+  .factory('$$stackedMap', function() {
+    return {
+      createNew: function() {
+        var stack = [];
+
+        return {
+          add: function(key, value) {
+            stack.push({
+              key: key,
+              value: value
+            });
+          },
+          get: function(key) {
+            for (var i = 0; i < stack.length; i++) {
+              if (key == stack[i].key) {
+                return stack[i];
+              }
+            }
+          },
+          keys: function() {
+            var keys = [];
+            for (var i = 0; i < stack.length; i++) {
+              keys.push(stack[i].key);
+            }
+            return keys;
+          },
+          top: function() {
+            return stack[stack.length - 1];
+          },
+          remove: function(key) {
+            var idx = -1;
+            for (var i = 0; i < stack.length; i++) {
+              if (key == stack[i].key) {
+                idx = i;
+                break;
+              }
+            }
+            return stack.splice(idx, 1)[0];
+          },
+          removeTop: function() {
+            return stack.splice(stack.length - 1, 1)[0];
+          },
+          length: function() {
+            return stack.length;
+          }
+        };
+      }
+    };
+  })
+
+/**
+ * A helper, internal data structure that stores all references attached to key
+ */
+  .factory('$$multiMap', function() {
+    return {
+      createNew: function() {
+        var map = {};
+
+        return {
+          entries: function() {
+            return Object.keys(map).map(function(key) {
+              return {
+                key: key,
+                value: map[key]
+              };
+            });
+          },
+          get: function(key) {
+            return map[key];
+          },
+          hasKey: function(key) {
+            return !!map[key];
+          },
+          keys: function() {
+            return Object.keys(map);
+          },
+          put: function(key, value) {
+            if (!map[key]) {
+              map[key] = [];
+            }
+
+            map[key].push(value);
+          },
+          remove: function(key, value) {
+            var values = map[key];
+
+            if (!values) {
+              return;
+            }
+
+            var idx = values.indexOf(value);
+
+            if (idx !== -1) {
+              values.splice(idx, 1);
+            }
+
+            if (!values.length) {
+              delete map[key];
+            }
+          }
+        };
+      }
+    };
+  })
+
+/**
+ * A helper directive for the $modal service. It creates a backdrop element.
+ */
+  .directive('modalBackdrop', [
+           '$animate', '$injector', '$modalStack',
+  function($animate ,  $injector,   $modalStack) {
+    var $animateCss = null;
+
+    if ($injector.has('$animateCss')) {
+      $animateCss = $injector.get('$animateCss');
+    }
+
+    return {
+      restrict: 'EA',
+      replace: true,
+      templateUrl: 'template/modal/backdrop.html',
+      compile: function(tElement, tAttrs) {
+        tElement.addClass(tAttrs.backdropClass);
+        return linkFn;
+      }
+    };
+
+    function linkFn(scope, element, attrs) {
+      if (attrs.modalInClass) {
+        if ($animateCss) {
+          $animateCss(element, {
+            addClass: attrs.modalInClass
+          }).start();
+        } else {
+          $animate.addClass(element, attrs.modalInClass);
+        }
+
+        scope.$on($modalStack.NOW_CLOSING_EVENT, function(e, setIsAsync) {
+          var done = setIsAsync();
+          if ($animateCss) {
+            $animateCss(element, {
+              removeClass: attrs.modalInClass
+            }).start().then(done);
+          } else {
+            $animate.removeClass(element, attrs.modalInClass).then(done);
+          }
+        });
+      }
+    }
+  }])
+
+  .directive('modalWindow', [
+           '$modalStack', '$q', '$animate', '$injector',
+  function($modalStack ,  $q ,  $animate,   $injector) {
+    var $animateCss = null;
+
+    if ($injector.has('$animateCss')) {
+      $animateCss = $injector.get('$animateCss');
+    }
+
+    return {
+      restrict: 'EA',
+      scope: {
+        index: '@'
+      },
+      replace: true,
+      transclude: true,
+      templateUrl: function(tElement, tAttrs) {
+        return tAttrs.templateUrl || 'template/modal/window.html';
+      },
+      link: function(scope, element, attrs) {
+        element.addClass(attrs.windowClass || '');
+        scope.size = attrs.size;
+
+        scope.close = function(evt) {
+          var modal = $modalStack.getTop();
+          if (modal && modal.value.backdrop && modal.value.backdrop !== 'static' && (evt.target === evt.currentTarget)) {
+            evt.preventDefault();
+            evt.stopPropagation();
+            $modalStack.dismiss(modal.key, 'backdrop click');
+          }
+        };
+
+        // This property is only added to the scope for the purpose of detecting when this directive is rendered.
+        // We can detect that by using this property in the template associated with this directive and then use
+        // {@link Attribute#$observe} on it. For more details please see {@link TableColumnResize}.
+        scope.$isRendered = true;
+
+        // Deferred object that will be resolved when this modal is render.
+        var modalRenderDeferObj = $q.defer();
+        // Observe function will be called on next digest cycle after compilation, ensuring that the DOM is ready.
+        // In order to use this way of finding whether DOM is ready, we need to observe a scope property used in modal's template.
+        attrs.$observe('modalRender', function(value) {
+          if (value == 'true') {
+            modalRenderDeferObj.resolve();
+          }
+        });
+
+        modalRenderDeferObj.promise.then(function() {
+          var animationPromise = null;
+
+          if (attrs.modalInClass) {
+            if ($animateCss) {
+              animationPromise = $animateCss(element, {
+                addClass: attrs.modalInClass
+              }).start();
+            } else {
+              animationPromise = $animate.addClass(element, attrs.modalInClass);
+            }
+
+            scope.$on($modalStack.NOW_CLOSING_EVENT, function(e, setIsAsync) {
+              var done = setIsAsync();
+              if ($animateCss) {
+                $animateCss(element, {
+                  removeClass: attrs.modalInClass
+                }).start().then(done);
+              } else {
+                $animate.removeClass(element, attrs.modalInClass).then(done);
+              }
+            });
+          }
+
+
+          $q.when(animationPromise).then(function() {
+            var inputsWithAutofocus = element[0].querySelectorAll('[autofocus]');
+            /**
+             * Auto-focusing of a freshly-opened modal element causes any child elements
+             * with the autofocus attribute to lose focus. This is an issue on touch
+             * based devices which will show and then hide the onscreen keyboard.
+             * Attempts to refocus the autofocus element via JavaScript will not reopen
+             * the onscreen keyboard. Fixed by updated the focusing logic to only autofocus
+             * the modal element if the modal does not contain an autofocus element.
+             */
+            if (inputsWithAutofocus.length) {
+              inputsWithAutofocus[0].focus();
+            } else {
+              element[0].focus();
+            }
+          });
+
+          // Notify {@link $modalStack} that modal is rendered.
+          var modal = $modalStack.getTop();
+          if (modal) {
+            $modalStack.modalRendered(modal.key);
+          }
+        });
+      }
+    };
+  }])
+
+  .directive('modalAnimationClass', [
+    function () {
+      return {
+        compile: function(tElement, tAttrs) {
+          if (tAttrs.modalAnimation) {
+            tElement.addClass(tAttrs.modalAnimationClass);
+          }
+        }
+      };
+    }])
+
+  .directive('modalTransclude', function() {
+    return {
+      link: function($scope, $element, $attrs, controller, $transclude) {
+        $transclude($scope.$parent, function(clone) {
+          $element.empty();
+          $element.append(clone);
+        });
+      }
+    };
+  })
+
+  .factory('$modalStack', [
+             '$animate', '$timeout', '$document', '$compile', '$rootScope',
+             '$q',
+             '$injector',
+             '$$multiMap',
+             '$$stackedMap',
+    function($animate ,  $timeout ,  $document ,  $compile ,  $rootScope ,
+              $q,
+              $injector,
+              $$multiMap,
+              $$stackedMap) {
+      var $animateCss = null;
+
+      if ($injector.has('$animateCss')) {
+        $animateCss = $injector.get('$animateCss');
+      }
+
+      var OPENED_MODAL_CLASS = 'modal-open';
+
+      var backdropDomEl, backdropScope;
+      var openedWindows = $$stackedMap.createNew();
+      var openedClasses = $$multiMap.createNew();
+      var $modalStack = {
+        NOW_CLOSING_EVENT: 'modal.stack.now-closing'
+      };
+
+      //Modal focus behavior
+      var focusableElementList;
+      var focusIndex = 0;
+      var tababbleSelector = 'a[href], area[href], input:not([disabled]), ' +
+        'button:not([disabled]),select:not([disabled]), textarea:not([disabled]), ' +
+        'iframe, object, embed, *[tabindex], *[contenteditable=true]';
+
+      function backdropIndex() {
+        var topBackdropIndex = -1;
+        var opened = openedWindows.keys();
+        for (var i = 0; i < opened.length; i++) {
+          if (openedWindows.get(opened[i]).value.backdrop) {
+            topBackdropIndex = i;
+          }
+        }
+        return topBackdropIndex;
+      }
+
+      $rootScope.$watch(backdropIndex, function(newBackdropIndex) {
+        if (backdropScope) {
+          backdropScope.index = newBackdropIndex;
+        }
+      });
+
+      function removeModalWindow(modalInstance, elementToReceiveFocus) {
+        var body = $document.find('body').eq(0);
+        var modalWindow = openedWindows.get(modalInstance).value;
+
+        //clean up the stack
+        openedWindows.remove(modalInstance);
+
+        removeAfterAnimate(modalWindow.modalDomEl, modalWindow.modalScope, function() {
+          var modalBodyClass = modalWindow.openedClass || OPENED_MODAL_CLASS;
+          openedClasses.remove(modalBodyClass, modalInstance);
+          body.toggleClass(modalBodyClass, openedClasses.hasKey(modalBodyClass));
+        });
+        checkRemoveBackdrop();
+
+        //move focus to specified element if available, or else to body
+        if (elementToReceiveFocus && elementToReceiveFocus.focus) {
+          elementToReceiveFocus.focus();
+        } else {
+          body.focus();
+        }
+      }
+
+      function checkRemoveBackdrop() {
+          //remove backdrop if no longer needed
+          if (backdropDomEl && backdropIndex() == -1) {
+            var backdropScopeRef = backdropScope;
+            removeAfterAnimate(backdropDomEl, backdropScope, function() {
+              backdropScopeRef = null;
+            });
+            backdropDomEl = undefined;
+            backdropScope = undefined;
+          }
+      }
+
+      function removeAfterAnimate(domEl, scope, done) {
+        var asyncDeferred;
+        var asyncPromise = null;
+        var setIsAsync = function() {
+          if (!asyncDeferred) {
+            asyncDeferred = $q.defer();
+            asyncPromise = asyncDeferred.promise;
+          }
+
+          return function asyncDone() {
+            asyncDeferred.resolve();
+          };
+        };
+        scope.$broadcast($modalStack.NOW_CLOSING_EVENT, setIsAsync);
+
+        // Note that it's intentional that asyncPromise might be null.
+        // That's when setIsAsync has not been called during the
+        // NOW_CLOSING_EVENT broadcast.
+        return $q.when(asyncPromise).then(afterAnimating);
+
+        function afterAnimating() {
+          if (afterAnimating.done) {
+            return;
+          }
+          afterAnimating.done = true;
+
+          if ($animateCss) {
+            $animateCss(domEl, {
+              event: 'leave'
+            }).start().then(function() {
+              domEl.remove();
+            });
+          } else {
+            $animate.leave(domEl);
+          }
+          scope.$destroy();
+          if (done) {
+            done();
+          }
+        }
+      }
+
+      $document.bind('keydown', function(evt) {
+        if (evt.isDefaultPrevented()) {
+          return evt;
+        }
+
+        var modal = openedWindows.top();
+        if (modal && modal.value.keyboard) {
+          switch (evt.which){
+            case 27: {
+              evt.preventDefault();
+              $rootScope.$apply(function() {
+                $modalStack.dismiss(modal.key, 'escape key press');
+              });
+              break;
+            }
+            case 9: {
+              $modalStack.loadFocusElementList(modal);
+              var focusChanged = false;
+              if (evt.shiftKey) {
+                if ($modalStack.isFocusInFirstItem(evt)) {
+                  focusChanged = $modalStack.focusLastFocusableElement();
+                }
+              } else {
+                if ($modalStack.isFocusInLastItem(evt)) {
+                  focusChanged = $modalStack.focusFirstFocusableElement();
+                }
+              }
+
+              if (focusChanged) {
+                evt.preventDefault();
+                evt.stopPropagation();
+              }
+              break;
+            }
+          }
+        }
+      });
+
+      $modalStack.open = function(modalInstance, modal) {
+        var modalOpener = $document[0].activeElement,
+          modalBodyClass = modal.openedClass || OPENED_MODAL_CLASS;
+
+        openedWindows.add(modalInstance, {
+          deferred: modal.deferred,
+          renderDeferred: modal.renderDeferred,
+          modalScope: modal.scope,
+          backdrop: modal.backdrop,
+          keyboard: modal.keyboard,
+          openedClass: modal.openedClass
+        });
+
+        openedClasses.put(modalBodyClass, modalInstance);
+
+        var body = $document.find('body').eq(0),
+            currBackdropIndex = backdropIndex();
+
+        if (currBackdropIndex >= 0 && !backdropDomEl) {
+          backdropScope = $rootScope.$new(true);
+          backdropScope.index = currBackdropIndex;
+          var angularBackgroundDomEl = angular.element('<div modal-backdrop="modal-backdrop"></div>');
+          angularBackgroundDomEl.attr('backdrop-class', modal.backdropClass);
+          if (modal.animation) {
+            angularBackgroundDomEl.attr('modal-animation', 'true');
+          }
+          backdropDomEl = $compile(angularBackgroundDomEl)(backdropScope);
+          body.append(backdropDomEl);
+        }
+
+        var angularDomEl = angular.element('<div modal-window="modal-window"></div>');
+        angularDomEl.attr({
+          'template-url': modal.windowTemplateUrl,
+          'window-class': modal.windowClass,
+          'size': modal.size,
+          'index': openedWindows.length() - 1,
+          'animate': 'animate'
+        }).html(modal.content);
+        if (modal.animation) {
+          angularDomEl.attr('modal-animation', 'true');
+        }
+
+        var modalDomEl = $compile(angularDomEl)(modal.scope);
+        openedWindows.top().value.modalDomEl = modalDomEl;
+        openedWindows.top().value.modalOpener = modalOpener;
+        body.append(modalDomEl);
+        body.addClass(modalBodyClass);
+
+        $modalStack.clearFocusListCache();
+      };
+
+      function broadcastClosing(modalWindow, resultOrReason, closing) {
+          return !modalWindow.value.modalScope.$broadcast('modal.closing', resultOrReason, closing).defaultPrevented;
+      }
+
+      $modalStack.close = function(modalInstance, result) {
+        var modalWindow = openedWindows.get(modalInstance);
+        if (modalWindow && broadcastClosing(modalWindow, result, true)) {
+          modalWindow.value.modalScope.$$uibDestructionScheduled = true;
+          modalWindow.value.deferred.resolve(result);
+          removeModalWindow(modalInstance, modalWindow.value.modalOpener);
+          return true;
+        }
+        return !modalWindow;
+      };
+
+      $modalStack.dismiss = function(modalInstance, reason) {
+        var modalWindow = openedWindows.get(modalInstance);
+        if (modalWindow && broadcastClosing(modalWindow, reason, false)) {
+          modalWindow.value.modalScope.$$uibDestructionScheduled = true;
+          modalWindow.value.deferred.reject(reason);
+          removeModalWindow(modalInstance, modalWindow.value.modalOpener);
+          return true;
+        }
+        return !modalWindow;
+      };
+
+      $modalStack.dismissAll = function(reason) {
+        var topModal = this.getTop();
+        while (topModal && this.dismiss(topModal.key, reason)) {
+          topModal = this.getTop();
+        }
+      };
+
+      $modalStack.getTop = function() {
+        return openedWindows.top();
+      };
+
+      $modalStack.modalRendered = function(modalInstance) {
+        var modalWindow = openedWindows.get(modalInstance);
+        if (modalWindow) {
+          modalWindow.value.renderDeferred.resolve();
+        }
+      };
+
+      $modalStack.focusFirstFocusableElement = function() {
+        if (focusableElementList.length > 0) {
+          focusableElementList[0].focus();
+          return true;
+        }
+        return false;
+      };
+      $modalStack.focusLastFocusableElement = function() {
+        if (focusableElementList.length > 0) {
+          focusableElementList[focusableElementList.length - 1].focus();
+          return true;
+        }
+        return false;
+      };
+
+      $modalStack.isFocusInFirstItem = function(evt) {
+        if (focusableElementList.length > 0) {
+          return (evt.target || evt.srcElement) == focusableElementList[0];
+        }
+        return false;
+      };
+
+      $modalStack.isFocusInLastItem = function(evt) {
+        if (focusableElementList.length > 0) {
+          return (evt.target || evt.srcElement) == focusableElementList[focusableElementList.length - 1];
+        }
+        return false;
+      };
+
+      $modalStack.clearFocusListCache = function() {
+        focusableElementList = [];
+        focusIndex = 0;
+      };
+
+      $modalStack.loadFocusElementList = function(modalWindow) {
+        if (focusableElementList === undefined || !focusableElementList.length0) {
+          if (modalWindow) {
+            var modalDomE1 = modalWindow.value.modalDomEl;
+            if (modalDomE1 && modalDomE1.length) {
+              focusableElementList = modalDomE1[0].querySelectorAll(tababbleSelector);
+            }
+          }
+        }
+      };
+
+      return $modalStack;
+    }])
+
+  .provider('$modal', function() {
+    var $modalProvider = {
+      options: {
+        animation: true,
+        backdrop: true, //can also be false or 'static'
+        keyboard: true
+      },
+      $get: ['$injector', '$rootScope', '$q', '$templateRequest', '$controller', '$modalStack',
+        function ($injector, $rootScope, $q, $templateRequest, $controller, $modalStack) {
+          var $modal = {};
+
+          function getTemplatePromise(options) {
+            return options.template ? $q.when(options.template) :
+              $templateRequest(angular.isFunction(options.templateUrl) ? (options.templateUrl)() : options.templateUrl);
+          }
+
+          function getResolvePromises(resolves) {
+            var promisesArr = [];
+            angular.forEach(resolves, function(value) {
+              if (angular.isFunction(value) || angular.isArray(value)) {
+                promisesArr.push($q.when($injector.invoke(value)));
+              } else if (angular.isString(value)) {
+                promisesArr.push($q.when($injector.get(value)));
+              } else {
+                promisesArr.push($q.when(value));
+              }
+            });
+            return promisesArr;
+          }
+
+          var promiseChain = null;
+          $modal.getPromiseChain = function() {
+            return promiseChain;
+          };
+
+          $modal.open = function (modalOptions) {
+
+            var modalResultDeferred = $q.defer();
+            var modalOpenedDeferred = $q.defer();
+            var modalRenderDeferred = $q.defer();
+
+            //prepare an instance of a modal to be injected into controllers and returned to a caller
+            var modalInstance = {
+              result: modalResultDeferred.promise,
+              opened: modalOpenedDeferred.promise,
+              rendered: modalRenderDeferred.promise,
+              close: function (result) {
+                return $modalStack.close(modalInstance, result);
+              },
+              dismiss: function (reason) {
+                return $modalStack.dismiss(modalInstance, reason);
+              }
+            };
+
+            //merge and clean up options
+            modalOptions = angular.extend({}, $modalProvider.options, modalOptions);
+            modalOptions.resolve = modalOptions.resolve || {};
+
+            //verify options
+            if (!modalOptions.template && !modalOptions.templateUrl) {
+              throw new Error('One of template or templateUrl options is required.');
+            }
+
+            var templateAndResolvePromise =
+              $q.all([getTemplatePromise(modalOptions)].concat(getResolvePromises(modalOptions.resolve)));
+
+            // Wait for the resolution of the existing promise chain.
+            // Then switch to our own combined promise dependency (regardless of how the previous modal fared).
+            // Then add to $modalStack and resolve opened.
+            // Finally clean up the chain variable if no subsequent modal has overwritten it.
+            var samePromise;
+            samePromise = promiseChain = $q.all([promiseChain])
+              .then(function() { return templateAndResolvePromise; }, function() { return templateAndResolvePromise; })
+              .then(function resolveSuccess(tplAndVars) {
+
+                var modalScope = (modalOptions.scope || $rootScope).$new();
+                modalScope.$close = modalInstance.close;
+                modalScope.$dismiss = modalInstance.dismiss;
+
+                modalScope.$on('$destroy', function() {
+                  if (!modalScope.$$uibDestructionScheduled) {
+                    modalScope.$dismiss('$uibUnscheduledDestruction');
+                  }
+                });
+
+                var ctrlInstance, ctrlLocals = {};
+                var resolveIter = 1;
+
+                //controllers
+                if (modalOptions.controller) {
+                  ctrlLocals.$scope = modalScope;
+                  ctrlLocals.$modalInstance = modalInstance;
+                  angular.forEach(modalOptions.resolve, function(value, key) {
+                    ctrlLocals[key] = tplAndVars[resolveIter++];
+                  });
+
+                  ctrlInstance = $controller(modalOptions.controller, ctrlLocals);
+                  if (modalOptions.controllerAs) {
+                    if (modalOptions.bindToController) {
+                      angular.extend(ctrlInstance, modalScope);
+                    }
+
+                    modalScope[modalOptions.controllerAs] = ctrlInstance;
+                  }
+                }
+
+                $modalStack.open(modalInstance, {
+                  scope: modalScope,
+                  deferred: modalResultDeferred,
+                  renderDeferred: modalRenderDeferred,
+                  content: tplAndVars[0],
+                  animation: modalOptions.animation,
+                  backdrop: modalOptions.backdrop,
+                  keyboard: modalOptions.keyboard,
+                  backdropClass: modalOptions.backdropClass,
+                  windowClass: modalOptions.windowClass,
+                  windowTemplateUrl: modalOptions.windowTemplateUrl,
+                  size: modalOptions.size,
+                  openedClass: modalOptions.openedClass
+                });
+                modalOpenedDeferred.resolve(true);
+
+            }, function resolveError(reason) {
+              modalOpenedDeferred.reject(reason);
+              modalResultDeferred.reject(reason);
+            })
+            .finally(function() {
+              if (promiseChain === samePromise) {
+                promiseChain = null;
+              }
+            });
+
+            return modalInstance;
+          };
+
+          return $modal;
+        }]
+    };
+
+    return $modalProvider;
+  });
+
+angular.module('ui.bootstrap.pagination', [])
+.controller('PaginationController', ['$scope', '$attrs', '$parse', function($scope, $attrs, $parse) {
+  var self = this,
+      ngModelCtrl = { $setViewValue: angular.noop }, // nullModelCtrl
+      setNumPages = $attrs.numPages ? $parse($attrs.numPages).assign : angular.noop;
+
+  this.init = function(ngModelCtrl_, config) {
+    ngModelCtrl = ngModelCtrl_;
+    this.config = config;
+
+    ngModelCtrl.$render = function() {
+      self.render();
+    };
+
+    if ($attrs.itemsPerPage) {
+      $scope.$parent.$watch($parse($attrs.itemsPerPage), function(value) {
+        self.itemsPerPage = parseInt(value, 10);
+        $scope.totalPages = self.calculateTotalPages();
+      });
+    } else {
+      this.itemsPerPage = config.itemsPerPage;
+    }
+
+    $scope.$watch('totalItems', function() {
+      $scope.totalPages = self.calculateTotalPages();
+    });
+
+    $scope.$watch('totalPages', function(value) {
+      setNumPages($scope.$parent, value); // Readonly variable
+
+      if ( $scope.page > value ) {
+        $scope.selectPage(value);
+      } else {
+        ngModelCtrl.$render();
+      }
+    });
+  };
+
+  this.calculateTotalPages = function() {
+    var totalPages = this.itemsPerPage < 1 ? 1 : Math.ceil($scope.totalItems / this.itemsPerPage);
+    return Math.max(totalPages || 0, 1);
+  };
+
+  this.render = function() {
+    $scope.page = parseInt(ngModelCtrl.$viewValue, 10) || 1;
+  };
+
+  $scope.selectPage = function(page, evt) {
+    if (evt) {
+      evt.preventDefault();
+    }
+
+    var clickAllowed = !$scope.ngDisabled || !evt;
+    if (clickAllowed && $scope.page !== page && page > 0 && page <= $scope.totalPages) {
+      if (evt && evt.target) {
+        evt.target.blur();
+      }
+      ngModelCtrl.$setViewValue(page);
+      ngModelCtrl.$render();
+    }
+  };
+
+  $scope.getText = function(key) {
+    return $scope[key + 'Text'] || self.config[key + 'Text'];
+  };
+
+  $scope.noPrevious = function() {
+    return $scope.page === 1;
+  };
+
+  $scope.noNext = function() {
+    return $scope.page === $scope.totalPages;
+  };
+}])
+
+.constant('paginationConfig', {
+  itemsPerPage: 10,
+  boundaryLinks: false,
+  directionLinks: true,
+  firstText: 'First',
+  previousText: 'Previous',
+  nextText: 'Next',
+  lastText: 'Last',
+  rotate: true
+})
+
+.directive('pagination', ['$parse', 'paginationConfig', function($parse, paginationConfig) {
+  return {
+    restrict: 'EA',
+    scope: {
+      totalItems: '=',
+      firstText: '@',
+      previousText: '@',
+      nextText: '@',
+      lastText: '@',
+      ngDisabled:'='
+    },
+    require: ['pagination', '?ngModel'],
+    controller: 'PaginationController',
+    controllerAs: 'pagination',
+    templateUrl: function(element, attrs) {
+      return attrs.templateUrl || 'template/pagination/pagination.html';
+    },
+    replace: true,
+    link: function(scope, element, attrs, ctrls) {
+      var paginationCtrl = ctrls[0], ngModelCtrl = ctrls[1];
+
+      if (!ngModelCtrl) {
+         return; // do nothing if no ng-model
+      }
+
+      // Setup configuration parameters
+      var maxSize = angular.isDefined(attrs.maxSize) ? scope.$parent.$eval(attrs.maxSize) : paginationConfig.maxSize,
+          rotate = angular.isDefined(attrs.rotate) ? scope.$parent.$eval(attrs.rotate) : paginationConfig.rotate;
+      scope.boundaryLinks = angular.isDefined(attrs.boundaryLinks) ? scope.$parent.$eval(attrs.boundaryLinks) : paginationConfig.boundaryLinks;
+      scope.directionLinks = angular.isDefined(attrs.directionLinks) ? scope.$parent.$eval(attrs.directionLinks) : paginationConfig.directionLinks;
+
+      paginationCtrl.init(ngModelCtrl, paginationConfig);
+
+      if (attrs.maxSize) {
+        scope.$parent.$watch($parse(attrs.maxSize), function(value) {
+          maxSize = parseInt(value, 10);
+          paginationCtrl.render();
+        });
+      }
+
+      // Create page object used in template
+      function makePage(number, text, isActive) {
+        return {
+          number: number,
+          text: text,
+          active: isActive
+        };
+      }
+
+      function getPages(currentPage, totalPages) {
+        var pages = [];
+
+        // Default page limits
+        var startPage = 1, endPage = totalPages;
+        var isMaxSized = angular.isDefined(maxSize) && maxSize < totalPages;
+
+        // recompute if maxSize
+        if (isMaxSized) {
+          if (rotate) {
+            // Current page is displayed in the middle of the visible ones
+            startPage = Math.max(currentPage - Math.floor(maxSize/2), 1);
+            endPage   = startPage + maxSize - 1;
+
+            // Adjust if limit is exceeded
+            if (endPage > totalPages) {
+              endPage   = totalPages;
+              startPage = endPage - maxSize + 1;
+            }
+          } else {
+            // Visible pages are paginated with maxSize
+            startPage = ((Math.ceil(currentPage / maxSize) - 1) * maxSize) + 1;
+
+            // Adjust last page if limit is exceeded
+            endPage = Math.min(startPage + maxSize - 1, totalPages);
+          }
+        }
+
+        // Add page number links
+        for (var number = startPage; number <= endPage; number++) {
+          var page = makePage(number, number, number === currentPage);
+          pages.push(page);
+        }
+
+        // Add links to move between page sets
+        if (isMaxSized && ! rotate) {
+          if (startPage > 1) {
+            var previousPageSet = makePage(startPage - 1, '...', false);
+            pages.unshift(previousPageSet);
+          }
+
+          if (endPage < totalPages) {
+            var nextPageSet = makePage(endPage + 1, '...', false);
+            pages.push(nextPageSet);
+          }
+        }
+
+        return pages;
+      }
+
+      var originalRender = paginationCtrl.render;
+      paginationCtrl.render = function() {
+        originalRender();
+        if (scope.page > 0 && scope.page <= scope.totalPages) {
+          scope.pages = getPages(scope.page, scope.totalPages);
+        }
+      };
+    }
+  };
+}])
+
+.constant('pagerConfig', {
+  itemsPerPage: 10,
+  previousText: '« Previous',
+  nextText: 'Next »',
+  align: true
+})
+
+.directive('pager', ['pagerConfig', function(pagerConfig) {
+  return {
+    restrict: 'EA',
+    scope: {
+      totalItems: '=',
+      previousText: '@',
+      nextText: '@',
+      ngDisabled: '='
+    },
+    require: ['pager', '?ngModel'],
+    controller: 'PaginationController',
+    controllerAs: 'pagination',
+    templateUrl: function(element, attrs) {
+      return attrs.templateUrl || 'template/pagination/pager.html';
+    },
+    replace: true,
+    link: function(scope, element, attrs, ctrls) {
+      var paginationCtrl = ctrls[0], ngModelCtrl = ctrls[1];
+
+      if (!ngModelCtrl) {
+         return; // do nothing if no ng-model
+      }
+
+      scope.align = angular.isDefined(attrs.align) ? scope.$parent.$eval(attrs.align) : pagerConfig.align;
+      paginationCtrl.init(ngModelCtrl, pagerConfig);
+    }
+  };
+}]);
+
+/**
+ * The following features are still outstanding: animation as a
+ * function, placement as a function, inside, support for more triggers than
+ * just mouse enter/leave, html tooltips, and selector delegation.
+ */
+angular.module('ui.bootstrap.tooltip', ['ui.bootstrap.position', 'ui.bootstrap.bindHtml'])
+
+/**
+ * The $tooltip service creates tooltip- and popover-like directives as well as
+ * houses global options for them.
+ */
+.provider('$tooltip', function() {
+  // The default options tooltip and popover.
+  var defaultOptions = {
+    placement: 'top',
+    animation: true,
+    popupDelay: 0,
+    useContentExp: false
+  };
+
+  // Default hide triggers for each show trigger
+  var triggerMap = {
+    'mouseenter': 'mouseleave',
+    'click': 'click',
+    'focus': 'blur',
+    'none': ''
+  };
+
+  // The options specified to the provider globally.
+  var globalOptions = {};
+
+  /**
+   * `options({})` allows global configuration of all tooltips in the
+   * application.
+   *
+   *   var app = angular.module( 'App', ['ui.bootstrap.tooltip'], function( $tooltipProvider ) {
+   *     // place tooltips left instead of top by default
+   *     $tooltipProvider.options( { placement: 'left' } );
+   *   });
+   */
+	this.options = function(value) {
+		angular.extend(globalOptions, value);
+	};
+
+  /**
+   * This allows you to extend the set of trigger mappings available. E.g.:
+   *
+   *   $tooltipProvider.setTriggers( 'openTrigger': 'closeTrigger' );
+   */
+  this.setTriggers = function setTriggers(triggers) {
+    angular.extend(triggerMap, triggers);
+  };
+
+  /**
+   * This is a helper function for translating camel-case to snake-case.
+   */
+  function snake_case(name) {
+    var regexp = /[A-Z]/g;
+    var separator = '-';
+    return name.replace(regexp, function(letter, pos) {
+      return (pos ? separator : '') + letter.toLowerCase();
+    });
+  }
+
+  /**
+   * Returns the actual instance of the $tooltip service.
+   * TODO support multiple triggers
+   */
+  this.$get = ['$window', '$compile', '$timeout', '$document', '$position', '$interpolate', '$rootScope', '$parse', function($window, $compile, $timeout, $document, $position, $interpolate, $rootScope, $parse) {
+    return function $tooltip(type, prefix, defaultTriggerShow, options) {
+      options = angular.extend({}, defaultOptions, globalOptions, options);
+
+      /**
+       * Returns an object of show and hide triggers.
+       *
+       * If a trigger is supplied,
+       * it is used to show the tooltip; otherwise, it will use the `trigger`
+       * option passed to the `$tooltipProvider.options` method; else it will
+       * default to the trigger supplied to this directive factory.
+       *
+       * The hide trigger is based on the show trigger. If the `trigger` option
+       * was passed to the `$tooltipProvider.options` method, it will use the
+       * mapped trigger from `triggerMap` or the passed trigger if the map is
+       * undefined; otherwise, it uses the `triggerMap` value of the show
+       * trigger; else it will just use the show trigger.
+       */
+      function getTriggers(trigger) {
+        var show = (trigger || options.trigger || defaultTriggerShow).split(' ');
+        var hide = show.map(function(trigger) {
+          return triggerMap[trigger] || trigger;
+        });
+        return {
+          show: show,
+          hide: hide
+        };
+      }
+
+      var directiveName = snake_case(type);
+
+      var startSym = $interpolate.startSymbol();
+      var endSym = $interpolate.endSymbol();
+      var template =
+        '<div '+ directiveName +'-popup '+
+          'title="'+startSym+'title'+endSym+'" '+
+          (options.useContentExp ?
+            'content-exp="contentExp()" ' :
+            'content="'+startSym+'content'+endSym+'" ') +
+          'placement="'+startSym+'placement'+endSym+'" '+
+          'popup-class="'+startSym+'popupClass'+endSym+'" '+
+          'animation="animation" '+
+          'is-open="isOpen"'+
+          'origin-scope="origScope" '+
+          '>'+
+        '</div>';
+
+      return {
+        restrict: 'EA',
+        compile: function(tElem, tAttrs) {
+          var tooltipLinker = $compile( template );
+
+          return function link(scope, element, attrs, tooltipCtrl) {
+            var tooltip;
+            var tooltipLinkedScope;
+            var transitionTimeout;
+            var popupTimeout;
+            var positionTimeout;
+            var appendToBody = angular.isDefined(options.appendToBody) ? options.appendToBody : false;
+            var triggers = getTriggers(undefined);
+            var hasEnableExp = angular.isDefined(attrs[prefix + 'Enable']);
+            var ttScope = scope.$new(true);
+            var repositionScheduled = false;
+            var isOpenExp = angular.isDefined(attrs[prefix + 'IsOpen']) ? $parse(attrs[prefix + 'IsOpen']) : false;
+
+            var positionTooltip = function() {
+              if (!tooltip) { return; }
+
+              if (!positionTimeout) {
+                positionTimeout = $timeout(function() {
+                  // Reset the positioning and box size for correct width and height values.
+                  tooltip.css({ top: 0, left: 0, width: 'auto', height: 'auto' });
+
+                  var ttBox = $position.position(tooltip);
+                  var ttCss = $position.positionElements(element, tooltip, ttScope.placement, appendToBody);
+                  ttCss.top += 'px';
+                  ttCss.left += 'px';
+
+                  ttCss.width = ttBox.width + 'px';
+                  ttCss.height = ttBox.height + 'px';
+
+                  // Now set the calculated positioning and size.
+                  tooltip.css(ttCss);
+
+                  positionTimeout = null;
+
+                }, 0, false);
+              }
+            };
+
+            // Set up the correct scope to allow transclusion later
+            ttScope.origScope = scope;
+
+            // By default, the tooltip is not open.
+            // TODO add ability to start tooltip opened
+            ttScope.isOpen = false;
+
+            function toggleTooltipBind() {
+              if (!ttScope.isOpen) {
+                showTooltipBind();
+              } else {
+                hideTooltipBind();
+              }
+            }
+
+            // Show the tooltip with delay if specified, otherwise show it immediately
+            function showTooltipBind() {
+              if (hasEnableExp && !scope.$eval(attrs[prefix + 'Enable'])) {
+                return;
+              }
+
+              prepareTooltip();
+
+              if (ttScope.popupDelay) {
+                // Do nothing if the tooltip was already scheduled to pop-up.
+                // This happens if show is triggered multiple times before any hide is triggered.
+                if (!popupTimeout) {
+                  popupTimeout = $timeout(show, ttScope.popupDelay, false);
+                }
+              } else {
+                show();
+              }
+            }
+
+            function hideTooltipBind () {
+              hide();
+              if (!$rootScope.$$phase) {
+                $rootScope.$digest();
+              }
+            }
+
+            // Show the tooltip popup element.
+            function show() {
+              popupTimeout = null;
+
+              // If there is a pending remove transition, we must cancel it, lest the
+              // tooltip be mysteriously removed.
+              if (transitionTimeout) {
+                $timeout.cancel(transitionTimeout);
+                transitionTimeout = null;
+              }
+
+              // Don't show empty tooltips.
+              if (!(options.useContentExp ? ttScope.contentExp() : ttScope.content)) {
+                return angular.noop;
+              }
+
+              createTooltip();
+
+              // And show the tooltip.
+              ttScope.isOpen = true;
+              if (isOpenExp) {
+                isOpenExp.assign(ttScope.origScope, ttScope.isOpen);
+              }
+
+              if (!$rootScope.$$phase) {
+                ttScope.$apply(); // digest required as $apply is not called
+              }
+
+              tooltip.css({ display: 'block' });
+
+              positionTooltip();
+            }
+
+            // Hide the tooltip popup element.
+            function hide() {
+              // First things first: we don't show it anymore.
+              ttScope.isOpen = false;
+              if (isOpenExp) {
+                isOpenExp.assign(ttScope.origScope, ttScope.isOpen);
+              }
+
+              //if tooltip is going to be shown after delay, we must cancel this
+              $timeout.cancel(popupTimeout);
+              popupTimeout = null;
+
+              $timeout.cancel(positionTimeout);
+              positionTimeout = null;
+
+              // And now we remove it from the DOM. However, if we have animation, we
+              // need to wait for it to expire beforehand.
+              // FIXME: this is a placeholder for a port of the transitions library.
+              if (ttScope.animation) {
+                if (!transitionTimeout) {
+                  transitionTimeout = $timeout(removeTooltip, 500);
+                }
+              } else {
+                removeTooltip();
+              }
+            }
+
+            function createTooltip() {
+              // There can only be one tooltip element per directive shown at once.
+              if (tooltip) {
+                removeTooltip();
+              }
+              tooltipLinkedScope = ttScope.$new();
+              tooltip = tooltipLinker(tooltipLinkedScope, function(tooltip) {
+                if (appendToBody) {
+                  $document.find('body').append(tooltip);
+                } else {
+                  element.after(tooltip);
+                }
+              });
+
+              if (options.useContentExp) {
+                tooltipLinkedScope.$watch('contentExp()', function(val) {
+                  if (!val && ttScope.isOpen) {
+                    hide();
+                  }
+                });
+
+                tooltipLinkedScope.$watch(function() {
+                  if (!repositionScheduled) {
+                    repositionScheduled = true;
+                    tooltipLinkedScope.$$postDigest(function() {
+                      repositionScheduled = false;
+                      if (ttScope.isOpen) {
+                        positionTooltip();
+                      }
+                    });
+                  }
+                });
+
+              }
+            }
+
+            function removeTooltip() {
+              transitionTimeout = null;
+              if (tooltip) {
+                tooltip.remove();
+                tooltip = null;
+              }
+              if (tooltipLinkedScope) {
+                tooltipLinkedScope.$destroy();
+                tooltipLinkedScope = null;
+              }
+            }
+
+            function prepareTooltip() {
+              prepPopupClass();
+              prepPlacement();
+              prepPopupDelay();
+            }
+
+            ttScope.contentExp = function() {
+              return scope.$eval(attrs[type]);
+            };
+
+            /**
+             * Observe the relevant attributes.
+             */
+            if (!options.useContentExp) {
+              attrs.$observe(type, function(val) {
+                ttScope.content = val;
+
+                if (!val && ttScope.isOpen) {
+                  hide();
+                } else {
+                  positionTooltip();
+                }
+              });
+            }
+
+            attrs.$observe('disabled', function(val) {
+              if (popupTimeout && val) {
+                $timeout.cancel(popupTimeout);
+                popupTimeout = null;
+              }
+
+              if (val && ttScope.isOpen) {
+                hide();
+              }
+            });
+
+            attrs.$observe(prefix + 'Title', function(val) {
+              ttScope.title = val;
+              positionTooltip();
+            });
+
+            attrs.$observe(prefix + 'Placement', function() {
+              if (ttScope.isOpen) {
+                prepPlacement();
+                positionTooltip();
+              }
+            });
+
+            if (isOpenExp) {
+              scope.$watch(isOpenExp, function(val) {
+                if (val !== ttScope.isOpen) {
+                  toggleTooltipBind();
+                }
+              });
+            }
+
+            function prepPopupClass() {
+              ttScope.popupClass = attrs[prefix + 'Class'];
+            }
+
+            function prepPlacement() {
+              var val = attrs[prefix + 'Placement'];
+              ttScope.placement = angular.isDefined(val) ? val : options.placement;
+            }
+
+            function prepPopupDelay() {
+              var val = attrs[prefix + 'PopupDelay'];
+              var delay = parseInt(val, 10);
+              ttScope.popupDelay = !isNaN(delay) ? delay : options.popupDelay;
+            }
+
+            var unregisterTriggers = function() {
+              triggers.show.forEach(function(trigger) {
+                element.unbind(trigger, showTooltipBind);
+              });
+              triggers.hide.forEach(function(trigger) {
+                element.unbind(trigger, hideTooltipBind);
+              });
+            };
+
+            function prepTriggers() {
+              var val = attrs[prefix + 'Trigger'];
+              unregisterTriggers();
+
+              triggers = getTriggers(val);
+
+              if (triggers.show !== 'none') {
+                triggers.show.forEach(function(trigger, idx) {
+                  // Using raw addEventListener due to jqLite/jQuery bug - #4060
+                  if (trigger === triggers.hide[idx]) {
+                    element[0].addEventListener(trigger, toggleTooltipBind);
+                  } else if (trigger) {
+                    element[0].addEventListener(trigger, showTooltipBind);
+                    element[0].addEventListener(triggers.hide[idx], hideTooltipBind);
+                  }
+                });
+              }
+            }
+            prepTriggers();
+
+            var animation = scope.$eval(attrs[prefix + 'Animation']);
+            ttScope.animation = angular.isDefined(animation) ? !!animation : options.animation;
+
+            var appendToBodyVal = scope.$eval(attrs[prefix + 'AppendToBody']);
+            appendToBody = angular.isDefined(appendToBodyVal) ? appendToBodyVal : appendToBody;
+
+            // if a tooltip is attached to <body> we need to remove it on
+            // location change as its parent scope will probably not be destroyed
+            // by the change.
+            if (appendToBody) {
+              scope.$on('$locationChangeSuccess', function closeTooltipOnLocationChangeSuccess() {
+                if (ttScope.isOpen) {
+                  hide();
+                }
+              });
+            }
+
+            // Make sure tooltip is destroyed and removed.
+            scope.$on('$destroy', function onDestroyTooltip() {
+              $timeout.cancel(transitionTimeout);
+              $timeout.cancel(popupTimeout);
+              $timeout.cancel(positionTimeout);
+              unregisterTriggers();
+              removeTooltip();
+              ttScope = null;
+            });
+          };
+        }
+      };
+    };
+  }];
+})
+
+// This is mostly ngInclude code but with a custom scope
+.directive('tooltipTemplateTransclude', [
+         '$animate', '$sce', '$compile', '$templateRequest',
+function ($animate ,  $sce ,  $compile ,  $templateRequest) {
+  return {
+    link: function(scope, elem, attrs) {
+      var origScope = scope.$eval(attrs.tooltipTemplateTranscludeScope);
+
+      var changeCounter = 0,
+        currentScope,
+        previousElement,
+        currentElement;
+
+      var cleanupLastIncludeContent = function() {
+        if (previousElement) {
+          previousElement.remove();
+          previousElement = null;
+        }
+        if (currentScope) {
+          currentScope.$destroy();
+          currentScope = null;
+        }
+        if (currentElement) {
+          $animate.leave(currentElement).then(function() {
+            previousElement = null;
+          });
+          previousElement = currentElement;
+          currentElement = null;
+        }
+      };
+
+      scope.$watch($sce.parseAsResourceUrl(attrs.tooltipTemplateTransclude), function(src) {
+        var thisChangeId = ++changeCounter;
+
+        if (src) {
+          //set the 2nd param to true to ignore the template request error so that the inner
+          //contents and scope can be cleaned up.
+          $templateRequest(src, true).then(function(response) {
+            if (thisChangeId !== changeCounter) { return; }
+            var newScope = origScope.$new();
+            var template = response;
+
+            var clone = $compile(template)(newScope, function(clone) {
+              cleanupLastIncludeContent();
+              $animate.enter(clone, elem);
+            });
+
+            currentScope = newScope;
+            currentElement = clone;
+
+            currentScope.$emit('$includeContentLoaded', src);
+          }, function() {
+            if (thisChangeId === changeCounter) {
+              cleanupLastIncludeContent();
+              scope.$emit('$includeContentError', src);
+            }
+          });
+          scope.$emit('$includeContentRequested', src);
+        } else {
+          cleanupLastIncludeContent();
+        }
+      });
+
+      scope.$on('$destroy', cleanupLastIncludeContent);
+    }
+  };
+}])
+
+/**
+ * Note that it's intentional that these classes are *not* applied through $animate.
+ * They must not be animated as they're expected to be present on the tooltip on
+ * initialization.
+ */
+.directive('tooltipClasses', function() {
+  return {
+    restrict: 'A',
+    link: function(scope, element, attrs) {
+      if (scope.placement) {
+        element.addClass(scope.placement);
+      }
+      if (scope.popupClass) {
+        element.addClass(scope.popupClass);
+      }
+      if (scope.animation()) {
+        element.addClass(attrs.tooltipAnimationClass);
+      }
+    }
+  };
+})
+
+.directive('tooltipPopup', function() {
+  return {
+    restrict: 'EA',
+    replace: true,
+    scope: { content: '@', placement: '@', popupClass: '@', animation: '&', isOpen: '&' },
+    templateUrl: 'template/tooltip/tooltip-popup.html'
+  };
+})
+
+.directive('tooltip', [ '$tooltip', function($tooltip) {
+  return $tooltip('tooltip', 'tooltip', 'mouseenter');
+}])
+
+.directive('tooltipTemplatePopup', function() {
+  return {
+    restrict: 'EA',
+    replace: true,
+    scope: { contentExp: '&', placement: '@', popupClass: '@', animation: '&', isOpen: '&',
+      originScope: '&' },
+    templateUrl: 'template/tooltip/tooltip-template-popup.html'
+  };
+})
+
+.directive('tooltipTemplate', ['$tooltip', function($tooltip) {
+  return $tooltip('tooltipTemplate', 'tooltip', 'mouseenter', {
+    useContentExp: true
+  });
+}])
+
+.directive('tooltipHtmlPopup', function() {
+  return {
+    restrict: 'EA',
+    replace: true,
+    scope: { contentExp: '&', placement: '@', popupClass: '@', animation: '&', isOpen: '&' },
+    templateUrl: 'template/tooltip/tooltip-html-popup.html'
+  };
+})
+
+.directive('tooltipHtml', ['$tooltip', function($tooltip) {
+  return $tooltip('tooltipHtml', 'tooltip', 'mouseenter', {
+    useContentExp: true
+  });
+}])
+
+/*
+Deprecated
+*/
+.directive('tooltipHtmlUnsafePopup', function() {
+  return {
+    restrict: 'EA',
+    replace: true,
+    scope: { content: '@', placement: '@', popupClass: '@', animation: '&', isOpen: '&' },
+    templateUrl: 'template/tooltip/tooltip-html-unsafe-popup.html'
+  };
+})
+
+.value('tooltipHtmlUnsafeSuppressDeprecated', false)
+.directive('tooltipHtmlUnsafe', [
+          '$tooltip', 'tooltipHtmlUnsafeSuppressDeprecated', '$log',
+function($tooltip ,  tooltipHtmlUnsafeSuppressDeprecated ,  $log) {
+  if (!tooltipHtmlUnsafeSuppressDeprecated) {
+    $log.warn('tooltip-html-unsafe is now deprecated. Use tooltip-html or tooltip-template instead.');
+  }
+  return $tooltip('tooltipHtmlUnsafe', 'tooltip', 'mouseenter');
+}]);
+
+/**
+ * The following features are still outstanding: popup delay, animation as a
+ * function, placement as a function, inside, support for more triggers than
+ * just mouse enter/leave, and selector delegatation.
+ */
+angular.module( 'ui.bootstrap.popover', ['ui.bootstrap.tooltip'])
+
+.directive('popoverTemplatePopup', function() {
+  return {
+    restrict: 'EA',
+    replace: true,
+    scope: { title: '@', contentExp: '&', placement: '@', popupClass: '@', animation: '&', isOpen: '&',
+      originScope: '&' },
+    templateUrl: 'template/popover/popover-template.html'
+  };
+})
+
+.directive('popoverTemplate', ['$tooltip', function($tooltip) {
+  return $tooltip('popoverTemplate', 'popover', 'click', {
+    useContentExp: true
+  });
+}])
+
+.directive('popoverHtmlPopup', function() {
+  return {
+    restrict: 'EA',
+    replace: true,
+    scope: { contentExp: '&', title: '@', placement: '@', popupClass: '@', animation: '&', isOpen: '&' },
+    templateUrl: 'template/popover/popover-html.html'
+  };
+})
+
+.directive('popoverHtml', ['$tooltip', function($tooltip) {
+  return $tooltip( 'popoverHtml', 'popover', 'click', {
+    useContentExp: true
+  });
+}])
+
+.directive('popoverPopup', function() {
+  return {
+    restrict: 'EA',
+    replace: true,
+    scope: { title: '@', content: '@', placement: '@', popupClass: '@', animation: '&', isOpen: '&' },
+    templateUrl: 'template/popover/popover.html'
+  };
+})
+
+.directive('popover', ['$tooltip', function($tooltip) {
+  return $tooltip( 'popover', 'popover', 'click' );
+}]);
+
+angular.module('ui.bootstrap.progressbar', [])
+
+.constant('progressConfig', {
+  animate: true,
+  max: 100
+})
+
+.value('$progressSuppressWarning', false)
+
+.controller('ProgressController', ['$scope', '$attrs', 'progressConfig', function($scope, $attrs, progressConfig) {
+  var self = this,
+      animate = angular.isDefined($attrs.animate) ? $scope.$parent.$eval($attrs.animate) : progressConfig.animate;
+
+  this.bars = [];
+  $scope.max = angular.isDefined($scope.max) ? $scope.max : progressConfig.max;
+
+  this.addBar = function(bar, element) {
+    if (!animate) {
+      element.css({'transition': 'none'});
+    }
+
+    this.bars.push(bar);
+
+    bar.max = $scope.max;
+
+    bar.$watch('value', function(value) {
+      bar.recalculatePercentage();
+    });
+
+    bar.recalculatePercentage = function() {
+      bar.percent = +(100 * bar.value / bar.max).toFixed(2);
+
+      var totalPercentage = self.bars.reduce(function(total, bar) {
+        return total + bar.percent;
+      }, 0);
+
+      if (totalPercentage > 100) {
+        bar.percent -= totalPercentage - 100;
+      }
+    };
+
+    bar.$on('$destroy', function() {
+      element = null;
+      self.removeBar(bar);
+    });
+  };
+
+  this.removeBar = function(bar) {
+      this.bars.splice(this.bars.indexOf(bar), 1);
+  };
+
+  $scope.$watch('max', function(max) {
+    self.bars.forEach(function(bar) {
+      bar.max = $scope.max;
+      bar.recalculatePercentage();
+    });
+  });
+}])
+
+.directive('uibProgress', function() {
+  return {
+    restrict: 'EA',
+    replace: true,
+    transclude: true,
+    controller: 'ProgressController',
+    require: 'uibProgress',
+    scope: {
+      max: '=?'
+    },
+    templateUrl: 'template/progressbar/progress.html'
+  };
+})
+
+.directive('progress', ['$log', '$progressSuppressWarning', function($log, $progressSuppressWarning) {
+  return {
+    restrict: 'EA',
+    replace: true,
+    transclude: true,
+    controller: 'ProgressController',
+    require: 'progress',
+    scope: {
+      max: '=?'
+    },
+    templateUrl: 'template/progressbar/progress.html',
+    link: function() {
+      if ($progressSuppressWarning) {
+        $log.warn('progress is now deprecated. Use uib-progress instead');
+      }
+    }
+  };
+}])
+
+.directive('uibBar', function() {
+  return {
+    restrict: 'EA',
+    replace: true,
+    transclude: true,
+    require: '^uibProgress',
+    scope: {
+      value: '=',
+      type: '@'
+    },
+    templateUrl: 'template/progressbar/bar.html',
+    link: function(scope, element, attrs, progressCtrl) {
+      progressCtrl.addBar(scope, element);
+    }
+  };
+})
+
+.directive('bar', ['$log', '$progressSuppressWarning', function($log, $progressSuppressWarning) {
+  return {
+    restrict: 'EA',
+    replace: true,
+    transclude: true,
+    require: '^progress',
+    scope: {
+      value: '=',
+      type: '@'
+    },
+    templateUrl: 'template/progressbar/bar.html',
+    link: function(scope, element, attrs, progressCtrl) {
+      if ($progressSuppressWarning) {
+        $log.warn('bar is now deprecated. Use uib-bar instead');
+      }
+      progressCtrl.addBar(scope, element);
+    }
+  };
+}])
+
+.directive('progressbar', function() {
+  return {
+    restrict: 'EA',
+    replace: true,
+    transclude: true,
+    controller: 'ProgressController',
+    scope: {
+      value: '=',
+      max: '=?',
+      type: '@'
+    },
+    templateUrl: 'template/progressbar/progressbar.html',
+    link: function(scope, element, attrs, progressCtrl) {
+      progressCtrl.addBar(scope, angular.element(element.children()[0]));
+    }
+  };
+});
+
+angular.module('ui.bootstrap.rating', [])
+
+.constant('ratingConfig', {
+  max: 5,
+  stateOn: null,
+  stateOff: null,
+  titles : ['one', 'two', 'three', 'four', 'five']
+})
+
+.controller('RatingController', ['$scope', '$attrs', 'ratingConfig', function($scope, $attrs, ratingConfig) {
+  var ngModelCtrl  = { $setViewValue: angular.noop };
+
+  this.init = function(ngModelCtrl_) {
+    ngModelCtrl = ngModelCtrl_;
+    ngModelCtrl.$render = this.render;
+
+    ngModelCtrl.$formatters.push(function(value) {
+      if (angular.isNumber(value) && value << 0 !== value) {
+        value = Math.round(value);
+      }
+      return value;
+    });
+
+    this.stateOn = angular.isDefined($attrs.stateOn) ? $scope.$parent.$eval($attrs.stateOn) : ratingConfig.stateOn;
+    this.stateOff = angular.isDefined($attrs.stateOff) ? $scope.$parent.$eval($attrs.stateOff) : ratingConfig.stateOff;
+    var tmpTitles = angular.isDefined($attrs.titles)  ? $scope.$parent.$eval($attrs.titles) : ratingConfig.titles ;    
+    this.titles = angular.isArray(tmpTitles) && tmpTitles.length > 0 ?
+      tmpTitles : ratingConfig.titles;
+    
+    var ratingStates = angular.isDefined($attrs.ratingStates) ?
+      $scope.$parent.$eval($attrs.ratingStates) :
+      new Array(angular.isDefined($attrs.max) ? $scope.$parent.$eval($attrs.max) : ratingConfig.max);
+    $scope.range = this.buildTemplateObjects(ratingStates);
+  };
+
+  this.buildTemplateObjects = function(states) {
+    for (var i = 0, n = states.length; i < n; i++) {
+      states[i] = angular.extend({ index: i }, { stateOn: this.stateOn, stateOff: this.stateOff, title: this.getTitle(i) }, states[i]);
+    }
+    return states;
+  };
+  
+  this.getTitle = function(index) {
+    if (index >= this.titles.length) {
+      return index + 1;
+    } else {
+      return this.titles[index];
+    }
+  };
+  
+  $scope.rate = function(value) {
+    if (!$scope.readonly && value >= 0 && value <= $scope.range.length) {
+      ngModelCtrl.$setViewValue(ngModelCtrl.$viewValue === value ? 0 : value);
+      ngModelCtrl.$render();
+    }
+  };
+
+  $scope.enter = function(value) {
+    if (!$scope.readonly) {
+      $scope.value = value;
+    }
+    $scope.onHover({value: value});
+  };
+
+  $scope.reset = function() {
+    $scope.value = ngModelCtrl.$viewValue;
+    $scope.onLeave();
+  };
+
+  $scope.onKeydown = function(evt) {
+    if (/(37|38|39|40)/.test(evt.which)) {
+      evt.preventDefault();
+      evt.stopPropagation();
+      $scope.rate($scope.value + (evt.which === 38 || evt.which === 39 ? 1 : -1));
+    }
+  };
+
+  this.render = function() {
+    $scope.value = ngModelCtrl.$viewValue;
+  };
+}])
+
+.directive('rating', function() {
+  return {
+    restrict: 'EA',
+    require: ['rating', 'ngModel'],
+    scope: {
+      readonly: '=?',
+      onHover: '&',
+      onLeave: '&'
+    },
+    controller: 'RatingController',
+    templateUrl: 'template/rating/rating.html',
+    replace: true,
+    link: function(scope, element, attrs, ctrls) {
+      var ratingCtrl = ctrls[0], ngModelCtrl = ctrls[1];
+      ratingCtrl.init( ngModelCtrl );
+    }
+  };
+});
+
+
+/**
+ * @ngdoc overview
+ * @name ui.bootstrap.tabs
+ *
+ * @description
+ * AngularJS version of the tabs directive.
+ */
+
+angular.module('ui.bootstrap.tabs', [])
+
+.controller('TabsetController', ['$scope', function TabsetCtrl($scope) {
+  var ctrl = this,
+      tabs = ctrl.tabs = $scope.tabs = [];
+
+  ctrl.select = function(selectedTab) {
+    angular.forEach(tabs, function(tab) {
+      if (tab.active && tab !== selectedTab) {
+        tab.active = false;
+        tab.onDeselect();
+        selectedTab.selectCalled = false;
+      }
+    });
+    selectedTab.active = true;
+    // only call select if it has not already been called
+    if (!selectedTab.selectCalled) {
+      selectedTab.onSelect();
+      selectedTab.selectCalled = true;
+    }
+  };
+
+  ctrl.addTab = function addTab(tab) {
+    tabs.push(tab);
+    // we can't run the select function on the first tab
+    // since that would select it twice
+    if (tabs.length === 1 && tab.active !== false) {
+      tab.active = true;
+    } else if (tab.active) {
+      ctrl.select(tab);
+    } else {
+      tab.active = false;
+    }
+  };
+
+  ctrl.removeTab = function removeTab(tab) {
+    var index = tabs.indexOf(tab);
+    //Select a new tab if the tab to be removed is selected and not destroyed
+    if (tab.active && tabs.length > 1 && !destroyed) {
+      //If this is the last tab, select the previous tab. else, the next tab.
+      var newActiveIndex = index == tabs.length - 1 ? index - 1 : index + 1;
+      ctrl.select(tabs[newActiveIndex]);
+    }
+    tabs.splice(index, 1);
+  };
+
+  var destroyed;
+  $scope.$on('$destroy', function() {
+    destroyed = true;
+  });
+}])
+
+/**
+ * @ngdoc directive
+ * @name ui.bootstrap.tabs.directive:tabset
+ * @restrict EA
+ *
+ * @description
+ * Tabset is the outer container for the tabs directive
+ *
+ * @param {boolean=} vertical Whether or not to use vertical styling for the tabs.
+ * @param {boolean=} justified Whether or not to use justified styling for the tabs.
+ *
+ * @example
+<example module="ui.bootstrap">
+  <file name="index.html">
+    <tabset>
+      <tab heading="Tab 1"><b>First</b> Content!</tab>
+      <tab heading="Tab 2"><i>Second</i> Content!</tab>
+    </tabset>
+    <hr />
+    <tabset vertical="true">
+      <tab heading="Vertical Tab 1"><b>First</b> Vertical Content!</tab>
+      <tab heading="Vertical Tab 2"><i>Second</i> Vertical Content!</tab>
+    </tabset>
+    <tabset justified="true">
+      <tab heading="Justified Tab 1"><b>First</b> Justified Content!</tab>
+      <tab heading="Justified Tab 2"><i>Second</i> Justified Content!</tab>
+    </tabset>
+  </file>
+</example>
+ */
+.directive('tabset', function() {
+  return {
+    restrict: 'EA',
+    transclude: true,
+    replace: true,
+    scope: {
+      type: '@'
+    },
+    controller: 'TabsetController',
+    templateUrl: 'template/tabs/tabset.html',
+    link: function(scope, element, attrs) {
+      scope.vertical = angular.isDefined(attrs.vertical) ? scope.$parent.$eval(attrs.vertical) : false;
+      scope.justified = angular.isDefined(attrs.justified) ? scope.$parent.$eval(attrs.justified) : false;
+    }
+  };
+})
+
+/**
+ * @ngdoc directive
+ * @name ui.bootstrap.tabs.directive:tab
+ * @restrict EA
+ *
+ * @param {string=} heading The visible heading, or title, of the tab. Set HTML headings with {@link ui.bootstrap.tabs.directive:tabHeading tabHeading}.
+ * @param {string=} select An expression to evaluate when the tab is selected.
+ * @param {boolean=} active A binding, telling whether or not this tab is selected.
+ * @param {boolean=} disabled A binding, telling whether or not this tab is disabled.
+ *
+ * @description
+ * Creates a tab with a heading and content. Must be placed within a {@link ui.bootstrap.tabs.directive:tabset tabset}.
+ *
+ * @example
+<example module="ui.bootstrap">
+  <file name="index.html">
+    <div ng-controller="TabsDemoCtrl">
+      <button class="btn btn-small" ng-click="items[0].active = true">
+        Select item 1, using active binding
+      </button>
+      <button class="btn btn-small" ng-click="items[1].disabled = !items[1].disabled">
+        Enable/disable item 2, using disabled binding
+      </button>
+      <br />
+      <tabset>
+        <tab heading="Tab 1">First Tab</tab>
+        <tab select="alertMe()">
+          <tab-heading><i class="icon-bell"></i> Alert me!</tab-heading>
+          Second Tab, with alert callback and html heading!
+        </tab>
+        <tab ng-repeat="item in items"
+          heading="{{item.title}}"
+          disabled="item.disabled"
+          active="item.active">
+          {{item.content}}
+        </tab>
+      </tabset>
+    </div>
+  </file>
+  <file name="script.js">
+    function TabsDemoCtrl($scope) {
+      $scope.items = [
+        { title:"Dynamic Title 1", content:"Dynamic Item 0" },
+        { title:"Dynamic Title 2", content:"Dynamic Item 1", disabled: true }
+      ];
+
+      $scope.alertMe = function() {
+        setTimeout(function() {
+          alert("You've selected the alert tab!");
+        });
+      };
+    };
+  </file>
+</example>
+ */
+
+/**
+ * @ngdoc directive
+ * @name ui.bootstrap.tabs.directive:tabHeading
+ * @restrict EA
+ *
+ * @description
+ * Creates an HTML heading for a {@link ui.bootstrap.tabs.directive:tab tab}. Must be placed as a child of a tab element.
+ *
+ * @example
+<example module="ui.bootstrap">
+  <file name="index.html">
+    <tabset>
+      <tab>
+        <tab-heading><b>HTML</b> in my titles?!</tab-heading>
+        And some content, too!
+      </tab>
+      <tab>
+        <tab-heading><i class="icon-heart"></i> Icon heading?!?</tab-heading>
+        That's right.
+      </tab>
+    </tabset>
+  </file>
+</example>
+ */
+.directive('tab', ['$parse', '$log', function($parse, $log) {
+  return {
+    require: '^tabset',
+    restrict: 'EA',
+    replace: true,
+    templateUrl: 'template/tabs/tab.html',
+    transclude: true,
+    scope: {
+      active: '=?',
+      heading: '@',
+      onSelect: '&select', //This callback is called in contentHeadingTransclude
+                          //once it inserts the tab's content into the dom
+      onDeselect: '&deselect'
+    },
+    controller: function() {
+      //Empty controller so other directives can require being 'under' a tab
+    },
+    link: function(scope, elm, attrs, tabsetCtrl, transclude) {
+      scope.$watch('active', function(active) {
+        if (active) {
+          tabsetCtrl.select(scope);
+        }
+      });
+
+      scope.disabled = false;
+      if (attrs.disable) {
+        scope.$parent.$watch($parse(attrs.disable), function(value) {
+          scope.disabled = !! value;
+        });
+      }
+
+      // Deprecation support of "disabled" parameter
+      // fix(tab): IE9 disabled attr renders grey text on enabled tab #2677
+      // This code is duplicated from the lines above to make it easy to remove once
+      // the feature has been completely deprecated
+      if (attrs.disabled) {
+        $log.warn('Use of "disabled" attribute has been deprecated, please use "disable"');
+        scope.$parent.$watch($parse(attrs.disabled), function(value) {
+          scope.disabled = !! value;
+        });
+      }
+
+      scope.select = function() {
+        if (!scope.disabled) {
+          scope.active = true;
+        }
+      };
+
+      tabsetCtrl.addTab(scope);
+      scope.$on('$destroy', function() {
+        tabsetCtrl.removeTab(scope);
+      });
+
+      //We need to transclude later, once the content container is ready.
+      //when this link happens, we're inside a tab heading.
+      scope.$transcludeFn = transclude;
+    }
+  };
+}])
+
+.directive('tabHeadingTransclude', function() {
+  return {
+    restrict: 'A',
+    require: '^tab',
+    link: function(scope, elm, attrs, tabCtrl) {
+      scope.$watch('headingElement', function updateHeadingElement(heading) {
+        if (heading) {
+          elm.html('');
+          elm.append(heading);
+        }
+      });
+    }
+  };
+})
+
+.directive('tabContentTransclude', function() {
+  return {
+    restrict: 'A',
+    require: '^tabset',
+    link: function(scope, elm, attrs) {
+      var tab = scope.$eval(attrs.tabContentTransclude);
+
+      //Now our tab is ready to be transcluded: both the tab heading area
+      //and the tab content area are loaded.  Transclude 'em both.
+      tab.$transcludeFn(tab.$parent, function(contents) {
+        angular.forEach(contents, function(node) {
+          if (isTabHeading(node)) {
+            //Let tabHeadingTransclude know.
+            tab.headingElement = node;
+          } else {
+            elm.append(node);
+          }
+        });
+      });
+    }
+  };
+
+  function isTabHeading(node) {
+    return node.tagName && (
+      node.hasAttribute('tab-heading') ||
+      node.hasAttribute('data-tab-heading') ||
+      node.hasAttribute('x-tab-heading') ||
+      node.tagName.toLowerCase() === 'tab-heading' ||
+      node.tagName.toLowerCase() === 'data-tab-heading' ||
+      node.tagName.toLowerCase() === 'x-tab-heading'
+    );
+  }
+});
+
+angular.module('ui.bootstrap.timepicker', [])
+
+.constant('timepickerConfig', {
+  hourStep: 1,
+  minuteStep: 1,
+  showMeridian: true,
+  meridians: null,
+  readonlyInput: false,
+  mousewheel: true,
+  arrowkeys: true,
+  showSpinners: true
+})
+
+.controller('TimepickerController', ['$scope', '$attrs', '$parse', '$log', '$locale', 'timepickerConfig', function($scope, $attrs, $parse, $log, $locale, timepickerConfig) {
+  var selected = new Date(),
+      ngModelCtrl = { $setViewValue: angular.noop }, // nullModelCtrl
+      meridians = angular.isDefined($attrs.meridians) ? $scope.$parent.$eval($attrs.meridians) : timepickerConfig.meridians || $locale.DATETIME_FORMATS.AMPMS;
+
+  this.init = function(ngModelCtrl_, inputs) {
+    ngModelCtrl = ngModelCtrl_;
+    ngModelCtrl.$render = this.render;
+
+    ngModelCtrl.$formatters.unshift(function(modelValue) {
+      return modelValue ? new Date(modelValue) : null;
+    });
+
+    var hoursInputEl = inputs.eq(0),
+        minutesInputEl = inputs.eq(1);
+
+    var mousewheel = angular.isDefined($attrs.mousewheel) ? $scope.$parent.$eval($attrs.mousewheel) : timepickerConfig.mousewheel;
+    if (mousewheel) {
+      this.setupMousewheelEvents(hoursInputEl, minutesInputEl);
+    }
+
+    var arrowkeys = angular.isDefined($attrs.arrowkeys) ? $scope.$parent.$eval($attrs.arrowkeys) : timepickerConfig.arrowkeys;
+    if (arrowkeys) {
+      this.setupArrowkeyEvents(hoursInputEl, minutesInputEl);
+    }
+
+    $scope.readonlyInput = angular.isDefined($attrs.readonlyInput) ? $scope.$parent.$eval($attrs.readonlyInput) : timepickerConfig.readonlyInput;
+    this.setupInputEvents(hoursInputEl, minutesInputEl);
+  };
+
+  var hourStep = timepickerConfig.hourStep;
+  if ($attrs.hourStep) {
+    $scope.$parent.$watch($parse($attrs.hourStep), function(value) {
+      hourStep = parseInt(value, 10);
+    });
+  }
+
+  var minuteStep = timepickerConfig.minuteStep;
+  if ($attrs.minuteStep) {
+    $scope.$parent.$watch($parse($attrs.minuteStep), function(value) {
+      minuteStep = parseInt(value, 10);
+    });
+  }
+
+  var min;
+  $scope.$parent.$watch($parse($attrs.min), function(value) {
+    var dt = new Date(value);
+    min = isNaN(dt) ? undefined : dt;
+  });
+
+  var max;
+  $scope.$parent.$watch($parse($attrs.max), function(value) {
+    var dt = new Date(value);
+    max = isNaN(dt) ? undefined : dt;
+  });
+
+  $scope.noIncrementHours = function() {
+    var incrementedSelected = addMinutes(selected, hourStep * 60);
+    return incrementedSelected > max ||
+      (incrementedSelected < selected && incrementedSelected < min);
+  };
+
+  $scope.noDecrementHours = function() {
+    var decrementedSelected = addMinutes(selected, -hourStep * 60);
+    return decrementedSelected < min ||
+      (decrementedSelected > selected && decrementedSelected > max);
+  };
+
+  $scope.noIncrementMinutes = function() {
+    var incrementedSelected = addMinutes(selected, minuteStep);
+    return incrementedSelected > max ||
+      (incrementedSelected < selected && incrementedSelected < min);
+  };
+
+  $scope.noDecrementMinutes = function() {
+    var decrementedSelected = addMinutes(selected, -minuteStep);
+    return decrementedSelected < min ||
+      (decrementedSelected > selected && decrementedSelected > max);
+  };
+
+  $scope.noToggleMeridian = function() {
+    if (selected.getHours() < 13) {
+      return addMinutes(selected, 12 * 60) > max;
+    } else {
+      return addMinutes(selected, -12 * 60) < min;
+    }
+  };
+
+  // 12H / 24H mode
+  $scope.showMeridian = timepickerConfig.showMeridian;
+  if ($attrs.showMeridian) {
+    $scope.$parent.$watch($parse($attrs.showMeridian), function(value) {
+      $scope.showMeridian = !!value;
+
+      if (ngModelCtrl.$error.time) {
+        // Evaluate from template
+        var hours = getHoursFromTemplate(), minutes = getMinutesFromTemplate();
+        if (angular.isDefined(hours) && angular.isDefined(minutes)) {
+          selected.setHours(hours);
+          refresh();
+        }
+      } else {
+        updateTemplate();
+      }
+    });
+  }
+
+  // Get $scope.hours in 24H mode if valid
+  function getHoursFromTemplate() {
+    var hours = parseInt($scope.hours, 10);
+    var valid = $scope.showMeridian ? (hours > 0 && hours < 13) : (hours >= 0 && hours < 24);
+    if (!valid) {
+      return undefined;
+    }
+
+    if ($scope.showMeridian) {
+      if (hours === 12) {
+        hours = 0;
+      }
+      if ($scope.meridian === meridians[1]) {
+        hours = hours + 12;
+      }
+    }
+    return hours;
+  }
+
+  function getMinutesFromTemplate() {
+    var minutes = parseInt($scope.minutes, 10);
+    return (minutes >= 0 && minutes < 60) ? minutes : undefined;
+  }
+
+  function pad(value) {
+    return (angular.isDefined(value) && value.toString().length < 2) ? '0' + value : value.toString();
+  }
+
+  // Respond on mousewheel spin
+  this.setupMousewheelEvents = function(hoursInputEl, minutesInputEl) {
+    var isScrollingUp = function(e) {
+      if (e.originalEvent) {
+        e = e.originalEvent;
+      }
+      //pick correct delta variable depending on event
+      var delta = (e.wheelDelta) ? e.wheelDelta : -e.deltaY;
+      return (e.detail || delta > 0);
+    };
+
+    hoursInputEl.bind('mousewheel wheel', function(e) {
+      $scope.$apply(isScrollingUp(e) ? $scope.incrementHours() : $scope.decrementHours());
+      e.preventDefault();
+    });
+
+    minutesInputEl.bind('mousewheel wheel', function(e) {
+      $scope.$apply(isScrollingUp(e) ? $scope.incrementMinutes() : $scope.decrementMinutes());
+      e.preventDefault();
+    });
+
+  };
+
+  // Respond on up/down arrowkeys
+  this.setupArrowkeyEvents = function(hoursInputEl, minutesInputEl) {
+    hoursInputEl.bind('keydown', function(e) {
+      if (e.which === 38) { // up
+        e.preventDefault();
+        $scope.incrementHours();
+        $scope.$apply();
+      } else if (e.which === 40) { // down
+        e.preventDefault();
+        $scope.decrementHours();
+        $scope.$apply();
+      }
+    });
+
+    minutesInputEl.bind('keydown', function(e) {
+      if (e.which === 38) { // up
+        e.preventDefault();
+        $scope.incrementMinutes();
+        $scope.$apply();
+      } else if (e.which === 40) { // down
+        e.preventDefault();
+        $scope.decrementMinutes();
+        $scope.$apply();
+      }
+    });
+  };
+
+  this.setupInputEvents = function(hoursInputEl, minutesInputEl) {
+    if ($scope.readonlyInput) {
+      $scope.updateHours = angular.noop;
+      $scope.updateMinutes = angular.noop;
+      return;
+    }
+
+    var invalidate = function(invalidHours, invalidMinutes) {
+      ngModelCtrl.$setViewValue(null);
+      ngModelCtrl.$setValidity('time', false);
+      if (angular.isDefined(invalidHours)) {
+        $scope.invalidHours = invalidHours;
+      }
+      if (angular.isDefined(invalidMinutes)) {
+        $scope.invalidMinutes = invalidMinutes;
+      }
+    };
+
+    $scope.updateHours = function() {
+      var hours = getHoursFromTemplate(),
+        minutes = getMinutesFromTemplate();
+
+      if (angular.isDefined(hours) && angular.isDefined(minutes)) {
+        selected.setHours(hours);
+        if (selected < min || selected > max) {
+          invalidate(true);
+        } else {
+          refresh('h');
+        }
+      } else {
+        invalidate(true);
+      }
+    };
+
+    hoursInputEl.bind('blur', function(e) {
+      if (!$scope.invalidHours && $scope.hours < 10) {
+        $scope.$apply(function() {
+          $scope.hours = pad($scope.hours);
+        });
+      }
+    });
+
+    $scope.updateMinutes = function() {
+      var minutes = getMinutesFromTemplate(),
+        hours = getHoursFromTemplate();
+
+      if (angular.isDefined(minutes) && angular.isDefined(hours)) {
+        selected.setMinutes(minutes);
+        if (selected < min || selected > max) {
+          invalidate(undefined, true);
+        } else {
+          refresh('m');
+        }
+      } else {
+        invalidate(undefined, true);
+      }
+    };
+
+    minutesInputEl.bind('blur', function(e) {
+      if (!$scope.invalidMinutes && $scope.minutes < 10) {
+        $scope.$apply(function() {
+          $scope.minutes = pad($scope.minutes);
+        });
+      }
+    });
+
+  };
+
+  this.render = function() {
+    var date = ngModelCtrl.$viewValue;
+
+    if (isNaN(date)) {
+      ngModelCtrl.$setValidity('time', false);
+      $log.error('Timepicker directive: "ng-model" value must be a Date object, a number of milliseconds since 01.01.1970 or a string representing an RFC2822 or ISO 8601 date.');
+    } else {
+      if (date) {
+        selected = date;
+      }
+
+      if (selected < min || selected > max) {
+        ngModelCtrl.$setValidity('time', false);
+        $scope.invalidHours = true;
+        $scope.invalidMinutes = true;
+      } else {
+        makeValid();
+      }
+      updateTemplate();
+    }
+  };
+
+  // Call internally when we know that model is valid.
+  function refresh(keyboardChange) {
+    makeValid();
+    ngModelCtrl.$setViewValue(new Date(selected));
+    updateTemplate(keyboardChange);
+  }
+
+  function makeValid() {
+    ngModelCtrl.$setValidity('time', true);
+    $scope.invalidHours = false;
+    $scope.invalidMinutes = false;
+  }
+
+  function updateTemplate(keyboardChange) {
+    var hours = selected.getHours(), minutes = selected.getMinutes();
+
+    if ($scope.showMeridian) {
+      hours = (hours === 0 || hours === 12) ? 12 : hours % 12; // Convert 24 to 12 hour system
+    }
+
+    $scope.hours = keyboardChange === 'h' ? hours : pad(hours);
+    if (keyboardChange !== 'm') {
+      $scope.minutes = pad(minutes);
+    }
+    $scope.meridian = selected.getHours() < 12 ? meridians[0] : meridians[1];
+  }
+
+  function addMinutes(date, minutes) {
+    var dt = new Date(date.getTime() + minutes * 60000);
+    var newDate = new Date(date);
+    newDate.setHours(dt.getHours(), dt.getMinutes());
+    return newDate;
+  }
+
+  function addMinutesToSelected(minutes) {
+    selected = addMinutes(selected, minutes);
+    refresh();
+  }
+
+  $scope.showSpinners = angular.isDefined($attrs.showSpinners) ?
+    $scope.$parent.$eval($attrs.showSpinners) : timepickerConfig.showSpinners;
+
+  $scope.incrementHours = function() {
+    if (!$scope.noIncrementHours()) {
+      addMinutesToSelected(hourStep * 60);
+    }
+  };
+
+  $scope.decrementHours = function() {
+    if (!$scope.noDecrementHours()) {
+      addMinutesToSelected(-hourStep * 60);
+    }
+  };
+
+  $scope.incrementMinutes = function() {
+    if (!$scope.noIncrementMinutes()) {
+      addMinutesToSelected(minuteStep);
+    }
+  };
+
+  $scope.decrementMinutes = function() {
+    if (!$scope.noDecrementMinutes()) {
+      addMinutesToSelected(-minuteStep);
+    }
+  };
+
+  $scope.toggleMeridian = function() {
+    if (!$scope.noToggleMeridian()) {
+      addMinutesToSelected(12 * 60 * (selected.getHours() < 12 ? 1 : -1));
+    }
+  };
+}])
+
+.directive('timepicker', function() {
+  return {
+    restrict: 'EA',
+    require: ['timepicker', '?^ngModel'],
+    controller:'TimepickerController',
+    controllerAs: 'timepicker',
+    replace: true,
+    scope: {},
+    templateUrl: function(element, attrs) {
+      return attrs.templateUrl || 'template/timepicker/timepicker.html';
+    },
+    link: function(scope, element, attrs, ctrls) {
+      var timepickerCtrl = ctrls[0], ngModelCtrl = ctrls[1];
+
+      if (ngModelCtrl) {
+        timepickerCtrl.init(ngModelCtrl, element.find('input'));
+      }
+    }
+  };
+});
+
+angular.module('ui.bootstrap.transition', [])
+
+.value('$transitionSuppressDeprecated', false)
+/**
+ * $transition service provides a consistent interface to trigger CSS 3 transitions and to be informed when they complete.
+ * @param  {DOMElement} element  The DOMElement that will be animated.
+ * @param  {string|object|function} trigger  The thing that will cause the transition to start:
+ *   - As a string, it represents the css class to be added to the element.
+ *   - As an object, it represents a hash of style attributes to be applied to the element.
+ *   - As a function, it represents a function to be called that will cause the transition to occur.
+ * @return {Promise}  A promise that is resolved when the transition finishes.
+ */
+.factory('$transition', [
+        '$q', '$timeout', '$rootScope', '$log', '$transitionSuppressDeprecated',
+function($q ,  $timeout ,  $rootScope ,  $log ,  $transitionSuppressDeprecated) {
+
+  if (!$transitionSuppressDeprecated) {
+    $log.warn('$transition is now deprecated. Use $animate from ngAnimate instead.');
+  }
+
+  var $transition = function(element, trigger, options) {
+    options = options || {};
+    var deferred = $q.defer();
+    var endEventName = $transition[options.animation ? 'animationEndEventName' : 'transitionEndEventName'];
+
+    var transitionEndHandler = function(event) {
+      $rootScope.$apply(function() {
+        element.unbind(endEventName, transitionEndHandler);
+        deferred.resolve(element);
+      });
+    };
+
+    if (endEventName) {
+      element.bind(endEventName, transitionEndHandler);
+    }
+
+    // Wrap in a timeout to allow the browser time to update the DOM before the transition is to occur
+    $timeout(function() {
+      if ( angular.isString(trigger) ) {
+        element.addClass(trigger);
+      } else if ( angular.isFunction(trigger) ) {
+        trigger(element);
+      } else if ( angular.isObject(trigger) ) {
+        element.css(trigger);
+      }
+      //If browser does not support transitions, instantly resolve
+      if ( !endEventName ) {
+        deferred.resolve(element);
+      }
+    });
+
+    // Add our custom cancel function to the promise that is returned
+    // We can call this if we are about to run a new transition, which we know will prevent this transition from ending,
+    // i.e. it will therefore never raise a transitionEnd event for that transition
+    deferred.promise.cancel = function() {
+      if ( endEventName ) {
+        element.unbind(endEventName, transitionEndHandler);
+      }
+      deferred.reject('Transition cancelled');
+    };
+
+    return deferred.promise;
+  };
+
+  // Work out the name of the transitionEnd event
+  var transElement = document.createElement('trans');
+  var transitionEndEventNames = {
+    'WebkitTransition': 'webkitTransitionEnd',
+    'MozTransition': 'transitionend',
+    'OTransition': 'oTransitionEnd',
+    'transition': 'transitionend'
+  };
+  var animationEndEventNames = {
+    'WebkitTransition': 'webkitAnimationEnd',
+    'MozTransition': 'animationend',
+    'OTransition': 'oAnimationEnd',
+    'transition': 'animationend'
+  };
+  function findEndEventName(endEventNames) {
+    for (var name in endEventNames){
+      if (transElement.style[name] !== undefined) {
+        return endEventNames[name];
+      }
+    }
+  }
+  $transition.transitionEndEventName = findEndEventName(transitionEndEventNames);
+  $transition.animationEndEventName = findEndEventName(animationEndEventNames);
+  return $transition;
+}]);
+
+angular.module('ui.bootstrap.typeahead', ['ui.bootstrap.position'])
+
+/**
+ * A helper service that can parse typeahead's syntax (string provided by users)
+ * Extracted to a separate service for ease of unit testing
+ */
+  .factory('typeaheadParser', ['$parse', function($parse) {
+
+  //                      00000111000000000000022200000000000000003333333333333330000000000044000
+  var TYPEAHEAD_REGEXP = /^\s*([\s\S]+?)(?:\s+as\s+([\s\S]+?))?\s+for\s+(?:([\$\w][\$\w\d]*))\s+in\s+([\s\S]+?)$/;
+
+  return {
+    parse: function(input) {
+      var match = input.match(TYPEAHEAD_REGEXP);
+      if (!match) {
+        throw new Error(
+          'Expected typeahead specification in form of "_modelValue_ (as _label_)? for _item_ in _collection_"' +
+            ' but got "' + input + '".');
+      }
+
+      return {
+        itemName:match[3],
+        source:$parse(match[4]),
+        viewMapper:$parse(match[2] || match[1]),
+        modelMapper:$parse(match[1])
+      };
+    }
+  };
+}])
+
+  .directive('typeahead', ['$compile', '$parse', '$q', '$timeout', '$document', '$window', '$rootScope', '$position', 'typeaheadParser',
+    function($compile, $parse, $q, $timeout, $document, $window, $rootScope, $position, typeaheadParser) {
+    var HOT_KEYS = [9, 13, 27, 38, 40];
+    var eventDebounceTime = 200;
+
+    return {
+      require: ['ngModel', '^?ngModelOptions'],
+      link: function(originalScope, element, attrs, ctrls) {
+        var modelCtrl = ctrls[0];
+        var ngModelOptions = ctrls[1];
+        //SUPPORTED ATTRIBUTES (OPTIONS)
+
+        //minimal no of characters that needs to be entered before typeahead kicks-in
+        var minLength = originalScope.$eval(attrs.typeaheadMinLength);
+        if (!minLength && minLength !== 0) {
+          minLength = 1;
+        }
+
+        //minimal wait time after last character typed before typeahead kicks-in
+        var waitTime = originalScope.$eval(attrs.typeaheadWaitMs) || 0;
+
+        //should it restrict model values to the ones selected from the popup only?
+        var isEditable = originalScope.$eval(attrs.typeaheadEditable) !== false;
+
+        //binding to a variable that indicates if matches are being retrieved asynchronously
+        var isLoadingSetter = $parse(attrs.typeaheadLoading).assign || angular.noop;
+
+        //a callback executed when a match is selected
+        var onSelectCallback = $parse(attrs.typeaheadOnSelect);
+
+        //should it select highlighted popup value when losing focus?
+        var isSelectOnBlur = angular.isDefined(attrs.typeaheadSelectOnBlur) ? originalScope.$eval(attrs.typeaheadSelectOnBlur) : false;
+
+        //binding to a variable that indicates if there were no results after the query is completed
+        var isNoResultsSetter = $parse(attrs.typeaheadNoResults).assign || angular.noop;
+
+        var inputFormatter = attrs.typeaheadInputFormatter ? $parse(attrs.typeaheadInputFormatter) : undefined;
+
+        var appendToBody =  attrs.typeaheadAppendToBody ? originalScope.$eval(attrs.typeaheadAppendToBody) : false;
+
+        var focusFirst = originalScope.$eval(attrs.typeaheadFocusFirst) !== false;
+
+        //If input matches an item of the list exactly, select it automatically
+        var selectOnExact = attrs.typeaheadSelectOnExact ? originalScope.$eval(attrs.typeaheadSelectOnExact) : false;
+
+        //INTERNAL VARIABLES
+
+        //model setter executed upon match selection
+        var parsedModel = $parse(attrs.ngModel);
+        var invokeModelSetter = $parse(attrs.ngModel + '($$$p)');
+        var $setModelValue = function(scope, newValue) {
+          if (angular.isFunction(parsedModel(originalScope)) &&
+            ngModelOptions && ngModelOptions.$options && ngModelOptions.$options.getterSetter) {
+            return invokeModelSetter(scope, {$$$p: newValue});
+          } else {
+            return parsedModel.assign(scope, newValue);
+          }
+        };
+
+        //expressions used by typeahead
+        var parserResult = typeaheadParser.parse(attrs.typeahead);
+
+        var hasFocus;
+
+        //Used to avoid bug in iOS webview where iOS keyboard does not fire
+        //mousedown & mouseup events
+        //Issue #3699
+        var selected;
+
+        //create a child scope for the typeahead directive so we are not polluting original scope
+        //with typeahead-specific data (matches, query etc.)
+        var scope = originalScope.$new();
+        var offDestroy = originalScope.$on('$destroy', function() {
+			    scope.$destroy();
+        });
+        scope.$on('$destroy', offDestroy);
+
+        // WAI-ARIA
+        var popupId = 'typeahead-' + scope.$id + '-' + Math.floor(Math.random() * 10000);
+        element.attr({
+          'aria-autocomplete': 'list',
+          'aria-expanded': false,
+          'aria-owns': popupId
+        });
+
+        //pop-up element used to display matches
+        var popUpEl = angular.element('<div typeahead-popup></div>');
+        popUpEl.attr({
+          id: popupId,
+          matches: 'matches',
+          active: 'activeIdx',
+          select: 'select(activeIdx)',
+          'move-in-progress': 'moveInProgress',
+          query: 'query',
+          position: 'position'
+        });
+        //custom item template
+        if (angular.isDefined(attrs.typeaheadTemplateUrl)) {
+          popUpEl.attr('template-url', attrs.typeaheadTemplateUrl);
+        }
+
+        if (angular.isDefined(attrs.typeaheadPopupTemplateUrl)) {
+          popUpEl.attr('popup-template-url', attrs.typeaheadPopupTemplateUrl);
+        }
+
+        var resetMatches = function() {
+          scope.matches = [];
+          scope.activeIdx = -1;
+          element.attr('aria-expanded', false);
+        };
+
+        var getMatchId = function(index) {
+          return popupId + '-option-' + index;
+        };
+
+        // Indicate that the specified match is the active (pre-selected) item in the list owned by this typeahead.
+        // This attribute is added or removed automatically when the `activeIdx` changes.
+        scope.$watch('activeIdx', function(index) {
+          if (index < 0) {
+            element.removeAttr('aria-activedescendant');
+          } else {
+            element.attr('aria-activedescendant', getMatchId(index));
+          }
+        });
+
+        var inputIsExactMatch = function(inputValue, index) {
+          if (scope.matches.length > index && inputValue) {
+            return inputValue.toUpperCase() === scope.matches[index].label.toUpperCase();
+          }
+
+          return false;
+        };
+
+        var getMatchesAsync = function(inputValue) {
+          var locals = {$viewValue: inputValue};
+          isLoadingSetter(originalScope, true);
+          isNoResultsSetter(originalScope, false);
+          $q.when(parserResult.source(originalScope, locals)).then(function(matches) {
+            //it might happen that several async queries were in progress if a user were typing fast
+            //but we are interested only in responses that correspond to the current view value
+            var onCurrentRequest = (inputValue === modelCtrl.$viewValue);
+            if (onCurrentRequest && hasFocus) {
+              if (matches && matches.length > 0) {
+
+                scope.activeIdx = focusFirst ? 0 : -1;
+                isNoResultsSetter(originalScope, false);
+                scope.matches.length = 0;
+
+                //transform labels
+                for (var i = 0; i < matches.length; i++) {
+                  locals[parserResult.itemName] = matches[i];
+                  scope.matches.push({
+                    id: getMatchId(i),
+                    label: parserResult.viewMapper(scope, locals),
+                    model: matches[i]
+                  });
+                }
+
+                scope.query = inputValue;
+                //position pop-up with matches - we need to re-calculate its position each time we are opening a window
+                //with matches as a pop-up might be absolute-positioned and position of an input might have changed on a page
+                //due to other elements being rendered
+                recalculatePosition();
+
+                element.attr('aria-expanded', true);
+
+                //Select the single remaining option if user input matches
+                if (selectOnExact && scope.matches.length === 1 && inputIsExactMatch(inputValue, 0)) {
+                  scope.select(0);
+                }
+              } else {
+                resetMatches();
+                isNoResultsSetter(originalScope, true);
+              }
+            }
+            if (onCurrentRequest) {
+              isLoadingSetter(originalScope, false);
+            }
+          }, function() {
+            resetMatches();
+            isLoadingSetter(originalScope, false);
+            isNoResultsSetter(originalScope, true);
+          });
+        };
+
+        // bind events only if appendToBody params exist - performance feature
+        if (appendToBody) {
+          angular.element($window).bind('resize', fireRecalculating);
+          $document.find('body').bind('scroll', fireRecalculating);
+        }
+
+        // Declare the timeout promise var outside the function scope so that stacked calls can be cancelled later
+        var timeoutEventPromise;
+
+        // Default progress type
+        scope.moveInProgress = false;
+
+        function fireRecalculating() {
+          if (!scope.moveInProgress) {
+            scope.moveInProgress = true;
+            scope.$digest();
+          }
+
+          // Cancel previous timeout
+          if (timeoutEventPromise) {
+            $timeout.cancel(timeoutEventPromise);
+          }
+
+          // Debounced executing recalculate after events fired
+          timeoutEventPromise = $timeout(function() {
+            // if popup is visible
+            if (scope.matches.length) {
+              recalculatePosition();
+            }
+
+            scope.moveInProgress = false;
+            scope.$digest();
+          }, eventDebounceTime);
+        }
+
+        // recalculate actual position and set new values to scope
+        // after digest loop is popup in right position
+        function recalculatePosition() {
+          scope.position = appendToBody ? $position.offset(element) : $position.position(element);
+          scope.position.top += element.prop('offsetHeight');
+        }
+
+        resetMatches();
+
+        //we need to propagate user's query so we can higlight matches
+        scope.query = undefined;
+
+        //Declare the timeout promise var outside the function scope so that stacked calls can be cancelled later
+        var timeoutPromise;
+
+        var scheduleSearchWithTimeout = function(inputValue) {
+          timeoutPromise = $timeout(function() {
+            getMatchesAsync(inputValue);
+          }, waitTime);
+        };
+
+        var cancelPreviousTimeout = function() {
+          if (timeoutPromise) {
+            $timeout.cancel(timeoutPromise);
+          }
+        };
+
+        //plug into $parsers pipeline to open a typeahead on view changes initiated from DOM
+        //$parsers kick-in on all the changes coming from the view as well as manually triggered by $setViewValue
+        modelCtrl.$parsers.unshift(function(inputValue) {
+          hasFocus = true;
+
+          if (minLength === 0 || inputValue && inputValue.length >= minLength) {
+            if (waitTime > 0) {
+              cancelPreviousTimeout();
+              scheduleSearchWithTimeout(inputValue);
+            } else {
+              getMatchesAsync(inputValue);
+            }
+          } else {
+            isLoadingSetter(originalScope, false);
+            cancelPreviousTimeout();
+            resetMatches();
+          }
+
+          if (isEditable) {
+            return inputValue;
+          } else {
+            if (!inputValue) {
+              // Reset in case user had typed something previously.
+              modelCtrl.$setValidity('editable', true);
+              return null;
+            } else {
+              modelCtrl.$setValidity('editable', false);
+              return undefined;
+            }
+          }
+        });
+
+        modelCtrl.$formatters.push(function(modelValue) {
+          var candidateViewValue, emptyViewValue;
+          var locals = {};
+
+          // The validity may be set to false via $parsers (see above) if
+          // the model is restricted to selected values. If the model
+          // is set manually it is considered to be valid.
+          if (!isEditable) {
+            modelCtrl.$setValidity('editable', true);
+          }
+
+          if (inputFormatter) {
+            locals.$model = modelValue;
+            return inputFormatter(originalScope, locals);
+          } else {
+            //it might happen that we don't have enough info to properly render input value
+            //we need to check for this situation and simply return model value if we can't apply custom formatting
+            locals[parserResult.itemName] = modelValue;
+            candidateViewValue = parserResult.viewMapper(originalScope, locals);
+            locals[parserResult.itemName] = undefined;
+            emptyViewValue = parserResult.viewMapper(originalScope, locals);
+
+            return candidateViewValue!== emptyViewValue ? candidateViewValue : modelValue;
+          }
+        });
+
+        scope.select = function(activeIdx) {
+          //called from within the $digest() cycle
+          var locals = {};
+          var model, item;
+
+          selected = true;
+          locals[parserResult.itemName] = item = scope.matches[activeIdx].model;
+          model = parserResult.modelMapper(originalScope, locals);
+          $setModelValue(originalScope, model);
+          modelCtrl.$setValidity('editable', true);
+          modelCtrl.$setValidity('parse', true);
+
+          onSelectCallback(originalScope, {
+            $item: item,
+            $model: model,
+            $label: parserResult.viewMapper(originalScope, locals)
+          });
+
+          resetMatches();
+
+          //return focus to the input element if a match was selected via a mouse click event
+          // use timeout to avoid $rootScope:inprog error
+          if (scope.$eval(attrs.typeaheadFocusOnSelect) !== false) {
+            $timeout(function() { element[0].focus(); }, 0, false);
+          }
+        };
+
+        //bind keyboard events: arrows up(38) / down(40), enter(13) and tab(9), esc(27)
+        element.bind('keydown', function(evt) {
+          //typeahead is open and an "interesting" key was pressed
+          if (scope.matches.length === 0 || HOT_KEYS.indexOf(evt.which) === -1) {
+            return;
+          }
+
+          // if there's nothing selected (i.e. focusFirst) and enter or tab is hit, clear the results
+          if (scope.activeIdx === -1 && (evt.which === 9 || evt.which === 13)) {
+            resetMatches();
+            scope.$digest();
+            return;
+          }
+
+          evt.preventDefault();
+
+          if (evt.which === 40) {
+            scope.activeIdx = (scope.activeIdx + 1) % scope.matches.length;
+            scope.$digest();
+
+          } else if (evt.which === 38) {
+            scope.activeIdx = (scope.activeIdx > 0 ? scope.activeIdx : scope.matches.length) - 1;
+            scope.$digest();
+
+          } else if (evt.which === 13 || evt.which === 9) {
+            scope.$apply(function () {
+              scope.select(scope.activeIdx);
+            });
+
+          } else if (evt.which === 27) {
+            evt.stopPropagation();
+
+            resetMatches();
+            scope.$digest();
+          }
+        });
+
+        element.bind('blur', function() {
+          if (isSelectOnBlur && scope.matches.length && scope.activeIdx !== -1 && !selected) {
+            selected = true;
+            scope.$apply(function() {
+              scope.select(scope.activeIdx);
+            });
+          }
+          hasFocus = false;
+          selected = false;
+        });
+
+        // Keep reference to click handler to unbind it.
+        var dismissClickHandler = function(evt) {
+          // Issue #3973
+          // Firefox treats right click as a click on document
+          if (element[0] !== evt.target && evt.which !== 3 && scope.matches.length !== 0) {
+            resetMatches();
+            if (!$rootScope.$$phase) {
+              scope.$digest();
+            }
+          }
+        };
+
+        $document.bind('click', dismissClickHandler);
+
+        originalScope.$on('$destroy', function() {
+          $document.unbind('click', dismissClickHandler);
+          if (appendToBody) {
+            $popup.remove();
+          }
+          // Prevent jQuery cache memory leak
+          popUpEl.remove();
+        });
+
+        var $popup = $compile(popUpEl)(scope);
+
+        if (appendToBody) {
+          $document.find('body').append($popup);
+        } else {
+          element.after($popup);
+        }
+      }
+    };
+
+  }])
+
+  .directive('typeaheadPopup', function() {
+    return {
+      restrict: 'EA',
+      scope: {
+        matches: '=',
+        query: '=',
+        active: '=',
+        position: '&',
+        moveInProgress: '=',
+        select: '&'
+      },
+      replace: true,
+      templateUrl: function(element, attrs) {
+        return attrs.popupTemplateUrl || 'template/typeahead/typeahead-popup.html';
+      },
+      link: function(scope, element, attrs) {
+        scope.templateUrl = attrs.templateUrl;
+
+        scope.isOpen = function() {
+          return scope.matches.length > 0;
+        };
+
+        scope.isActive = function(matchIdx) {
+          return scope.active == matchIdx;
+        };
+
+        scope.selectActive = function(matchIdx) {
+          scope.active = matchIdx;
+        };
+
+        scope.selectMatch = function(activeIdx) {
+          scope.select({activeIdx:activeIdx});
+        };
+      }
+    };
+  })
+
+  .directive('typeaheadMatch', ['$templateRequest', '$compile', '$parse', function($templateRequest, $compile, $parse) {
+    return {
+      restrict: 'EA',
+      scope: {
+        index: '=',
+        match: '=',
+        query: '='
+      },
+      link:function(scope, element, attrs) {
+        var tplUrl = $parse(attrs.templateUrl)(scope.$parent) || 'template/typeahead/typeahead-match.html';
+        $templateRequest(tplUrl).then(function(tplContent) {
+          $compile(tplContent.trim())(scope, function(clonedElement) {
+            element.replaceWith(clonedElement);
+          });
+        });
+      }
+    };
+  }])
+
+  .filter('typeaheadHighlight', ['$sce', '$injector', '$log', function($sce, $injector, $log) {
+    var isSanitizePresent;
+    isSanitizePresent = $injector.has('$sanitize');
+
+    function escapeRegexp(queryToEscape) {
+      // Regex: capture the whole query string and replace it with the string that will be used to match
+      // the results, for example if the capture is "a" the result will be \a
+      return queryToEscape.replace(/([.?*+^$[\]\\(){}|-])/g, '\\$1');
+    }
+
+    function containsHtml(matchItem) {
+      return /<.*>/g.test(matchItem);
+    }
+
+    return function(matchItem, query) {
+      if (!isSanitizePresent && containsHtml(matchItem)) {
+        $log.warn('Unsafe use of typeahead please use ngSanitize'); // Warn the user about the danger
+      }
+      matchItem = query? ('' + matchItem).replace(new RegExp(escapeRegexp(query), 'gi'), '<strong>$&</strong>') : matchItem; // Replaces the capture string with a the same string inside of a "strong" tag
+      if (!isSanitizePresent) {
+        matchItem = $sce.trustAsHtml(matchItem); // If $sanitize is not present we pack the string in a $sce object for the ng-bind-html directive
+      }
+      return matchItem;
+    };
+  }]);
+
+angular.module("template/accordion/accordion-group.html", []).run(["$templateCache", function($templateCache) {
+  $templateCache.put("template/accordion/accordion-group.html",
+    "<div class=\"panel {{panelClass || 'panel-default'}}\">\n" +
+    "  <div class=\"panel-heading\" ng-keypress=\"toggleOpen($event)\">\n" +
+    "    <h4 class=\"panel-title\">\n" +
+    "      <a href tabindex=\"0\" class=\"accordion-toggle\" ng-click=\"toggleOpen()\" accordion-transclude=\"heading\"><span ng-class=\"{'text-muted': isDisabled}\">{{heading}}</span></a>\n" +
+    "    </h4>\n" +
+    "  </div>\n" +
+    "  <div class=\"panel-collapse collapse\" collapse=\"!isOpen\">\n" +
+    "	  <div class=\"panel-body\" ng-transclude></div>\n" +
+    "  </div>\n" +
+    "</div>\n" +
+    "");
+}]);
+
+angular.module("template/accordion/accordion.html", []).run(["$templateCache", function($templateCache) {
+  $templateCache.put("template/accordion/accordion.html",
+    "<div class=\"panel-group\" ng-transclude></div>");
+}]);
+
+angular.module("template/alert/alert.html", []).run(["$templateCache", function($templateCache) {
+  $templateCache.put("template/alert/alert.html",
+    "<div class=\"alert\" ng-class=\"['alert-' + (type || 'warning'), closeable ? 'alert-dismissible' : null]\" role=\"alert\">\n" +
+    "    <button ng-show=\"closeable\" type=\"button\" class=\"close\" ng-click=\"close($event)\">\n" +
+    "        <span aria-hidden=\"true\">&times;</span>\n" +
+    "        <span class=\"sr-only\">Close</span>\n" +
+    "    </button>\n" +
+    "    <div ng-transclude></div>\n" +
+    "</div>\n" +
+    "");
+}]);
+
+angular.module("template/carousel/carousel.html", []).run(["$templateCache", function($templateCache) {
+  $templateCache.put("template/carousel/carousel.html",
+    "<div ng-mouseenter=\"pause()\" ng-mouseleave=\"play()\" class=\"carousel\" ng-swipe-right=\"prev()\" ng-swipe-left=\"next()\">\n" +
+    "    <ol class=\"carousel-indicators\" ng-show=\"slides.length > 1\">\n" +
+    "        <li ng-repeat=\"slide in slides | orderBy:indexOfSlide track by $index\" ng-class=\"{active: isActive(slide)}\" ng-click=\"select(slide)\"></li>\n" +
+    "    </ol>\n" +
+    "    <div class=\"carousel-inner\" ng-transclude></div>\n" +
+    "    <a class=\"left carousel-control\" ng-click=\"prev()\" ng-show=\"slides.length > 1\"><span class=\"glyphicon glyphicon-chevron-left\"></span></a>\n" +
+    "    <a class=\"right carousel-control\" ng-click=\"next()\" ng-show=\"slides.length > 1\"><span class=\"glyphicon glyphicon-chevron-right\"></span></a>\n" +
+    "</div>\n" +
+    "");
+}]);
+
+angular.module("template/carousel/slide.html", []).run(["$templateCache", function($templateCache) {
+  $templateCache.put("template/carousel/slide.html",
+    "<div ng-class=\"{\n" +
+    "    'active': active\n" +
+    "  }\" class=\"item text-center\" ng-transclude></div>\n" +
+    "");
+}]);
+
+angular.module("template/datepicker/datepicker.html", []).run(["$templateCache", function($templateCache) {
+  $templateCache.put("template/datepicker/datepicker.html",
+    "<div ng-switch=\"datepickerMode\" role=\"application\" ng-keydown=\"keydown($event)\">\n" +
+    "  <daypicker ng-switch-when=\"day\" tabindex=\"0\"></daypicker>\n" +
+    "  <monthpicker ng-switch-when=\"month\" tabindex=\"0\"></monthpicker>\n" +
+    "  <yearpicker ng-switch-when=\"year\" tabindex=\"0\"></yearpicker>\n" +
+    "</div>");
+}]);
+
+angular.module("template/datepicker/day.html", []).run(["$templateCache", function($templateCache) {
+  $templateCache.put("template/datepicker/day.html",
+    "<table role=\"grid\" aria-labelledby=\"{{::uniqueId}}-title\" aria-activedescendant=\"{{activeDateId}}\">\n" +
+    "  <thead>\n" +
+    "    <tr>\n" +
+    "      <th><button type=\"button\" class=\"btn btn-default btn-sm pull-left\" ng-click=\"move(-1)\" tabindex=\"-1\"><i class=\"glyphicon glyphicon-chevron-left\"></i></button></th>\n" +
+    "      <th colspan=\"{{::5 + showWeeks}}\"><button id=\"{{::uniqueId}}-title\" role=\"heading\" aria-live=\"assertive\" aria-atomic=\"true\" type=\"button\" class=\"btn btn-default btn-sm\" ng-click=\"toggleMode()\" ng-disabled=\"datepickerMode === maxMode\" tabindex=\"-1\" style=\"width:100%;\"><strong>{{title}}</strong></button></th>\n" +
+    "      <th><button type=\"button\" class=\"btn btn-default btn-sm pull-right\" ng-click=\"move(1)\" tabindex=\"-1\"><i class=\"glyphicon glyphicon-chevron-right\"></i></button></th>\n" +
+    "    </tr>\n" +
+    "    <tr>\n" +
+    "      <th ng-if=\"showWeeks\" class=\"text-center\"></th>\n" +
+    "      <th ng-repeat=\"label in ::labels track by $index\" class=\"text-center\"><small aria-label=\"{{::label.full}}\">{{::label.abbr}}</small></th>\n" +
+    "    </tr>\n" +
+    "  </thead>\n" +
+    "  <tbody>\n" +
+    "    <tr ng-repeat=\"row in rows track by $index\">\n" +
+    "      <td ng-if=\"showWeeks\" class=\"text-center h6\"><em>{{ weekNumbers[$index] }}</em></td>\n" +
+    "      <td ng-repeat=\"dt in row track by dt.date\" class=\"text-center\" role=\"gridcell\" id=\"{{::dt.uid}}\" ng-class=\"::dt.customClass\">\n" +
+    "        <button type=\"button\" style=\"min-width:100%;\" class=\"btn btn-default btn-sm\" ng-class=\"{'btn-info': dt.selected, active: isActive(dt)}\" ng-click=\"select(dt.date)\" ng-disabled=\"dt.disabled\" tabindex=\"-1\"><span ng-class=\"::{'text-muted': dt.secondary, 'text-info': dt.current}\">{{::dt.label}}</span></button>\n" +
+    "      </td>\n" +
+    "    </tr>\n" +
+    "  </tbody>\n" +
+    "</table>\n" +
+    "");
+}]);
+
+angular.module("template/datepicker/month.html", []).run(["$templateCache", function($templateCache) {
+  $templateCache.put("template/datepicker/month.html",
+    "<table role=\"grid\" aria-labelledby=\"{{::uniqueId}}-title\" aria-activedescendant=\"{{activeDateId}}\">\n" +
+    "  <thead>\n" +
+    "    <tr>\n" +
+    "      <th><button type=\"button\" class=\"btn btn-default btn-sm pull-left\" ng-click=\"move(-1)\" tabindex=\"-1\"><i class=\"glyphicon glyphicon-chevron-left\"></i></button></th>\n" +
+    "      <th><button id=\"{{::uniqueId}}-title\" role=\"heading\" aria-live=\"assertive\" aria-atomic=\"true\" type=\"button\" class=\"btn btn-default btn-sm\" ng-click=\"toggleMode()\" ng-disabled=\"datepickerMode === maxMode\" tabindex=\"-1\" style=\"width:100%;\"><strong>{{title}}</strong></button></th>\n" +
+    "      <th><button type=\"button\" class=\"btn btn-default btn-sm pull-right\" ng-click=\"move(1)\" tabindex=\"-1\"><i class=\"glyphicon glyphicon-chevron-right\"></i></button></th>\n" +
+    "    </tr>\n" +
+    "  </thead>\n" +
+    "  <tbody>\n" +
+    "    <tr ng-repeat=\"row in rows track by $index\">\n" +
+    "      <td ng-repeat=\"dt in row track by dt.date\" class=\"text-center\" role=\"gridcell\" id=\"{{::dt.uid}}\" ng-class=\"::dt.customClass\">\n" +
+    "        <button type=\"button\" style=\"min-width:100%;\" class=\"btn btn-default\" ng-class=\"{'btn-info': dt.selected, active: isActive(dt)}\" ng-click=\"select(dt.date)\" ng-disabled=\"dt.disabled\" tabindex=\"-1\"><span ng-class=\"::{'text-info': dt.current}\">{{::dt.label}}</span></button>\n" +
+    "      </td>\n" +
+    "    </tr>\n" +
+    "  </tbody>\n" +
+    "</table>\n" +
+    "");
+}]);
+
+angular.module("template/datepicker/popup.html", []).run(["$templateCache", function($templateCache) {
+  $templateCache.put("template/datepicker/popup.html",
+    "<ul class=\"dropdown-menu\" ng-if=\"isOpen\" style=\"display: block\" ng-style=\"{top: position.top+'px', left: position.left+'px'}\" ng-keydown=\"keydown($event)\" ng-click=\"$event.stopPropagation()\">\n" +
+    "	<li ng-transclude></li>\n" +
+    "	<li ng-if=\"showButtonBar\" style=\"padding:10px 9px 2px\">\n" +
+    "		<span class=\"btn-group pull-left\">\n" +
+    "			<button type=\"button\" class=\"btn btn-sm btn-info\" ng-click=\"select('today')\" ng-disabled=\"isDisabled('today')\">{{ getText('current') }}</button>\n" +
+    "			<button type=\"button\" class=\"btn btn-sm btn-danger\" ng-click=\"select(null)\">{{ getText('clear') }}</button>\n" +
+    "		</span>\n" +
+    "		<button type=\"button\" class=\"btn btn-sm btn-success pull-right\" ng-click=\"close()\">{{ getText('close') }}</button>\n" +
+    "	</li>\n" +
+    "</ul>\n" +
+    "");
+}]);
+
+angular.module("template/datepicker/year.html", []).run(["$templateCache", function($templateCache) {
+  $templateCache.put("template/datepicker/year.html",
+    "<table role=\"grid\" aria-labelledby=\"{{::uniqueId}}-title\" aria-activedescendant=\"{{activeDateId}}\">\n" +
+    "  <thead>\n" +
+    "    <tr>\n" +
+    "      <th><button type=\"button\" class=\"btn btn-default btn-sm pull-left\" ng-click=\"move(-1)\" tabindex=\"-1\"><i class=\"glyphicon glyphicon-chevron-left\"></i></button></th>\n" +
+    "      <th colspan=\"3\"><button id=\"{{::uniqueId}}-title\" role=\"heading\" aria-live=\"assertive\" aria-atomic=\"true\" type=\"button\" class=\"btn btn-default btn-sm\" ng-click=\"toggleMode()\" ng-disabled=\"datepickerMode === maxMode\" tabindex=\"-1\" style=\"width:100%;\"><strong>{{title}}</strong></button></th>\n" +
+    "      <th><button type=\"button\" class=\"btn btn-default btn-sm pull-right\" ng-click=\"move(1)\" tabindex=\"-1\"><i class=\"glyphicon glyphicon-chevron-right\"></i></button></th>\n" +
+    "    </tr>\n" +
+    "  </thead>\n" +
+    "  <tbody>\n" +
+    "    <tr ng-repeat=\"row in rows track by $index\">\n" +
+    "      <td ng-repeat=\"dt in row track by dt.date\" class=\"text-center\" role=\"gridcell\" id=\"{{::dt.uid}}\">\n" +
+    "        <button type=\"button\" style=\"min-width:100%;\" class=\"btn btn-default\" ng-class=\"{'btn-info': dt.selected, active: isActive(dt)}\" ng-click=\"select(dt.date)\" ng-disabled=\"dt.disabled\" tabindex=\"-1\"><span ng-class=\"::{'text-info': dt.current}\">{{::dt.label}}</span></button>\n" +
+    "      </td>\n" +
+    "    </tr>\n" +
+    "  </tbody>\n" +
+    "</table>\n" +
+    "");
+}]);
+
+angular.module("template/modal/backdrop.html", []).run(["$templateCache", function($templateCache) {
+  $templateCache.put("template/modal/backdrop.html",
+    "<div class=\"modal-backdrop\"\n" +
+    "     modal-animation-class=\"fade\"\n" +
+    "     modal-in-class=\"in\"\n" +
+    "     ng-style=\"{'z-index': 1040 + (index && 1 || 0) + index*10}\"\n" +
+    "></div>\n" +
+    "");
+}]);
+
+angular.module("template/modal/window.html", []).run(["$templateCache", function($templateCache) {
+  $templateCache.put("template/modal/window.html",
+    "<div modal-render=\"{{$isRendered}}\" tabindex=\"-1\" role=\"dialog\" class=\"modal\"\n" +
+    "    modal-animation-class=\"fade\"\n" +
+    "    modal-in-class=\"in\"\n" +
+    "	ng-style=\"{'z-index': 1050 + index*10, display: 'block'}\" ng-click=\"close($event)\">\n" +
+    "    <div class=\"modal-dialog\" ng-class=\"size ? 'modal-' + size : ''\"><div class=\"modal-content\" modal-transclude></div></div>\n" +
+    "</div>\n" +
+    "");
+}]);
+
+angular.module("template/pagination/pager.html", []).run(["$templateCache", function($templateCache) {
+  $templateCache.put("template/pagination/pager.html",
+    "<ul class=\"pager\">\n" +
+    "  <li ng-class=\"{disabled: noPrevious()||ngDisabled, previous: align}\"><a href ng-click=\"selectPage(page - 1, $event)\">{{::getText('previous')}}</a></li>\n" +
+    "  <li ng-class=\"{disabled: noNext()||ngDisabled, next: align}\"><a href ng-click=\"selectPage(page + 1, $event)\">{{::getText('next')}}</a></li>\n" +
+    "</ul>\n" +
+    "");
+}]);
+
+angular.module("template/pagination/pagination.html", []).run(["$templateCache", function($templateCache) {
+  $templateCache.put("template/pagination/pagination.html",
+    "<ul class=\"pagination\">\n" +
+    "  <li ng-if=\"::boundaryLinks\" ng-class=\"{disabled: noPrevious()||ngDisabled}\" class=\"pagination-first\"><a href ng-click=\"selectPage(1, $event)\">{{::getText('first')}}</a></li>\n" +
+    "  <li ng-if=\"::directionLinks\" ng-class=\"{disabled: noPrevious()||ngDisabled}\" class=\"pagination-prev\"><a href ng-click=\"selectPage(page - 1, $event)\">{{::getText('previous')}}</a></li>\n" +
+    "  <li ng-repeat=\"page in pages track by $index\" ng-class=\"{active: page.active,disabled: ngDisabled&&!page.active}\" class=\"pagination-page\"><a href ng-click=\"selectPage(page.number, $event)\">{{page.text}}</a></li>\n" +
+    "  <li ng-if=\"::directionLinks\" ng-class=\"{disabled: noNext()||ngDisabled}\" class=\"pagination-next\"><a href ng-click=\"selectPage(page + 1, $event)\">{{::getText('next')}}</a></li>\n" +
+    "  <li ng-if=\"::boundaryLinks\" ng-class=\"{disabled: noNext()||ngDisabled}\" class=\"pagination-last\"><a href ng-click=\"selectPage(totalPages, $event)\">{{::getText('last')}}</a></li>\n" +
+    "</ul>\n" +
+    "");
+}]);
+
+angular.module("template/tooltip/tooltip-html-popup.html", []).run(["$templateCache", function($templateCache) {
+  $templateCache.put("template/tooltip/tooltip-html-popup.html",
+    "<div class=\"tooltip\"\n" +
+    "  tooltip-animation-class=\"fade\"\n" +
+    "  tooltip-classes\n" +
+    "  ng-class=\"{ in: isOpen() }\">\n" +
+    "  <div class=\"tooltip-arrow\"></div>\n" +
+    "  <div class=\"tooltip-inner\" ng-bind-html=\"contentExp()\"></div>\n" +
+    "</div>\n" +
+    "");
+}]);
+
+angular.module("template/tooltip/tooltip-html-unsafe-popup.html", []).run(["$templateCache", function($templateCache) {
+  $templateCache.put("template/tooltip/tooltip-html-unsafe-popup.html",
+    "<div class=\"tooltip\"\n" +
+    "  tooltip-animation-class=\"fade\"\n" +
+    "  tooltip-classes\n" +
+    "  ng-class=\"{ in: isOpen() }\">\n" +
+    "  <div class=\"tooltip-arrow\"></div>\n" +
+    "  <div class=\"tooltip-inner\" bind-html-unsafe=\"content\"></div>\n" +
+    "</div>\n" +
+    "");
+}]);
+
+angular.module("template/tooltip/tooltip-popup.html", []).run(["$templateCache", function($templateCache) {
+  $templateCache.put("template/tooltip/tooltip-popup.html",
+    "<div class=\"tooltip\"\n" +
+    "  tooltip-animation-class=\"fade\"\n" +
+    "  tooltip-classes\n" +
+    "  ng-class=\"{ in: isOpen() }\">\n" +
+    "  <div class=\"tooltip-arrow\"></div>\n" +
+    "  <div class=\"tooltip-inner\" ng-bind=\"content\"></div>\n" +
+    "</div>\n" +
+    "");
+}]);
+
+angular.module("template/tooltip/tooltip-template-popup.html", []).run(["$templateCache", function($templateCache) {
+  $templateCache.put("template/tooltip/tooltip-template-popup.html",
+    "<div class=\"tooltip\"\n" +
+    "  tooltip-animation-class=\"fade\"\n" +
+    "  tooltip-classes\n" +
+    "  ng-class=\"{ in: isOpen() }\">\n" +
+    "  <div class=\"tooltip-arrow\"></div>\n" +
+    "  <div class=\"tooltip-inner\"\n" +
+    "    tooltip-template-transclude=\"contentExp()\"\n" +
+    "    tooltip-template-transclude-scope=\"originScope()\"></div>\n" +
+    "</div>\n" +
+    "");
+}]);
+
+angular.module("template/popover/popover-html.html", []).run(["$templateCache", function($templateCache) {
+  $templateCache.put("template/popover/popover-html.html",
+    "<div class=\"popover\"\n" +
+    "  tooltip-animation-class=\"fade\"\n" +
+    "  tooltip-classes\n" +
+    "  ng-class=\"{ in: isOpen() }\">\n" +
+    "  <div class=\"arrow\"></div>\n" +
+    "\n" +
+    "  <div class=\"popover-inner\">\n" +
+    "      <h3 class=\"popover-title\" ng-bind=\"title\" ng-if=\"title\"></h3>\n" +
+    "      <div class=\"popover-content\" ng-bind-html=\"contentExp()\"></div>\n" +
+    "  </div>\n" +
+    "</div>\n" +
+    "");
+}]);
+
+angular.module("template/popover/popover-template.html", []).run(["$templateCache", function($templateCache) {
+  $templateCache.put("template/popover/popover-template.html",
+    "<div class=\"popover\"\n" +
+    "  tooltip-animation-class=\"fade\"\n" +
+    "  tooltip-classes\n" +
+    "  ng-class=\"{ in: isOpen() }\">\n" +
+    "  <div class=\"arrow\"></div>\n" +
+    "\n" +
+    "  <div class=\"popover-inner\">\n" +
+    "      <h3 class=\"popover-title\" ng-bind=\"title\" ng-if=\"title\"></h3>\n" +
+    "      <div class=\"popover-content\"\n" +
+    "        tooltip-template-transclude=\"contentExp()\"\n" +
+    "        tooltip-template-transclude-scope=\"originScope()\"></div>\n" +
+    "  </div>\n" +
+    "</div>\n" +
+    "");
+}]);
+
+angular.module("template/popover/popover.html", []).run(["$templateCache", function($templateCache) {
+  $templateCache.put("template/popover/popover.html",
+    "<div class=\"popover\"\n" +
+    "  tooltip-animation-class=\"fade\"\n" +
+    "  tooltip-classes\n" +
+    "  ng-class=\"{ in: isOpen() }\">\n" +
+    "  <div class=\"arrow\"></div>\n" +
+    "\n" +
+    "  <div class=\"popover-inner\">\n" +
+    "      <h3 class=\"popover-title\" ng-bind=\"title\" ng-if=\"title\"></h3>\n" +
+    "      <div class=\"popover-content\" ng-bind=\"content\"></div>\n" +
+    "  </div>\n" +
+    "</div>\n" +
+    "");
+}]);
+
+angular.module("template/progressbar/bar.html", []).run(["$templateCache", function($templateCache) {
+  $templateCache.put("template/progressbar/bar.html",
+    "<div class=\"progress-bar\" ng-class=\"type && 'progress-bar-' + type\" role=\"progressbar\" aria-valuenow=\"{{value}}\" aria-valuemin=\"0\" aria-valuemax=\"{{max}}\" ng-style=\"{width: (percent < 100 ? percent : 100) + '%'}\" aria-valuetext=\"{{percent | number:0}}%\" style=\"min-width: 0;\" ng-transclude></div>\n" +
+    "");
+}]);
+
+angular.module("template/progressbar/progress.html", []).run(["$templateCache", function($templateCache) {
+  $templateCache.put("template/progressbar/progress.html",
+    "<div class=\"progress\" ng-transclude></div>");
+}]);
+
+angular.module("template/progressbar/progressbar.html", []).run(["$templateCache", function($templateCache) {
+  $templateCache.put("template/progressbar/progressbar.html",
+    "<div class=\"progress\">\n" +
+    "  <div class=\"progress-bar\" ng-class=\"type && 'progress-bar-' + type\" role=\"progressbar\" aria-valuenow=\"{{value}}\" aria-valuemin=\"0\" aria-valuemax=\"{{max}}\" ng-style=\"{width: (percent < 100 ? percent : 100) + '%'}\" aria-valuetext=\"{{percent | number:0}}%\" style=\"min-width: 0;\" ng-transclude></div>\n" +
+    "</div>\n" +
+    "");
+}]);
+
+angular.module("template/rating/rating.html", []).run(["$templateCache", function($templateCache) {
+  $templateCache.put("template/rating/rating.html",
+    "<span ng-mouseleave=\"reset()\" ng-keydown=\"onKeydown($event)\" tabindex=\"0\" role=\"slider\" aria-valuemin=\"0\" aria-valuemax=\"{{range.length}}\" aria-valuenow=\"{{value}}\">\n" +
+    "    <span ng-repeat-start=\"r in range track by $index\" class=\"sr-only\">({{ $index < value ? '*' : ' ' }})</span>\n" +
+    "    <i ng-repeat-end ng-mouseenter=\"enter($index + 1)\" ng-click=\"rate($index + 1)\" class=\"glyphicon\" ng-class=\"$index < value && (r.stateOn || 'glyphicon-star') || (r.stateOff || 'glyphicon-star-empty')\" ng-attr-title=\"{{r.title}}\" ></i>\n" +
+    "</span>\n" +
+    "");
+}]);
+
+angular.module("template/tabs/tab.html", []).run(["$templateCache", function($templateCache) {
+  $templateCache.put("template/tabs/tab.html",
+    "<li ng-class=\"{active: active, disabled: disabled}\">\n" +
+    "  <a href ng-click=\"select()\" tab-heading-transclude>{{heading}}</a>\n" +
+    "</li>\n" +
+    "");
+}]);
+
+angular.module("template/tabs/tabset.html", []).run(["$templateCache", function($templateCache) {
+  $templateCache.put("template/tabs/tabset.html",
+    "<div>\n" +
+    "  <ul class=\"nav nav-{{type || 'tabs'}}\" ng-class=\"{'nav-stacked': vertical, 'nav-justified': justified}\" ng-transclude></ul>\n" +
+    "  <div class=\"tab-content\">\n" +
+    "    <div class=\"tab-pane\" \n" +
+    "         ng-repeat=\"tab in tabs\" \n" +
+    "         ng-class=\"{active: tab.active}\"\n" +
+    "         tab-content-transclude=\"tab\">\n" +
+    "    </div>\n" +
+    "  </div>\n" +
+    "</div>\n" +
+    "");
+}]);
+
+angular.module("template/timepicker/timepicker.html", []).run(["$templateCache", function($templateCache) {
+  $templateCache.put("template/timepicker/timepicker.html",
+    "<table>\n" +
+    "  <tbody>\n" +
+    "    <tr class=\"text-center\" ng-show=\"::showSpinners\">\n" +
+    "      <td><a ng-click=\"incrementHours()\" ng-class=\"{disabled: noIncrementHours()}\" class=\"btn btn-link\"><span class=\"glyphicon glyphicon-chevron-up\"></span></a></td>\n" +
+    "      <td>&nbsp;</td>\n" +
+    "      <td><a ng-click=\"incrementMinutes()\" ng-class=\"{disabled: noIncrementMinutes()}\" class=\"btn btn-link\"><span class=\"glyphicon glyphicon-chevron-up\"></span></a></td>\n" +
+    "      <td ng-show=\"showMeridian\"></td>\n" +
+    "    </tr>\n" +
+    "    <tr>\n" +
+    "      <td class=\"form-group\" ng-class=\"{'has-error': invalidHours}\">\n" +
+    "        <input style=\"width:50px;\" type=\"text\" ng-model=\"hours\" ng-change=\"updateHours()\" class=\"form-control text-center\" ng-readonly=\"::readonlyInput\" maxlength=\"2\">\n" +
+    "      </td>\n" +
+    "      <td>:</td>\n" +
+    "      <td class=\"form-group\" ng-class=\"{'has-error': invalidMinutes}\">\n" +
+    "        <input style=\"width:50px;\" type=\"text\" ng-model=\"minutes\" ng-change=\"updateMinutes()\" class=\"form-control text-center\" ng-readonly=\"::readonlyInput\" maxlength=\"2\">\n" +
+    "      </td>\n" +
+    "      <td ng-show=\"showMeridian\"><button type=\"button\" ng-class=\"{disabled: noToggleMeridian()}\" class=\"btn btn-default text-center\" ng-click=\"toggleMeridian()\">{{meridian}}</button></td>\n" +
+    "    </tr>\n" +
+    "    <tr class=\"text-center\" ng-show=\"::showSpinners\">\n" +
+    "      <td><a ng-click=\"decrementHours()\" ng-class=\"{disabled: noDecrementHours()}\" class=\"btn btn-link\"><span class=\"glyphicon glyphicon-chevron-down\"></span></a></td>\n" +
+    "      <td>&nbsp;</td>\n" +
+    "      <td><a ng-click=\"decrementMinutes()\" ng-class=\"{disabled: noDecrementMinutes()}\" class=\"btn btn-link\"><span class=\"glyphicon glyphicon-chevron-down\"></span></a></td>\n" +
+    "      <td ng-show=\"showMeridian\"></td>\n" +
+    "    </tr>\n" +
+    "  </tbody>\n" +
+    "</table>\n" +
+    "");
+}]);
+
+angular.module("template/typeahead/typeahead-match.html", []).run(["$templateCache", function($templateCache) {
+  $templateCache.put("template/typeahead/typeahead-match.html",
+    "<a href tabindex=\"-1\" ng-bind-html=\"match.label | typeaheadHighlight:query\"></a>\n" +
+    "");
+}]);
+
+angular.module("template/typeahead/typeahead-popup.html", []).run(["$templateCache", function($templateCache) {
+  $templateCache.put("template/typeahead/typeahead-popup.html",
+    "<ul class=\"dropdown-menu\" ng-show=\"isOpen() && !moveInProgress\" ng-style=\"{top: position().top+'px', left: position().left+'px'}\" style=\"display: block;\" role=\"listbox\" aria-hidden=\"{{!isOpen()}}\">\n" +
+    "    <li ng-repeat=\"match in matches track by $index\" ng-class=\"{active: isActive($index) }\" ng-mouseenter=\"selectActive($index)\" ng-click=\"selectMatch($index)\" role=\"option\" id=\"{{::match.id}}\">\n" +
+    "        <div typeahead-match index=\"$index\" match=\"match\" query=\"query\" template-url=\"templateUrl\"></div>\n" +
+    "    </li>\n" +
+    "</ul>\n" +
+    "");
+}]);
+!angular.$$csp() && angular.element(document).find('head').prepend('<style type="text/css">.ng-animate.item:not(.left):not(.right){-webkit-transition:0s ease-in-out left;transition:0s ease-in-out left}</style>');
+// https://github.com/Gillardo/bootstrap-ui-datetime-picker
+// Version: 1.2.6
+// Released: 2015-10-21 
+angular.module("ui.bootstrap.datetimepicker",["ui.bootstrap.dateparser","ui.bootstrap.position"]).constant("uiDatetimePickerConfig",{dateFormat:"yyyy-MM-dd HH:mm",html5Types:{date:"yyyy-MM-dd","datetime-local":"yyyy-MM-ddTHH:mm:ss.sss",month:"yyyy-MM"},enableDate:!0,enableTime:!0,todayText:"Today",nowText:"Now",clearText:"Clear",closeText:"Done",dateText:"Date",timeText:"Time",closeOnDateSelection:!0,appendToBody:!1,showButtonBar:!0}).directive("datetimePicker",["$compile","$parse","$document","$timeout","$position","dateFilter","dateParser","uiDatetimePickerConfig","$rootScope",function(a,b,c,d,e,f,g,h,i){return{restrict:"A",require:"ngModel",scope:{isOpen:"=?",enableDate:"=?",enableTime:"=?",todayText:"@",nowText:"@",dateText:"@",timeText:"@",clearText:"@",closeText:"@",dateDisabled:"&"},link:function(j,k,l,m){function n(a){return a.replace(/([A-Z])/g,function(a){return"-"+a.toLowerCase()})}function o(a){if(angular.isNumber(a)&&(a=new Date(a)),a){if(angular.isDate(a)&&!isNaN(a))return a;if(angular.isString(a)){var b=g.parse(a,q,j.date);return isNaN(b)?null:b}return null}return null}function p(a,b){var c=a||b;if(!l.ngRequired&&!l.required&&!c)return!0;if(angular.isNumber(c)&&(c=new Date(c)),c){if(angular.isDate(c)&&!isNaN(c))return!0;if(angular.isDate(new Date(c))&&!isNaN(new Date(c).valueOf()))return!0;if(angular.isString(c)){var d=g.parse(c,q);return!isNaN(d)}return!1}return!0}var q=h.dateFormat,r=angular.isDefined(l.closeOnDateSelection)?j.$parent.$eval(l.closeOnDateSelection):h.closeOnDateSelection,s=angular.isDefined(l.datepickerAppendToBody)?j.$parent.$eval(l.datepickerAppendToBody):h.appendToBody;j.showButtonBar=angular.isDefined(l.showButtonBar)?j.$parent.$eval(l.showButtonBar):h.showButtonBar,j.enableDate=angular.isDefined(j.enableDate)?j.enableDate:h.enableDate,j.enableTime=angular.isDefined(j.enableTime)?j.enableTime:h.enableTime,j.showPicker=j.enableDate?"date":"time",j.getText=function(a){return j[a+"Text"]||h[a+"Text"]};var t=!1;h.html5Types[l.type]?(q=h.html5Types[l.type],t=!0):(q=l.datepickerPopup||h.dateFormat,l.$observe("datetimePicker",function(a){var b=a||h.dateFormat;if(b!==q&&(q=b,m.$modelValue=null,!q))throw new Error("datetimePicker must have a date format specified.")}));var u=angular.element('<div date-picker-wrap><div datepicker></div></div><div time-picker-wrap><div timepicker style="margin:0 auto"></div></div>');u.attr({"ng-model":"date","ng-change":"dateSelection(date)"});var v=angular.element(u.children()[0]);if(t&&"month"===l.type&&(v.attr("datepicker-mode",'"month"'),v.attr("min-mode","month")),l.datepickerOptions){var w=j.$parent.$eval(l.datepickerOptions);w&&w.initDate&&(j.initDate=w.initDate,v.attr("init-date","initDate"),delete w.initDate),angular.forEach(w,function(a,b){v.attr(n(b),a)})}var x=angular.element(u.children()[1]);if(l.timepickerOptions){var w=j.$parent.$eval(l.timepickerOptions);angular.forEach(w,function(a,b){x.attr(n(b),a)})}angular.isDefined(l.datepickerMode)||(l.datepickerMode="day"),j.watchData={},angular.forEach(["minMode","maxMode","minDate","maxDate","datepickerMode","initDate","shortcutPropagation"],function(a){if(l[a]){var c=b(l[a]);if(j.$parent.$watch(c,function(b){j.watchData[a]=b}),v.attr(n(a),"watchData."+a),"datepickerMode"===a){var d=c.assign;j.$watch("watchData."+a,function(a,b){angular.isFunction(d)&&a!==b&&d(j.$parent,a)})}}}),l.dateDisabled&&v.attr("date-disabled","dateDisabled({ date: date, mode: mode })"),t?m.$formatters.push(function(a){return j.date=a,a}):(m.$$parserName="datetime",m.$validators.datetime=p,m.$parsers.unshift(o),m.$formatters.push(function(a){return j.date=a,m.$isEmpty(a)?a:f(a,q)})),j.dateSelection=function(a){if(j.enableTime&&"time"===j.showPicker&&(a||null!=a)&&(angular.isDefined(j.date)&&null!=j.date||(j.date=new Date),a&&null!=a)){var b=new Date(j.date);b.setHours(a.getHours()),b.setMinutes(a.getMinutes()),b.setSeconds(a.getSeconds()),b.setMilliseconds(a.getMilliseconds()),a=b}angular.isDefined(a)&&(j.date=a);var b=j.date?f(j.date,q):null;k.val(b),m.$setViewValue(b),r&&"time"!=j.showPicker&&null!=b&&(j.enableTime?d(function(){j.showPicker="time"},0):j.close())},m.$viewChangeListeners.push(function(){j.date=g.parse(m.$viewValue,q,j.date)});var y=function(a){!j.isOpen||k[0].contains(a.target)||A[0].contains(a.target)||j.$apply(function(){j.close()})},z=function(a){27===a.which&&j.isOpen?(a.preventDefault(),a.stopPropagation(),j.$apply(function(){j.close()}),k[0].focus()):40!==a.which||j.isOpen||(a.preventDefault(),a.stopPropagation(),j.$apply(function(){j.isOpen=!0}))};k.bind("keydown",z),j.keydown=function(a){27===a.which&&(j.close(),k[0].focus())},j.$watch("isOpen",function(a){if(j.dropdownStyle={display:a?"block":"none"},a){var b=s?e.offset(k):e.position(k);j.dropdownStyle.top=s?b.top+k.prop("offsetHeight")+"px":void 0,j.dropdownStyle.left=b.left+"px",d(function(){j.$broadcast("datepicker.focus"),c.bind("click",y)},0,!1)}else c.unbind("click",y)}),j.isDisabled=function(a){return("today"===a||"now"===a)&&(a=new Date),l.dateDisabled?j.dateDisabled({date:a,mode:j.watchData.datepickerMode}):!1},j.select=function(a){var b=null;if("today"===a||"now"==a){var c=new Date;angular.isDate(j.date)?(b=new Date(j.date),b.setFullYear(c.getFullYear(),c.getMonth(),c.getDate()),b.setHours(c.getHours(),c.getMinutes(),c.getSeconds(),c.getMilliseconds())):b=c}j.dateSelection(b),"clear"==a&&j.close()},j.close=function(){j.isOpen=!1,j.enableDate&&j.enableTime&&(j.showPicker="date"),k[0].focus()},j.changePicker=function(a,b){a.preventDefault(),a.stopPropagation(),j.showPicker=b};var A=a(u)(j);u.remove(),s?c.find("body").append(A):k.after(A),j.$on("$destroy",function(){j.isOpen===!0&&(i.$$phase||j.$apply(function(){j.close()})),A.remove(),k.unbind("keydown",z),c.unbind("click",y)})}}}]).directive("datePickerWrap",function(){return{restrict:"EA",replace:!0,transclude:!0,templateUrl:"template/date-picker.html"}}).directive("timePickerWrap",function(){return{restrict:"EA",replace:!0,transclude:!0,templateUrl:"template/time-picker.html"}}),angular.module("ui.bootstrap.datetimepicker").run(["$templateCache",function(a){"use strict";a.put("template/date-picker.html",'<ul ng-if="isOpen && showPicker == \'date\'" class="dropdown-menu dropdown-menu-left datetime-picker-dropdown" ng-style=dropdownStyle style=left:inherit ng-keydown=keydown($event) ng-click=$event.stopPropagation()><li style="padding:0 5px 5px 5px" class=date-picker-menu><div ng-transclude></div></li><li ng-if=showButtonBar style=padding:5px><span class="btn-group pull-left" style=margin-right:10px><button type=button class="btn btn-sm btn-info" ng-click="select(\'today\')" ng-disabled="isDisabled(\'today\')">{{ getText(\'today\') }}</button> <button type=button class="btn btn-sm btn-danger" ng-click="select(\'clear\')">{{ getText(\'clear\') }}</button></span> <span class="btn-group pull-right"><button ng-if=enableTime type=button class="btn btn-sm btn-default" ng-click="changePicker($event, \'time\')">{{ getText(\'time\')}}</button> <button type=button class="btn btn-sm btn-success" ng-click=close()>{{ getText(\'close\') }}</button></span></li></ul>'),a.put("template/time-picker.html",'<ul ng-if="isOpen && showPicker == \'time\'" class="dropdown-menu dropdown-menu-left datetime-picker-dropdown" ng-style=dropdownStyle style=left:inherit ng-keydown=keydown($event) ng-click=$event.stopPropagation()><li style="padding:0 5px 5px 5px" class=time-picker-menu><div ng-transclude></div></li><li ng-if=showButtonBar style=padding:5px><span class="btn-group pull-left" style=margin-right:10px><button type=button class="btn btn-sm btn-info" ng-click="select(\'now\')" ng-disabled="isDisabled(\'now\')">{{ getText(\'now\') }}</button> <button type=button class="btn btn-sm btn-danger" ng-click="select(\'clear\')">{{ getText(\'clear\') }}</button></span> <span class="btn-group pull-right"><button ng-if=enableDate type=button class="btn btn-sm btn-default" ng-click="changePicker($event, \'date\')">{{ getText(\'date\')}}</button> <button type=button class="btn btn-sm btn-success" ng-click=close()>{{ getText(\'close\') }}</button></span></li></ul>')}]);
+/**
+ * @license
+ * lodash 3.10.1 (Custom Build) <https://lodash.com/>
+ * Build: `lodash modern -o ./lodash.js`
+ * Copyright 2012-2015 The Dojo Foundation <http://dojofoundation.org/>
+ * Based on Underscore.js 1.8.3 <http://underscorejs.org/LICENSE>
+ * Copyright 2009-2015 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
+ * Available under MIT license <https://lodash.com/license>
+ */
+;(function() {
+
+  /** Used as a safe reference for `undefined` in pre-ES5 environments. */
+  var undefined;
+
+  /** Used as the semantic version number. */
+  var VERSION = '3.10.1';
+
+  /** Used to compose bitmasks for wrapper metadata. */
+  var BIND_FLAG = 1,
+      BIND_KEY_FLAG = 2,
+      CURRY_BOUND_FLAG = 4,
+      CURRY_FLAG = 8,
+      CURRY_RIGHT_FLAG = 16,
+      PARTIAL_FLAG = 32,
+      PARTIAL_RIGHT_FLAG = 64,
+      ARY_FLAG = 128,
+      REARG_FLAG = 256;
+
+  /** Used as default options for `_.trunc`. */
+  var DEFAULT_TRUNC_LENGTH = 30,
+      DEFAULT_TRUNC_OMISSION = '...';
+
+  /** Used to detect when a function becomes hot. */
+  var HOT_COUNT = 150,
+      HOT_SPAN = 16;
+
+  /** Used as the size to enable large array optimizations. */
+  var LARGE_ARRAY_SIZE = 200;
+
+  /** Used to indicate the type of lazy iteratees. */
+  var LAZY_FILTER_FLAG = 1,
+      LAZY_MAP_FLAG = 2;
+
+  /** Used as the `TypeError` message for "Functions" methods. */
+  var FUNC_ERROR_TEXT = 'Expected a function';
+
+  /** Used as the internal argument placeholder. */
+  var PLACEHOLDER = '__lodash_placeholder__';
+
+  /** `Object#toString` result references. */
+  var argsTag = '[object Arguments]',
+      arrayTag = '[object Array]',
+      boolTag = '[object Boolean]',
+      dateTag = '[object Date]',
+      errorTag = '[object Error]',
+      funcTag = '[object Function]',
+      mapTag = '[object Map]',
+      numberTag = '[object Number]',
+      objectTag = '[object Object]',
+      regexpTag = '[object RegExp]',
+      setTag = '[object Set]',
+      stringTag = '[object String]',
+      weakMapTag = '[object WeakMap]';
+
+  var arrayBufferTag = '[object ArrayBuffer]',
+      float32Tag = '[object Float32Array]',
+      float64Tag = '[object Float64Array]',
+      int8Tag = '[object Int8Array]',
+      int16Tag = '[object Int16Array]',
+      int32Tag = '[object Int32Array]',
+      uint8Tag = '[object Uint8Array]',
+      uint8ClampedTag = '[object Uint8ClampedArray]',
+      uint16Tag = '[object Uint16Array]',
+      uint32Tag = '[object Uint32Array]';
+
+  /** Used to match empty string literals in compiled template source. */
+  var reEmptyStringLeading = /\b__p \+= '';/g,
+      reEmptyStringMiddle = /\b(__p \+=) '' \+/g,
+      reEmptyStringTrailing = /(__e\(.*?\)|\b__t\)) \+\n'';/g;
+
+  /** Used to match HTML entities and HTML characters. */
+  var reEscapedHtml = /&(?:amp|lt|gt|quot|#39|#96);/g,
+      reUnescapedHtml = /[&<>"'`]/g,
+      reHasEscapedHtml = RegExp(reEscapedHtml.source),
+      reHasUnescapedHtml = RegExp(reUnescapedHtml.source);
+
+  /** Used to match template delimiters. */
+  var reEscape = /<%-([\s\S]+?)%>/g,
+      reEvaluate = /<%([\s\S]+?)%>/g,
+      reInterpolate = /<%=([\s\S]+?)%>/g;
+
+  /** Used to match property names within property paths. */
+  var reIsDeepProp = /\.|\[(?:[^[\]]*|(["'])(?:(?!\1)[^\n\\]|\\.)*?\1)\]/,
+      reIsPlainProp = /^\w*$/,
+      rePropName = /[^.[\]]+|\[(?:(-?\d+(?:\.\d+)?)|(["'])((?:(?!\2)[^\n\\]|\\.)*?)\2)\]/g;
+
+  /**
+   * Used to match `RegExp` [syntax characters](http://ecma-international.org/ecma-262/6.0/#sec-patterns)
+   * and those outlined by [`EscapeRegExpPattern`](http://ecma-international.org/ecma-262/6.0/#sec-escaperegexppattern).
+   */
+  var reRegExpChars = /^[:!,]|[\\^$.*+?()[\]{}|\/]|(^[0-9a-fA-Fnrtuvx])|([\n\r\u2028\u2029])/g,
+      reHasRegExpChars = RegExp(reRegExpChars.source);
+
+  /** Used to match [combining diacritical marks](https://en.wikipedia.org/wiki/Combining_Diacritical_Marks). */
+  var reComboMark = /[\u0300-\u036f\ufe20-\ufe23]/g;
+
+  /** Used to match backslashes in property paths. */
+  var reEscapeChar = /\\(\\)?/g;
+
+  /** Used to match [ES template delimiters](http://ecma-international.org/ecma-262/6.0/#sec-template-literal-lexical-components). */
+  var reEsTemplate = /\$\{([^\\}]*(?:\\.[^\\}]*)*)\}/g;
+
+  /** Used to match `RegExp` flags from their coerced string values. */
+  var reFlags = /\w*$/;
+
+  /** Used to detect hexadecimal string values. */
+  var reHasHexPrefix = /^0[xX]/;
+
+  /** Used to detect host constructors (Safari > 5). */
+  var reIsHostCtor = /^\[object .+?Constructor\]$/;
+
+  /** Used to detect unsigned integer values. */
+  var reIsUint = /^\d+$/;
+
+  /** Used to match latin-1 supplementary letters (excluding mathematical operators). */
+  var reLatin1 = /[\xc0-\xd6\xd8-\xde\xdf-\xf6\xf8-\xff]/g;
+
+  /** Used to ensure capturing order of template delimiters. */
+  var reNoMatch = /($^)/;
+
+  /** Used to match unescaped characters in compiled string literals. */
+  var reUnescapedString = /['\n\r\u2028\u2029\\]/g;
+
+  /** Used to match words to create compound words. */
+  var reWords = (function() {
+    var upper = '[A-Z\\xc0-\\xd6\\xd8-\\xde]',
+        lower = '[a-z\\xdf-\\xf6\\xf8-\\xff]+';
+
+    return RegExp(upper + '+(?=' + upper + lower + ')|' + upper + '?' + lower + '|' + upper + '+|[0-9]+', 'g');
+  }());
+
+  /** Used to assign default `context` object properties. */
+  var contextProps = [
+    'Array', 'ArrayBuffer', 'Date', 'Error', 'Float32Array', 'Float64Array',
+    'Function', 'Int8Array', 'Int16Array', 'Int32Array', 'Math', 'Number',
+    'Object', 'RegExp', 'Set', 'String', '_', 'clearTimeout', 'isFinite',
+    'parseFloat', 'parseInt', 'setTimeout', 'TypeError', 'Uint8Array',
+    'Uint8ClampedArray', 'Uint16Array', 'Uint32Array', 'WeakMap'
+  ];
+
+  /** Used to make template sourceURLs easier to identify. */
+  var templateCounter = -1;
+
+  /** Used to identify `toStringTag` values of typed arrays. */
+  var typedArrayTags = {};
+  typedArrayTags[float32Tag] = typedArrayTags[float64Tag] =
+  typedArrayTags[int8Tag] = typedArrayTags[int16Tag] =
+  typedArrayTags[int32Tag] = typedArrayTags[uint8Tag] =
+  typedArrayTags[uint8ClampedTag] = typedArrayTags[uint16Tag] =
+  typedArrayTags[uint32Tag] = true;
+  typedArrayTags[argsTag] = typedArrayTags[arrayTag] =
+  typedArrayTags[arrayBufferTag] = typedArrayTags[boolTag] =
+  typedArrayTags[dateTag] = typedArrayTags[errorTag] =
+  typedArrayTags[funcTag] = typedArrayTags[mapTag] =
+  typedArrayTags[numberTag] = typedArrayTags[objectTag] =
+  typedArrayTags[regexpTag] = typedArrayTags[setTag] =
+  typedArrayTags[stringTag] = typedArrayTags[weakMapTag] = false;
+
+  /** Used to identify `toStringTag` values supported by `_.clone`. */
+  var cloneableTags = {};
+  cloneableTags[argsTag] = cloneableTags[arrayTag] =
+  cloneableTags[arrayBufferTag] = cloneableTags[boolTag] =
+  cloneableTags[dateTag] = cloneableTags[float32Tag] =
+  cloneableTags[float64Tag] = cloneableTags[int8Tag] =
+  cloneableTags[int16Tag] = cloneableTags[int32Tag] =
+  cloneableTags[numberTag] = cloneableTags[objectTag] =
+  cloneableTags[regexpTag] = cloneableTags[stringTag] =
+  cloneableTags[uint8Tag] = cloneableTags[uint8ClampedTag] =
+  cloneableTags[uint16Tag] = cloneableTags[uint32Tag] = true;
+  cloneableTags[errorTag] = cloneableTags[funcTag] =
+  cloneableTags[mapTag] = cloneableTags[setTag] =
+  cloneableTags[weakMapTag] = false;
+
+  /** Used to map latin-1 supplementary letters to basic latin letters. */
+  var deburredLetters = {
+    '\xc0': 'A',  '\xc1': 'A', '\xc2': 'A', '\xc3': 'A', '\xc4': 'A', '\xc5': 'A',
+    '\xe0': 'a',  '\xe1': 'a', '\xe2': 'a', '\xe3': 'a', '\xe4': 'a', '\xe5': 'a',
+    '\xc7': 'C',  '\xe7': 'c',
+    '\xd0': 'D',  '\xf0': 'd',
+    '\xc8': 'E',  '\xc9': 'E', '\xca': 'E', '\xcb': 'E',
+    '\xe8': 'e',  '\xe9': 'e', '\xea': 'e', '\xeb': 'e',
+    '\xcC': 'I',  '\xcd': 'I', '\xce': 'I', '\xcf': 'I',
+    '\xeC': 'i',  '\xed': 'i', '\xee': 'i', '\xef': 'i',
+    '\xd1': 'N',  '\xf1': 'n',
+    '\xd2': 'O',  '\xd3': 'O', '\xd4': 'O', '\xd5': 'O', '\xd6': 'O', '\xd8': 'O',
+    '\xf2': 'o',  '\xf3': 'o', '\xf4': 'o', '\xf5': 'o', '\xf6': 'o', '\xf8': 'o',
+    '\xd9': 'U',  '\xda': 'U', '\xdb': 'U', '\xdc': 'U',
+    '\xf9': 'u',  '\xfa': 'u', '\xfb': 'u', '\xfc': 'u',
+    '\xdd': 'Y',  '\xfd': 'y', '\xff': 'y',
+    '\xc6': 'Ae', '\xe6': 'ae',
+    '\xde': 'Th', '\xfe': 'th',
+    '\xdf': 'ss'
+  };
+
+  /** Used to map characters to HTML entities. */
+  var htmlEscapes = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+    '`': '&#96;'
+  };
+
+  /** Used to map HTML entities to characters. */
+  var htmlUnescapes = {
+    '&amp;': '&',
+    '&lt;': '<',
+    '&gt;': '>',
+    '&quot;': '"',
+    '&#39;': "'",
+    '&#96;': '`'
+  };
+
+  /** Used to determine if values are of the language type `Object`. */
+  var objectTypes = {
+    'function': true,
+    'object': true
+  };
+
+  /** Used to escape characters for inclusion in compiled regexes. */
+  var regexpEscapes = {
+    '0': 'x30', '1': 'x31', '2': 'x32', '3': 'x33', '4': 'x34',
+    '5': 'x35', '6': 'x36', '7': 'x37', '8': 'x38', '9': 'x39',
+    'A': 'x41', 'B': 'x42', 'C': 'x43', 'D': 'x44', 'E': 'x45', 'F': 'x46',
+    'a': 'x61', 'b': 'x62', 'c': 'x63', 'd': 'x64', 'e': 'x65', 'f': 'x66',
+    'n': 'x6e', 'r': 'x72', 't': 'x74', 'u': 'x75', 'v': 'x76', 'x': 'x78'
+  };
+
+  /** Used to escape characters for inclusion in compiled string literals. */
+  var stringEscapes = {
+    '\\': '\\',
+    "'": "'",
+    '\n': 'n',
+    '\r': 'r',
+    '\u2028': 'u2028',
+    '\u2029': 'u2029'
+  };
+
+  /** Detect free variable `exports`. */
+  var freeExports = objectTypes[typeof exports] && exports && !exports.nodeType && exports;
+
+  /** Detect free variable `module`. */
+  var freeModule = objectTypes[typeof module] && module && !module.nodeType && module;
+
+  /** Detect free variable `global` from Node.js. */
+  var freeGlobal = freeExports && freeModule && typeof global == 'object' && global && global.Object && global;
+
+  /** Detect free variable `self`. */
+  var freeSelf = objectTypes[typeof self] && self && self.Object && self;
+
+  /** Detect free variable `window`. */
+  var freeWindow = objectTypes[typeof window] && window && window.Object && window;
+
+  /** Detect the popular CommonJS extension `module.exports`. */
+  var moduleExports = freeModule && freeModule.exports === freeExports && freeExports;
+
+  /**
+   * Used as a reference to the global object.
+   *
+   * The `this` value is used if it's the global object to avoid Greasemonkey's
+   * restricted `window` object, otherwise the `window` object is used.
+   */
+  var root = freeGlobal || ((freeWindow !== (this && this.window)) && freeWindow) || freeSelf || this;
+
+  /*--------------------------------------------------------------------------*/
+
+  /**
+   * The base implementation of `compareAscending` which compares values and
+   * sorts them in ascending order without guaranteeing a stable sort.
+   *
+   * @private
+   * @param {*} value The value to compare.
+   * @param {*} other The other value to compare.
+   * @returns {number} Returns the sort order indicator for `value`.
+   */
+  function baseCompareAscending(value, other) {
+    if (value !== other) {
+      var valIsNull = value === null,
+          valIsUndef = value === undefined,
+          valIsReflexive = value === value;
+
+      var othIsNull = other === null,
+          othIsUndef = other === undefined,
+          othIsReflexive = other === other;
+
+      if ((value > other && !othIsNull) || !valIsReflexive ||
+          (valIsNull && !othIsUndef && othIsReflexive) ||
+          (valIsUndef && othIsReflexive)) {
+        return 1;
+      }
+      if ((value < other && !valIsNull) || !othIsReflexive ||
+          (othIsNull && !valIsUndef && valIsReflexive) ||
+          (othIsUndef && valIsReflexive)) {
+        return -1;
+      }
+    }
+    return 0;
+  }
+
+  /**
+   * The base implementation of `_.findIndex` and `_.findLastIndex` without
+   * support for callback shorthands and `this` binding.
+   *
+   * @private
+   * @param {Array} array The array to search.
+   * @param {Function} predicate The function invoked per iteration.
+   * @param {boolean} [fromRight] Specify iterating from right to left.
+   * @returns {number} Returns the index of the matched value, else `-1`.
+   */
+  function baseFindIndex(array, predicate, fromRight) {
+    var length = array.length,
+        index = fromRight ? length : -1;
+
+    while ((fromRight ? index-- : ++index < length)) {
+      if (predicate(array[index], index, array)) {
+        return index;
+      }
+    }
+    return -1;
+  }
+
+  /**
+   * The base implementation of `_.indexOf` without support for binary searches.
+   *
+   * @private
+   * @param {Array} array The array to search.
+   * @param {*} value The value to search for.
+   * @param {number} fromIndex The index to search from.
+   * @returns {number} Returns the index of the matched value, else `-1`.
+   */
+  function baseIndexOf(array, value, fromIndex) {
+    if (value !== value) {
+      return indexOfNaN(array, fromIndex);
+    }
+    var index = fromIndex - 1,
+        length = array.length;
+
+    while (++index < length) {
+      if (array[index] === value) {
+        return index;
+      }
+    }
+    return -1;
+  }
+
+  /**
+   * The base implementation of `_.isFunction` without support for environments
+   * with incorrect `typeof` results.
+   *
+   * @private
+   * @param {*} value The value to check.
+   * @returns {boolean} Returns `true` if `value` is correctly classified, else `false`.
+   */
+  function baseIsFunction(value) {
+    // Avoid a Chakra JIT bug in compatibility modes of IE 11.
+    // See https://github.com/jashkenas/underscore/issues/1621 for more details.
+    return typeof value == 'function' || false;
+  }
+
+  /**
+   * Converts `value` to a string if it's not one. An empty string is returned
+   * for `null` or `undefined` values.
+   *
+   * @private
+   * @param {*} value The value to process.
+   * @returns {string} Returns the string.
+   */
+  function baseToString(value) {
+    return value == null ? '' : (value + '');
+  }
+
+  /**
+   * Used by `_.trim` and `_.trimLeft` to get the index of the first character
+   * of `string` that is not found in `chars`.
+   *
+   * @private
+   * @param {string} string The string to inspect.
+   * @param {string} chars The characters to find.
+   * @returns {number} Returns the index of the first character not found in `chars`.
+   */
+  function charsLeftIndex(string, chars) {
+    var index = -1,
+        length = string.length;
+
+    while (++index < length && chars.indexOf(string.charAt(index)) > -1) {}
+    return index;
+  }
+
+  /**
+   * Used by `_.trim` and `_.trimRight` to get the index of the last character
+   * of `string` that is not found in `chars`.
+   *
+   * @private
+   * @param {string} string The string to inspect.
+   * @param {string} chars The characters to find.
+   * @returns {number} Returns the index of the last character not found in `chars`.
+   */
+  function charsRightIndex(string, chars) {
+    var index = string.length;
+
+    while (index-- && chars.indexOf(string.charAt(index)) > -1) {}
+    return index;
+  }
+
+  /**
+   * Used by `_.sortBy` to compare transformed elements of a collection and stable
+   * sort them in ascending order.
+   *
+   * @private
+   * @param {Object} object The object to compare.
+   * @param {Object} other The other object to compare.
+   * @returns {number} Returns the sort order indicator for `object`.
+   */
+  function compareAscending(object, other) {
+    return baseCompareAscending(object.criteria, other.criteria) || (object.index - other.index);
+  }
+
+  /**
+   * Used by `_.sortByOrder` to compare multiple properties of a value to another
+   * and stable sort them.
+   *
+   * If `orders` is unspecified, all valuess are sorted in ascending order. Otherwise,
+   * a value is sorted in ascending order if its corresponding order is "asc", and
+   * descending if "desc".
+   *
+   * @private
+   * @param {Object} object The object to compare.
+   * @param {Object} other The other object to compare.
+   * @param {boolean[]} orders The order to sort by for each property.
+   * @returns {number} Returns the sort order indicator for `object`.
+   */
+  function compareMultiple(object, other, orders) {
+    var index = -1,
+        objCriteria = object.criteria,
+        othCriteria = other.criteria,
+        length = objCriteria.length,
+        ordersLength = orders.length;
+
+    while (++index < length) {
+      var result = baseCompareAscending(objCriteria[index], othCriteria[index]);
+      if (result) {
+        if (index >= ordersLength) {
+          return result;
+        }
+        var order = orders[index];
+        return result * ((order === 'asc' || order === true) ? 1 : -1);
+      }
+    }
+    // Fixes an `Array#sort` bug in the JS engine embedded in Adobe applications
+    // that causes it, under certain circumstances, to provide the same value for
+    // `object` and `other`. See https://github.com/jashkenas/underscore/pull/1247
+    // for more details.
+    //
+    // This also ensures a stable sort in V8 and other engines.
+    // See https://code.google.com/p/v8/issues/detail?id=90 for more details.
+    return object.index - other.index;
+  }
+
+  /**
+   * Used by `_.deburr` to convert latin-1 supplementary letters to basic latin letters.
+   *
+   * @private
+   * @param {string} letter The matched letter to deburr.
+   * @returns {string} Returns the deburred letter.
+   */
+  function deburrLetter(letter) {
+    return deburredLetters[letter];
+  }
+
+  /**
+   * Used by `_.escape` to convert characters to HTML entities.
+   *
+   * @private
+   * @param {string} chr The matched character to escape.
+   * @returns {string} Returns the escaped character.
+   */
+  function escapeHtmlChar(chr) {
+    return htmlEscapes[chr];
+  }
+
+  /**
+   * Used by `_.escapeRegExp` to escape characters for inclusion in compiled regexes.
+   *
+   * @private
+   * @param {string} chr The matched character to escape.
+   * @param {string} leadingChar The capture group for a leading character.
+   * @param {string} whitespaceChar The capture group for a whitespace character.
+   * @returns {string} Returns the escaped character.
+   */
+  function escapeRegExpChar(chr, leadingChar, whitespaceChar) {
+    if (leadingChar) {
+      chr = regexpEscapes[chr];
+    } else if (whitespaceChar) {
+      chr = stringEscapes[chr];
+    }
+    return '\\' + chr;
+  }
+
+  /**
+   * Used by `_.template` to escape characters for inclusion in compiled string literals.
+   *
+   * @private
+   * @param {string} chr The matched character to escape.
+   * @returns {string} Returns the escaped character.
+   */
+  function escapeStringChar(chr) {
+    return '\\' + stringEscapes[chr];
+  }
+
+  /**
+   * Gets the index at which the first occurrence of `NaN` is found in `array`.
+   *
+   * @private
+   * @param {Array} array The array to search.
+   * @param {number} fromIndex The index to search from.
+   * @param {boolean} [fromRight] Specify iterating from right to left.
+   * @returns {number} Returns the index of the matched `NaN`, else `-1`.
+   */
+  function indexOfNaN(array, fromIndex, fromRight) {
+    var length = array.length,
+        index = fromIndex + (fromRight ? 0 : -1);
+
+    while ((fromRight ? index-- : ++index < length)) {
+      var other = array[index];
+      if (other !== other) {
+        return index;
+      }
+    }
+    return -1;
+  }
+
+  /**
+   * Checks if `value` is object-like.
+   *
+   * @private
+   * @param {*} value The value to check.
+   * @returns {boolean} Returns `true` if `value` is object-like, else `false`.
+   */
+  function isObjectLike(value) {
+    return !!value && typeof value == 'object';
+  }
+
+  /**
+   * Used by `trimmedLeftIndex` and `trimmedRightIndex` to determine if a
+   * character code is whitespace.
+   *
+   * @private
+   * @param {number} charCode The character code to inspect.
+   * @returns {boolean} Returns `true` if `charCode` is whitespace, else `false`.
+   */
+  function isSpace(charCode) {
+    return ((charCode <= 160 && (charCode >= 9 && charCode <= 13) || charCode == 32 || charCode == 160) || charCode == 5760 || charCode == 6158 ||
+      (charCode >= 8192 && (charCode <= 8202 || charCode == 8232 || charCode == 8233 || charCode == 8239 || charCode == 8287 || charCode == 12288 || charCode == 65279)));
+  }
+
+  /**
+   * Replaces all `placeholder` elements in `array` with an internal placeholder
+   * and returns an array of their indexes.
+   *
+   * @private
+   * @param {Array} array The array to modify.
+   * @param {*} placeholder The placeholder to replace.
+   * @returns {Array} Returns the new array of placeholder indexes.
+   */
+  function replaceHolders(array, placeholder) {
+    var index = -1,
+        length = array.length,
+        resIndex = -1,
+        result = [];
+
+    while (++index < length) {
+      if (array[index] === placeholder) {
+        array[index] = PLACEHOLDER;
+        result[++resIndex] = index;
+      }
+    }
+    return result;
+  }
+
+  /**
+   * An implementation of `_.uniq` optimized for sorted arrays without support
+   * for callback shorthands and `this` binding.
+   *
+   * @private
+   * @param {Array} array The array to inspect.
+   * @param {Function} [iteratee] The function invoked per iteration.
+   * @returns {Array} Returns the new duplicate free array.
+   */
+  function sortedUniq(array, iteratee) {
+    var seen,
+        index = -1,
+        length = array.length,
+        resIndex = -1,
+        result = [];
+
+    while (++index < length) {
+      var value = array[index],
+          computed = iteratee ? iteratee(value, index, array) : value;
+
+      if (!index || seen !== computed) {
+        seen = computed;
+        result[++resIndex] = value;
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Used by `_.trim` and `_.trimLeft` to get the index of the first non-whitespace
+   * character of `string`.
+   *
+   * @private
+   * @param {string} string The string to inspect.
+   * @returns {number} Returns the index of the first non-whitespace character.
+   */
+  function trimmedLeftIndex(string) {
+    var index = -1,
+        length = string.length;
+
+    while (++index < length && isSpace(string.charCodeAt(index))) {}
+    return index;
+  }
+
+  /**
+   * Used by `_.trim` and `_.trimRight` to get the index of the last non-whitespace
+   * character of `string`.
+   *
+   * @private
+   * @param {string} string The string to inspect.
+   * @returns {number} Returns the index of the last non-whitespace character.
+   */
+  function trimmedRightIndex(string) {
+    var index = string.length;
+
+    while (index-- && isSpace(string.charCodeAt(index))) {}
+    return index;
+  }
+
+  /**
+   * Used by `_.unescape` to convert HTML entities to characters.
+   *
+   * @private
+   * @param {string} chr The matched character to unescape.
+   * @returns {string} Returns the unescaped character.
+   */
+  function unescapeHtmlChar(chr) {
+    return htmlUnescapes[chr];
+  }
+
+  /*--------------------------------------------------------------------------*/
+
+  /**
+   * Create a new pristine `lodash` function using the given `context` object.
+   *
+   * @static
+   * @memberOf _
+   * @category Utility
+   * @param {Object} [context=root] The context object.
+   * @returns {Function} Returns a new `lodash` function.
+   * @example
+   *
+   * _.mixin({ 'foo': _.constant('foo') });
+   *
+   * var lodash = _.runInContext();
+   * lodash.mixin({ 'bar': lodash.constant('bar') });
+   *
+   * _.isFunction(_.foo);
+   * // => true
+   * _.isFunction(_.bar);
+   * // => false
+   *
+   * lodash.isFunction(lodash.foo);
+   * // => false
+   * lodash.isFunction(lodash.bar);
+   * // => true
+   *
+   * // using `context` to mock `Date#getTime` use in `_.now`
+   * var mock = _.runInContext({
+   *   'Date': function() {
+   *     return { 'getTime': getTimeMock };
+   *   }
+   * });
+   *
+   * // or creating a suped-up `defer` in Node.js
+   * var defer = _.runInContext({ 'setTimeout': setImmediate }).defer;
+   */
+  function runInContext(context) {
+    // Avoid issues with some ES3 environments that attempt to use values, named
+    // after built-in constructors like `Object`, for the creation of literals.
+    // ES5 clears this up by stating that literals must use built-in constructors.
+    // See https://es5.github.io/#x11.1.5 for more details.
+    context = context ? _.defaults(root.Object(), context, _.pick(root, contextProps)) : root;
+
+    /** Native constructor references. */
+    var Array = context.Array,
+        Date = context.Date,
+        Error = context.Error,
+        Function = context.Function,
+        Math = context.Math,
+        Number = context.Number,
+        Object = context.Object,
+        RegExp = context.RegExp,
+        String = context.String,
+        TypeError = context.TypeError;
+
+    /** Used for native method references. */
+    var arrayProto = Array.prototype,
+        objectProto = Object.prototype,
+        stringProto = String.prototype;
+
+    /** Used to resolve the decompiled source of functions. */
+    var fnToString = Function.prototype.toString;
+
+    /** Used to check objects for own properties. */
+    var hasOwnProperty = objectProto.hasOwnProperty;
+
+    /** Used to generate unique IDs. */
+    var idCounter = 0;
+
+    /**
+     * Used to resolve the [`toStringTag`](http://ecma-international.org/ecma-262/6.0/#sec-object.prototype.tostring)
+     * of values.
+     */
+    var objToString = objectProto.toString;
+
+    /** Used to restore the original `_` reference in `_.noConflict`. */
+    var oldDash = root._;
+
+    /** Used to detect if a method is native. */
+    var reIsNative = RegExp('^' +
+      fnToString.call(hasOwnProperty).replace(/[\\^$.*+?()[\]{}|]/g, '\\$&')
+      .replace(/hasOwnProperty|(function).*?(?=\\\()| for .+?(?=\\\])/g, '$1.*?') + '$'
+    );
+
+    /** Native method references. */
+    var ArrayBuffer = context.ArrayBuffer,
+        clearTimeout = context.clearTimeout,
+        parseFloat = context.parseFloat,
+        pow = Math.pow,
+        propertyIsEnumerable = objectProto.propertyIsEnumerable,
+        Set = getNative(context, 'Set'),
+        setTimeout = context.setTimeout,
+        splice = arrayProto.splice,
+        Uint8Array = context.Uint8Array,
+        WeakMap = getNative(context, 'WeakMap');
+
+    /* Native method references for those with the same name as other `lodash` methods. */
+    var nativeCeil = Math.ceil,
+        nativeCreate = getNative(Object, 'create'),
+        nativeFloor = Math.floor,
+        nativeIsArray = getNative(Array, 'isArray'),
+        nativeIsFinite = context.isFinite,
+        nativeKeys = getNative(Object, 'keys'),
+        nativeMax = Math.max,
+        nativeMin = Math.min,
+        nativeNow = getNative(Date, 'now'),
+        nativeParseInt = context.parseInt,
+        nativeRandom = Math.random;
+
+    /** Used as references for `-Infinity` and `Infinity`. */
+    var NEGATIVE_INFINITY = Number.NEGATIVE_INFINITY,
+        POSITIVE_INFINITY = Number.POSITIVE_INFINITY;
+
+    /** Used as references for the maximum length and index of an array. */
+    var MAX_ARRAY_LENGTH = 4294967295,
+        MAX_ARRAY_INDEX = MAX_ARRAY_LENGTH - 1,
+        HALF_MAX_ARRAY_LENGTH = MAX_ARRAY_LENGTH >>> 1;
+
+    /**
+     * Used as the [maximum length](http://ecma-international.org/ecma-262/6.0/#sec-number.max_safe_integer)
+     * of an array-like value.
+     */
+    var MAX_SAFE_INTEGER = 9007199254740991;
+
+    /** Used to store function metadata. */
+    var metaMap = WeakMap && new WeakMap;
+
+    /** Used to lookup unminified function names. */
+    var realNames = {};
+
+    /*------------------------------------------------------------------------*/
+
+    /**
+     * Creates a `lodash` object which wraps `value` to enable implicit chaining.
+     * Methods that operate on and return arrays, collections, and functions can
+     * be chained together. Methods that retrieve a single value or may return a
+     * primitive value will automatically end the chain returning the unwrapped
+     * value. Explicit chaining may be enabled using `_.chain`. The execution of
+     * chained methods is lazy, that is, execution is deferred until `_#value`
+     * is implicitly or explicitly called.
+     *
+     * Lazy evaluation allows several methods to support shortcut fusion. Shortcut
+     * fusion is an optimization strategy which merge iteratee calls; this can help
+     * to avoid the creation of intermediate data structures and greatly reduce the
+     * number of iteratee executions.
+     *
+     * Chaining is supported in custom builds as long as the `_#value` method is
+     * directly or indirectly included in the build.
+     *
+     * In addition to lodash methods, wrappers have `Array` and `String` methods.
+     *
+     * The wrapper `Array` methods are:
+     * `concat`, `join`, `pop`, `push`, `reverse`, `shift`, `slice`, `sort`,
+     * `splice`, and `unshift`
+     *
+     * The wrapper `String` methods are:
+     * `replace` and `split`
+     *
+     * The wrapper methods that support shortcut fusion are:
+     * `compact`, `drop`, `dropRight`, `dropRightWhile`, `dropWhile`, `filter`,
+     * `first`, `initial`, `last`, `map`, `pluck`, `reject`, `rest`, `reverse`,
+     * `slice`, `take`, `takeRight`, `takeRightWhile`, `takeWhile`, `toArray`,
+     * and `where`
+     *
+     * The chainable wrapper methods are:
+     * `after`, `ary`, `assign`, `at`, `before`, `bind`, `bindAll`, `bindKey`,
+     * `callback`, `chain`, `chunk`, `commit`, `compact`, `concat`, `constant`,
+     * `countBy`, `create`, `curry`, `debounce`, `defaults`, `defaultsDeep`,
+     * `defer`, `delay`, `difference`, `drop`, `dropRight`, `dropRightWhile`,
+     * `dropWhile`, `fill`, `filter`, `flatten`, `flattenDeep`, `flow`, `flowRight`,
+     * `forEach`, `forEachRight`, `forIn`, `forInRight`, `forOwn`, `forOwnRight`,
+     * `functions`, `groupBy`, `indexBy`, `initial`, `intersection`, `invert`,
+     * `invoke`, `keys`, `keysIn`, `map`, `mapKeys`, `mapValues`, `matches`,
+     * `matchesProperty`, `memoize`, `merge`, `method`, `methodOf`, `mixin`,
+     * `modArgs`, `negate`, `omit`, `once`, `pairs`, `partial`, `partialRight`,
+     * `partition`, `pick`, `plant`, `pluck`, `property`, `propertyOf`, `pull`,
+     * `pullAt`, `push`, `range`, `rearg`, `reject`, `remove`, `rest`, `restParam`,
+     * `reverse`, `set`, `shuffle`, `slice`, `sort`, `sortBy`, `sortByAll`,
+     * `sortByOrder`, `splice`, `spread`, `take`, `takeRight`, `takeRightWhile`,
+     * `takeWhile`, `tap`, `throttle`, `thru`, `times`, `toArray`, `toPlainObject`,
+     * `transform`, `union`, `uniq`, `unshift`, `unzip`, `unzipWith`, `values`,
+     * `valuesIn`, `where`, `without`, `wrap`, `xor`, `zip`, `zipObject`, `zipWith`
+     *
+     * The wrapper methods that are **not** chainable by default are:
+     * `add`, `attempt`, `camelCase`, `capitalize`, `ceil`, `clone`, `cloneDeep`,
+     * `deburr`, `endsWith`, `escape`, `escapeRegExp`, `every`, `find`, `findIndex`,
+     * `findKey`, `findLast`, `findLastIndex`, `findLastKey`, `findWhere`, `first`,
+     * `floor`, `get`, `gt`, `gte`, `has`, `identity`, `includes`, `indexOf`,
+     * `inRange`, `isArguments`, `isArray`, `isBoolean`, `isDate`, `isElement`,
+     * `isEmpty`, `isEqual`, `isError`, `isFinite` `isFunction`, `isMatch`,
+     * `isNative`, `isNaN`, `isNull`, `isNumber`, `isObject`, `isPlainObject`,
+     * `isRegExp`, `isString`, `isUndefined`, `isTypedArray`, `join`, `kebabCase`,
+     * `last`, `lastIndexOf`, `lt`, `lte`, `max`, `min`, `noConflict`, `noop`,
+     * `now`, `pad`, `padLeft`, `padRight`, `parseInt`, `pop`, `random`, `reduce`,
+     * `reduceRight`, `repeat`, `result`, `round`, `runInContext`, `shift`, `size`,
+     * `snakeCase`, `some`, `sortedIndex`, `sortedLastIndex`, `startCase`,
+     * `startsWith`, `sum`, `template`, `trim`, `trimLeft`, `trimRight`, `trunc`,
+     * `unescape`, `uniqueId`, `value`, and `words`
+     *
+     * The wrapper method `sample` will return a wrapped value when `n` is provided,
+     * otherwise an unwrapped value is returned.
+     *
+     * @name _
+     * @constructor
+     * @category Chain
+     * @param {*} value The value to wrap in a `lodash` instance.
+     * @returns {Object} Returns the new `lodash` wrapper instance.
+     * @example
+     *
+     * var wrapped = _([1, 2, 3]);
+     *
+     * // returns an unwrapped value
+     * wrapped.reduce(function(total, n) {
+     *   return total + n;
+     * });
+     * // => 6
+     *
+     * // returns a wrapped value
+     * var squares = wrapped.map(function(n) {
+     *   return n * n;
+     * });
+     *
+     * _.isArray(squares);
+     * // => false
+     *
+     * _.isArray(squares.value());
+     * // => true
+     */
+    function lodash(value) {
+      if (isObjectLike(value) && !isArray(value) && !(value instanceof LazyWrapper)) {
+        if (value instanceof LodashWrapper) {
+          return value;
+        }
+        if (hasOwnProperty.call(value, '__chain__') && hasOwnProperty.call(value, '__wrapped__')) {
+          return wrapperClone(value);
+        }
+      }
+      return new LodashWrapper(value);
+    }
+
+    /**
+     * The function whose prototype all chaining wrappers inherit from.
+     *
+     * @private
+     */
+    function baseLodash() {
+      // No operation performed.
+    }
+
+    /**
+     * The base constructor for creating `lodash` wrapper objects.
+     *
+     * @private
+     * @param {*} value The value to wrap.
+     * @param {boolean} [chainAll] Enable chaining for all wrapper methods.
+     * @param {Array} [actions=[]] Actions to peform to resolve the unwrapped value.
+     */
+    function LodashWrapper(value, chainAll, actions) {
+      this.__wrapped__ = value;
+      this.__actions__ = actions || [];
+      this.__chain__ = !!chainAll;
+    }
+
+    /**
+     * An object environment feature flags.
+     *
+     * @static
+     * @memberOf _
+     * @type Object
+     */
+    var support = lodash.support = {};
+
+    /**
+     * By default, the template delimiters used by lodash are like those in
+     * embedded Ruby (ERB). Change the following template settings to use
+     * alternative delimiters.
+     *
+     * @static
+     * @memberOf _
+     * @type Object
+     */
+    lodash.templateSettings = {
+
+      /**
+       * Used to detect `data` property values to be HTML-escaped.
+       *
+       * @memberOf _.templateSettings
+       * @type RegExp
+       */
+      'escape': reEscape,
+
+      /**
+       * Used to detect code to be evaluated.
+       *
+       * @memberOf _.templateSettings
+       * @type RegExp
+       */
+      'evaluate': reEvaluate,
+
+      /**
+       * Used to detect `data` property values to inject.
+       *
+       * @memberOf _.templateSettings
+       * @type RegExp
+       */
+      'interpolate': reInterpolate,
+
+      /**
+       * Used to reference the data object in the template text.
+       *
+       * @memberOf _.templateSettings
+       * @type string
+       */
+      'variable': '',
+
+      /**
+       * Used to import variables into the compiled template.
+       *
+       * @memberOf _.templateSettings
+       * @type Object
+       */
+      'imports': {
+
+        /**
+         * A reference to the `lodash` function.
+         *
+         * @memberOf _.templateSettings.imports
+         * @type Function
+         */
+        '_': lodash
+      }
+    };
+
+    /*------------------------------------------------------------------------*/
+
+    /**
+     * Creates a lazy wrapper object which wraps `value` to enable lazy evaluation.
+     *
+     * @private
+     * @param {*} value The value to wrap.
+     */
+    function LazyWrapper(value) {
+      this.__wrapped__ = value;
+      this.__actions__ = [];
+      this.__dir__ = 1;
+      this.__filtered__ = false;
+      this.__iteratees__ = [];
+      this.__takeCount__ = POSITIVE_INFINITY;
+      this.__views__ = [];
+    }
+
+    /**
+     * Creates a clone of the lazy wrapper object.
+     *
+     * @private
+     * @name clone
+     * @memberOf LazyWrapper
+     * @returns {Object} Returns the cloned `LazyWrapper` object.
+     */
+    function lazyClone() {
+      var result = new LazyWrapper(this.__wrapped__);
+      result.__actions__ = arrayCopy(this.__actions__);
+      result.__dir__ = this.__dir__;
+      result.__filtered__ = this.__filtered__;
+      result.__iteratees__ = arrayCopy(this.__iteratees__);
+      result.__takeCount__ = this.__takeCount__;
+      result.__views__ = arrayCopy(this.__views__);
+      return result;
+    }
+
+    /**
+     * Reverses the direction of lazy iteration.
+     *
+     * @private
+     * @name reverse
+     * @memberOf LazyWrapper
+     * @returns {Object} Returns the new reversed `LazyWrapper` object.
+     */
+    function lazyReverse() {
+      if (this.__filtered__) {
+        var result = new LazyWrapper(this);
+        result.__dir__ = -1;
+        result.__filtered__ = true;
+      } else {
+        result = this.clone();
+        result.__dir__ *= -1;
+      }
+      return result;
+    }
+
+    /**
+     * Extracts the unwrapped value from its lazy wrapper.
+     *
+     * @private
+     * @name value
+     * @memberOf LazyWrapper
+     * @returns {*} Returns the unwrapped value.
+     */
+    function lazyValue() {
+      var array = this.__wrapped__.value(),
+          dir = this.__dir__,
+          isArr = isArray(array),
+          isRight = dir < 0,
+          arrLength = isArr ? array.length : 0,
+          view = getView(0, arrLength, this.__views__),
+          start = view.start,
+          end = view.end,
+          length = end - start,
+          index = isRight ? end : (start - 1),
+          iteratees = this.__iteratees__,
+          iterLength = iteratees.length,
+          resIndex = 0,
+          takeCount = nativeMin(length, this.__takeCount__);
+
+      if (!isArr || arrLength < LARGE_ARRAY_SIZE || (arrLength == length && takeCount == length)) {
+        return baseWrapperValue(array, this.__actions__);
+      }
+      var result = [];
+
+      outer:
+      while (length-- && resIndex < takeCount) {
+        index += dir;
+
+        var iterIndex = -1,
+            value = array[index];
+
+        while (++iterIndex < iterLength) {
+          var data = iteratees[iterIndex],
+              iteratee = data.iteratee,
+              type = data.type,
+              computed = iteratee(value);
+
+          if (type == LAZY_MAP_FLAG) {
+            value = computed;
+          } else if (!computed) {
+            if (type == LAZY_FILTER_FLAG) {
+              continue outer;
+            } else {
+              break outer;
+            }
+          }
+        }
+        result[resIndex++] = value;
+      }
+      return result;
+    }
+
+    /*------------------------------------------------------------------------*/
+
+    /**
+     * Creates a cache object to store key/value pairs.
+     *
+     * @private
+     * @static
+     * @name Cache
+     * @memberOf _.memoize
+     */
+    function MapCache() {
+      this.__data__ = {};
+    }
+
+    /**
+     * Removes `key` and its value from the cache.
+     *
+     * @private
+     * @name delete
+     * @memberOf _.memoize.Cache
+     * @param {string} key The key of the value to remove.
+     * @returns {boolean} Returns `true` if the entry was removed successfully, else `false`.
+     */
+    function mapDelete(key) {
+      return this.has(key) && delete this.__data__[key];
+    }
+
+    /**
+     * Gets the cached value for `key`.
+     *
+     * @private
+     * @name get
+     * @memberOf _.memoize.Cache
+     * @param {string} key The key of the value to get.
+     * @returns {*} Returns the cached value.
+     */
+    function mapGet(key) {
+      return key == '__proto__' ? undefined : this.__data__[key];
+    }
+
+    /**
+     * Checks if a cached value for `key` exists.
+     *
+     * @private
+     * @name has
+     * @memberOf _.memoize.Cache
+     * @param {string} key The key of the entry to check.
+     * @returns {boolean} Returns `true` if an entry for `key` exists, else `false`.
+     */
+    function mapHas(key) {
+      return key != '__proto__' && hasOwnProperty.call(this.__data__, key);
+    }
+
+    /**
+     * Sets `value` to `key` of the cache.
+     *
+     * @private
+     * @name set
+     * @memberOf _.memoize.Cache
+     * @param {string} key The key of the value to cache.
+     * @param {*} value The value to cache.
+     * @returns {Object} Returns the cache object.
+     */
+    function mapSet(key, value) {
+      if (key != '__proto__') {
+        this.__data__[key] = value;
+      }
+      return this;
+    }
+
+    /*------------------------------------------------------------------------*/
+
+    /**
+     *
+     * Creates a cache object to store unique values.
+     *
+     * @private
+     * @param {Array} [values] The values to cache.
+     */
+    function SetCache(values) {
+      var length = values ? values.length : 0;
+
+      this.data = { 'hash': nativeCreate(null), 'set': new Set };
+      while (length--) {
+        this.push(values[length]);
+      }
+    }
+
+    /**
+     * Checks if `value` is in `cache` mimicking the return signature of
+     * `_.indexOf` by returning `0` if the value is found, else `-1`.
+     *
+     * @private
+     * @param {Object} cache The cache to search.
+     * @param {*} value The value to search for.
+     * @returns {number} Returns `0` if `value` is found, else `-1`.
+     */
+    function cacheIndexOf(cache, value) {
+      var data = cache.data,
+          result = (typeof value == 'string' || isObject(value)) ? data.set.has(value) : data.hash[value];
+
+      return result ? 0 : -1;
+    }
+
+    /**
+     * Adds `value` to the cache.
+     *
+     * @private
+     * @name push
+     * @memberOf SetCache
+     * @param {*} value The value to cache.
+     */
+    function cachePush(value) {
+      var data = this.data;
+      if (typeof value == 'string' || isObject(value)) {
+        data.set.add(value);
+      } else {
+        data.hash[value] = true;
+      }
+    }
+
+    /*------------------------------------------------------------------------*/
+
+    /**
+     * Creates a new array joining `array` with `other`.
+     *
+     * @private
+     * @param {Array} array The array to join.
+     * @param {Array} other The other array to join.
+     * @returns {Array} Returns the new concatenated array.
+     */
+    function arrayConcat(array, other) {
+      var index = -1,
+          length = array.length,
+          othIndex = -1,
+          othLength = other.length,
+          result = Array(length + othLength);
+
+      while (++index < length) {
+        result[index] = array[index];
+      }
+      while (++othIndex < othLength) {
+        result[index++] = other[othIndex];
+      }
+      return result;
+    }
+
+    /**
+     * Copies the values of `source` to `array`.
+     *
+     * @private
+     * @param {Array} source The array to copy values from.
+     * @param {Array} [array=[]] The array to copy values to.
+     * @returns {Array} Returns `array`.
+     */
+    function arrayCopy(source, array) {
+      var index = -1,
+          length = source.length;
+
+      array || (array = Array(length));
+      while (++index < length) {
+        array[index] = source[index];
+      }
+      return array;
+    }
+
+    /**
+     * A specialized version of `_.forEach` for arrays without support for callback
+     * shorthands and `this` binding.
+     *
+     * @private
+     * @param {Array} array The array to iterate over.
+     * @param {Function} iteratee The function invoked per iteration.
+     * @returns {Array} Returns `array`.
+     */
+    function arrayEach(array, iteratee) {
+      var index = -1,
+          length = array.length;
+
+      while (++index < length) {
+        if (iteratee(array[index], index, array) === false) {
+          break;
+        }
+      }
+      return array;
+    }
+
+    /**
+     * A specialized version of `_.forEachRight` for arrays without support for
+     * callback shorthands and `this` binding.
+     *
+     * @private
+     * @param {Array} array The array to iterate over.
+     * @param {Function} iteratee The function invoked per iteration.
+     * @returns {Array} Returns `array`.
+     */
+    function arrayEachRight(array, iteratee) {
+      var length = array.length;
+
+      while (length--) {
+        if (iteratee(array[length], length, array) === false) {
+          break;
+        }
+      }
+      return array;
+    }
+
+    /**
+     * A specialized version of `_.every` for arrays without support for callback
+     * shorthands and `this` binding.
+     *
+     * @private
+     * @param {Array} array The array to iterate over.
+     * @param {Function} predicate The function invoked per iteration.
+     * @returns {boolean} Returns `true` if all elements pass the predicate check,
+     *  else `false`.
+     */
+    function arrayEvery(array, predicate) {
+      var index = -1,
+          length = array.length;
+
+      while (++index < length) {
+        if (!predicate(array[index], index, array)) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    /**
+     * A specialized version of `baseExtremum` for arrays which invokes `iteratee`
+     * with one argument: (value).
+     *
+     * @private
+     * @param {Array} array The array to iterate over.
+     * @param {Function} iteratee The function invoked per iteration.
+     * @param {Function} comparator The function used to compare values.
+     * @param {*} exValue The initial extremum value.
+     * @returns {*} Returns the extremum value.
+     */
+    function arrayExtremum(array, iteratee, comparator, exValue) {
+      var index = -1,
+          length = array.length,
+          computed = exValue,
+          result = computed;
+
+      while (++index < length) {
+        var value = array[index],
+            current = +iteratee(value);
+
+        if (comparator(current, computed)) {
+          computed = current;
+          result = value;
+        }
+      }
+      return result;
+    }
+
+    /**
+     * A specialized version of `_.filter` for arrays without support for callback
+     * shorthands and `this` binding.
+     *
+     * @private
+     * @param {Array} array The array to iterate over.
+     * @param {Function} predicate The function invoked per iteration.
+     * @returns {Array} Returns the new filtered array.
+     */
+    function arrayFilter(array, predicate) {
+      var index = -1,
+          length = array.length,
+          resIndex = -1,
+          result = [];
+
+      while (++index < length) {
+        var value = array[index];
+        if (predicate(value, index, array)) {
+          result[++resIndex] = value;
+        }
+      }
+      return result;
+    }
+
+    /**
+     * A specialized version of `_.map` for arrays without support for callback
+     * shorthands and `this` binding.
+     *
+     * @private
+     * @param {Array} array The array to iterate over.
+     * @param {Function} iteratee The function invoked per iteration.
+     * @returns {Array} Returns the new mapped array.
+     */
+    function arrayMap(array, iteratee) {
+      var index = -1,
+          length = array.length,
+          result = Array(length);
+
+      while (++index < length) {
+        result[index] = iteratee(array[index], index, array);
+      }
+      return result;
+    }
+
+    /**
+     * Appends the elements of `values` to `array`.
+     *
+     * @private
+     * @param {Array} array The array to modify.
+     * @param {Array} values The values to append.
+     * @returns {Array} Returns `array`.
+     */
+    function arrayPush(array, values) {
+      var index = -1,
+          length = values.length,
+          offset = array.length;
+
+      while (++index < length) {
+        array[offset + index] = values[index];
+      }
+      return array;
+    }
+
+    /**
+     * A specialized version of `_.reduce` for arrays without support for callback
+     * shorthands and `this` binding.
+     *
+     * @private
+     * @param {Array} array The array to iterate over.
+     * @param {Function} iteratee The function invoked per iteration.
+     * @param {*} [accumulator] The initial value.
+     * @param {boolean} [initFromArray] Specify using the first element of `array`
+     *  as the initial value.
+     * @returns {*} Returns the accumulated value.
+     */
+    function arrayReduce(array, iteratee, accumulator, initFromArray) {
+      var index = -1,
+          length = array.length;
+
+      if (initFromArray && length) {
+        accumulator = array[++index];
+      }
+      while (++index < length) {
+        accumulator = iteratee(accumulator, array[index], index, array);
+      }
+      return accumulator;
+    }
+
+    /**
+     * A specialized version of `_.reduceRight` for arrays without support for
+     * callback shorthands and `this` binding.
+     *
+     * @private
+     * @param {Array} array The array to iterate over.
+     * @param {Function} iteratee The function invoked per iteration.
+     * @param {*} [accumulator] The initial value.
+     * @param {boolean} [initFromArray] Specify using the last element of `array`
+     *  as the initial value.
+     * @returns {*} Returns the accumulated value.
+     */
+    function arrayReduceRight(array, iteratee, accumulator, initFromArray) {
+      var length = array.length;
+      if (initFromArray && length) {
+        accumulator = array[--length];
+      }
+      while (length--) {
+        accumulator = iteratee(accumulator, array[length], length, array);
+      }
+      return accumulator;
+    }
+
+    /**
+     * A specialized version of `_.some` for arrays without support for callback
+     * shorthands and `this` binding.
+     *
+     * @private
+     * @param {Array} array The array to iterate over.
+     * @param {Function} predicate The function invoked per iteration.
+     * @returns {boolean} Returns `true` if any element passes the predicate check,
+     *  else `false`.
+     */
+    function arraySome(array, predicate) {
+      var index = -1,
+          length = array.length;
+
+      while (++index < length) {
+        if (predicate(array[index], index, array)) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    /**
+     * A specialized version of `_.sum` for arrays without support for callback
+     * shorthands and `this` binding..
+     *
+     * @private
+     * @param {Array} array The array to iterate over.
+     * @param {Function} iteratee The function invoked per iteration.
+     * @returns {number} Returns the sum.
+     */
+    function arraySum(array, iteratee) {
+      var length = array.length,
+          result = 0;
+
+      while (length--) {
+        result += +iteratee(array[length]) || 0;
+      }
+      return result;
+    }
+
+    /**
+     * Used by `_.defaults` to customize its `_.assign` use.
+     *
+     * @private
+     * @param {*} objectValue The destination object property value.
+     * @param {*} sourceValue The source object property value.
+     * @returns {*} Returns the value to assign to the destination object.
+     */
+    function assignDefaults(objectValue, sourceValue) {
+      return objectValue === undefined ? sourceValue : objectValue;
+    }
+
+    /**
+     * Used by `_.template` to customize its `_.assign` use.
+     *
+     * **Note:** This function is like `assignDefaults` except that it ignores
+     * inherited property values when checking if a property is `undefined`.
+     *
+     * @private
+     * @param {*} objectValue The destination object property value.
+     * @param {*} sourceValue The source object property value.
+     * @param {string} key The key associated with the object and source values.
+     * @param {Object} object The destination object.
+     * @returns {*} Returns the value to assign to the destination object.
+     */
+    function assignOwnDefaults(objectValue, sourceValue, key, object) {
+      return (objectValue === undefined || !hasOwnProperty.call(object, key))
+        ? sourceValue
+        : objectValue;
+    }
+
+    /**
+     * A specialized version of `_.assign` for customizing assigned values without
+     * support for argument juggling, multiple sources, and `this` binding `customizer`
+     * functions.
+     *
+     * @private
+     * @param {Object} object The destination object.
+     * @param {Object} source The source object.
+     * @param {Function} customizer The function to customize assigned values.
+     * @returns {Object} Returns `object`.
+     */
+    function assignWith(object, source, customizer) {
+      var index = -1,
+          props = keys(source),
+          length = props.length;
+
+      while (++index < length) {
+        var key = props[index],
+            value = object[key],
+            result = customizer(value, source[key], key, object, source);
+
+        if ((result === result ? (result !== value) : (value === value)) ||
+            (value === undefined && !(key in object))) {
+          object[key] = result;
+        }
+      }
+      return object;
+    }
+
+    /**
+     * The base implementation of `_.assign` without support for argument juggling,
+     * multiple sources, and `customizer` functions.
+     *
+     * @private
+     * @param {Object} object The destination object.
+     * @param {Object} source The source object.
+     * @returns {Object} Returns `object`.
+     */
+    function baseAssign(object, source) {
+      return source == null
+        ? object
+        : baseCopy(source, keys(source), object);
+    }
+
+    /**
+     * The base implementation of `_.at` without support for string collections
+     * and individual key arguments.
+     *
+     * @private
+     * @param {Array|Object} collection The collection to iterate over.
+     * @param {number[]|string[]} props The property names or indexes of elements to pick.
+     * @returns {Array} Returns the new array of picked elements.
+     */
+    function baseAt(collection, props) {
+      var index = -1,
+          isNil = collection == null,
+          isArr = !isNil && isArrayLike(collection),
+          length = isArr ? collection.length : 0,
+          propsLength = props.length,
+          result = Array(propsLength);
+
+      while(++index < propsLength) {
+        var key = props[index];
+        if (isArr) {
+          result[index] = isIndex(key, length) ? collection[key] : undefined;
+        } else {
+          result[index] = isNil ? undefined : collection[key];
+        }
+      }
+      return result;
+    }
+
+    /**
+     * Copies properties of `source` to `object`.
+     *
+     * @private
+     * @param {Object} source The object to copy properties from.
+     * @param {Array} props The property names to copy.
+     * @param {Object} [object={}] The object to copy properties to.
+     * @returns {Object} Returns `object`.
+     */
+    function baseCopy(source, props, object) {
+      object || (object = {});
+
+      var index = -1,
+          length = props.length;
+
+      while (++index < length) {
+        var key = props[index];
+        object[key] = source[key];
+      }
+      return object;
+    }
+
+    /**
+     * The base implementation of `_.callback` which supports specifying the
+     * number of arguments to provide to `func`.
+     *
+     * @private
+     * @param {*} [func=_.identity] The value to convert to a callback.
+     * @param {*} [thisArg] The `this` binding of `func`.
+     * @param {number} [argCount] The number of arguments to provide to `func`.
+     * @returns {Function} Returns the callback.
+     */
+    function baseCallback(func, thisArg, argCount) {
+      var type = typeof func;
+      if (type == 'function') {
+        return thisArg === undefined
+          ? func
+          : bindCallback(func, thisArg, argCount);
+      }
+      if (func == null) {
+        return identity;
+      }
+      if (type == 'object') {
+        return baseMatches(func);
+      }
+      return thisArg === undefined
+        ? property(func)
+        : baseMatchesProperty(func, thisArg);
+    }
+
+    /**
+     * The base implementation of `_.clone` without support for argument juggling
+     * and `this` binding `customizer` functions.
+     *
+     * @private
+     * @param {*} value The value to clone.
+     * @param {boolean} [isDeep] Specify a deep clone.
+     * @param {Function} [customizer] The function to customize cloning values.
+     * @param {string} [key] The key of `value`.
+     * @param {Object} [object] The object `value` belongs to.
+     * @param {Array} [stackA=[]] Tracks traversed source objects.
+     * @param {Array} [stackB=[]] Associates clones with source counterparts.
+     * @returns {*} Returns the cloned value.
+     */
+    function baseClone(value, isDeep, customizer, key, object, stackA, stackB) {
+      var result;
+      if (customizer) {
+        result = object ? customizer(value, key, object) : customizer(value);
+      }
+      if (result !== undefined) {
+        return result;
+      }
+      if (!isObject(value)) {
+        return value;
+      }
+      var isArr = isArray(value);
+      if (isArr) {
+        result = initCloneArray(value);
+        if (!isDeep) {
+          return arrayCopy(value, result);
+        }
+      } else {
+        var tag = objToString.call(value),
+            isFunc = tag == funcTag;
+
+        if (tag == objectTag || tag == argsTag || (isFunc && !object)) {
+          result = initCloneObject(isFunc ? {} : value);
+          if (!isDeep) {
+            return baseAssign(result, value);
+          }
+        } else {
+          return cloneableTags[tag]
+            ? initCloneByTag(value, tag, isDeep)
+            : (object ? value : {});
+        }
+      }
+      // Check for circular references and return its corresponding clone.
+      stackA || (stackA = []);
+      stackB || (stackB = []);
+
+      var length = stackA.length;
+      while (length--) {
+        if (stackA[length] == value) {
+          return stackB[length];
+        }
+      }
+      // Add the source value to the stack of traversed objects and associate it with its clone.
+      stackA.push(value);
+      stackB.push(result);
+
+      // Recursively populate clone (susceptible to call stack limits).
+      (isArr ? arrayEach : baseForOwn)(value, function(subValue, key) {
+        result[key] = baseClone(subValue, isDeep, customizer, key, value, stackA, stackB);
+      });
+      return result;
+    }
+
+    /**
+     * The base implementation of `_.create` without support for assigning
+     * properties to the created object.
+     *
+     * @private
+     * @param {Object} prototype The object to inherit from.
+     * @returns {Object} Returns the new object.
+     */
+    var baseCreate = (function() {
+      function object() {}
+      return function(prototype) {
+        if (isObject(prototype)) {
+          object.prototype = prototype;
+          var result = new object;
+          object.prototype = undefined;
+        }
+        return result || {};
+      };
+    }());
+
+    /**
+     * The base implementation of `_.delay` and `_.defer` which accepts an index
+     * of where to slice the arguments to provide to `func`.
+     *
+     * @private
+     * @param {Function} func The function to delay.
+     * @param {number} wait The number of milliseconds to delay invocation.
+     * @param {Object} args The arguments provide to `func`.
+     * @returns {number} Returns the timer id.
+     */
+    function baseDelay(func, wait, args) {
+      if (typeof func != 'function') {
+        throw new TypeError(FUNC_ERROR_TEXT);
+      }
+      return setTimeout(function() { func.apply(undefined, args); }, wait);
+    }
+
+    /**
+     * The base implementation of `_.difference` which accepts a single array
+     * of values to exclude.
+     *
+     * @private
+     * @param {Array} array The array to inspect.
+     * @param {Array} values The values to exclude.
+     * @returns {Array} Returns the new array of filtered values.
+     */
+    function baseDifference(array, values) {
+      var length = array ? array.length : 0,
+          result = [];
+
+      if (!length) {
+        return result;
+      }
+      var index = -1,
+          indexOf = getIndexOf(),
+          isCommon = indexOf === baseIndexOf,
+          cache = (isCommon && values.length >= LARGE_ARRAY_SIZE) ? createCache(values) : null,
+          valuesLength = values.length;
+
+      if (cache) {
+        indexOf = cacheIndexOf;
+        isCommon = false;
+        values = cache;
+      }
+      outer:
+      while (++index < length) {
+        var value = array[index];
+
+        if (isCommon && value === value) {
+          var valuesIndex = valuesLength;
+          while (valuesIndex--) {
+            if (values[valuesIndex] === value) {
+              continue outer;
+            }
+          }
+          result.push(value);
+        }
+        else if (indexOf(values, value, 0) < 0) {
+          result.push(value);
+        }
+      }
+      return result;
+    }
+
+    /**
+     * The base implementation of `_.forEach` without support for callback
+     * shorthands and `this` binding.
+     *
+     * @private
+     * @param {Array|Object|string} collection The collection to iterate over.
+     * @param {Function} iteratee The function invoked per iteration.
+     * @returns {Array|Object|string} Returns `collection`.
+     */
+    var baseEach = createBaseEach(baseForOwn);
+
+    /**
+     * The base implementation of `_.forEachRight` without support for callback
+     * shorthands and `this` binding.
+     *
+     * @private
+     * @param {Array|Object|string} collection The collection to iterate over.
+     * @param {Function} iteratee The function invoked per iteration.
+     * @returns {Array|Object|string} Returns `collection`.
+     */
+    var baseEachRight = createBaseEach(baseForOwnRight, true);
+
+    /**
+     * The base implementation of `_.every` without support for callback
+     * shorthands and `this` binding.
+     *
+     * @private
+     * @param {Array|Object|string} collection The collection to iterate over.
+     * @param {Function} predicate The function invoked per iteration.
+     * @returns {boolean} Returns `true` if all elements pass the predicate check,
+     *  else `false`
+     */
+    function baseEvery(collection, predicate) {
+      var result = true;
+      baseEach(collection, function(value, index, collection) {
+        result = !!predicate(value, index, collection);
+        return result;
+      });
+      return result;
+    }
+
+    /**
+     * Gets the extremum value of `collection` invoking `iteratee` for each value
+     * in `collection` to generate the criterion by which the value is ranked.
+     * The `iteratee` is invoked with three arguments: (value, index|key, collection).
+     *
+     * @private
+     * @param {Array|Object|string} collection The collection to iterate over.
+     * @param {Function} iteratee The function invoked per iteration.
+     * @param {Function} comparator The function used to compare values.
+     * @param {*} exValue The initial extremum value.
+     * @returns {*} Returns the extremum value.
+     */
+    function baseExtremum(collection, iteratee, comparator, exValue) {
+      var computed = exValue,
+          result = computed;
+
+      baseEach(collection, function(value, index, collection) {
+        var current = +iteratee(value, index, collection);
+        if (comparator(current, computed) || (current === exValue && current === result)) {
+          computed = current;
+          result = value;
+        }
+      });
+      return result;
+    }
+
+    /**
+     * The base implementation of `_.fill` without an iteratee call guard.
+     *
+     * @private
+     * @param {Array} array The array to fill.
+     * @param {*} value The value to fill `array` with.
+     * @param {number} [start=0] The start position.
+     * @param {number} [end=array.length] The end position.
+     * @returns {Array} Returns `array`.
+     */
+    function baseFill(array, value, start, end) {
+      var length = array.length;
+
+      start = start == null ? 0 : (+start || 0);
+      if (start < 0) {
+        start = -start > length ? 0 : (length + start);
+      }
+      end = (end === undefined || end > length) ? length : (+end || 0);
+      if (end < 0) {
+        end += length;
+      }
+      length = start > end ? 0 : (end >>> 0);
+      start >>>= 0;
+
+      while (start < length) {
+        array[start++] = value;
+      }
+      return array;
+    }
+
+    /**
+     * The base implementation of `_.filter` without support for callback
+     * shorthands and `this` binding.
+     *
+     * @private
+     * @param {Array|Object|string} collection The collection to iterate over.
+     * @param {Function} predicate The function invoked per iteration.
+     * @returns {Array} Returns the new filtered array.
+     */
+    function baseFilter(collection, predicate) {
+      var result = [];
+      baseEach(collection, function(value, index, collection) {
+        if (predicate(value, index, collection)) {
+          result.push(value);
+        }
+      });
+      return result;
+    }
+
+    /**
+     * The base implementation of `_.find`, `_.findLast`, `_.findKey`, and `_.findLastKey`,
+     * without support for callback shorthands and `this` binding, which iterates
+     * over `collection` using the provided `eachFunc`.
+     *
+     * @private
+     * @param {Array|Object|string} collection The collection to search.
+     * @param {Function} predicate The function invoked per iteration.
+     * @param {Function} eachFunc The function to iterate over `collection`.
+     * @param {boolean} [retKey] Specify returning the key of the found element
+     *  instead of the element itself.
+     * @returns {*} Returns the found element or its key, else `undefined`.
+     */
+    function baseFind(collection, predicate, eachFunc, retKey) {
+      var result;
+      eachFunc(collection, function(value, key, collection) {
+        if (predicate(value, key, collection)) {
+          result = retKey ? key : value;
+          return false;
+        }
+      });
+      return result;
+    }
+
+    /**
+     * The base implementation of `_.flatten` with added support for restricting
+     * flattening and specifying the start index.
+     *
+     * @private
+     * @param {Array} array The array to flatten.
+     * @param {boolean} [isDeep] Specify a deep flatten.
+     * @param {boolean} [isStrict] Restrict flattening to arrays-like objects.
+     * @param {Array} [result=[]] The initial result value.
+     * @returns {Array} Returns the new flattened array.
+     */
+    function baseFlatten(array, isDeep, isStrict, result) {
+      result || (result = []);
+
+      var index = -1,
+          length = array.length;
+
+      while (++index < length) {
+        var value = array[index];
+        if (isObjectLike(value) && isArrayLike(value) &&
+            (isStrict || isArray(value) || isArguments(value))) {
+          if (isDeep) {
+            // Recursively flatten arrays (susceptible to call stack limits).
+            baseFlatten(value, isDeep, isStrict, result);
+          } else {
+            arrayPush(result, value);
+          }
+        } else if (!isStrict) {
+          result[result.length] = value;
+        }
+      }
+      return result;
+    }
+
+    /**
+     * The base implementation of `baseForIn` and `baseForOwn` which iterates
+     * over `object` properties returned by `keysFunc` invoking `iteratee` for
+     * each property. Iteratee functions may exit iteration early by explicitly
+     * returning `false`.
+     *
+     * @private
+     * @param {Object} object The object to iterate over.
+     * @param {Function} iteratee The function invoked per iteration.
+     * @param {Function} keysFunc The function to get the keys of `object`.
+     * @returns {Object} Returns `object`.
+     */
+    var baseFor = createBaseFor();
+
+    /**
+     * This function is like `baseFor` except that it iterates over properties
+     * in the opposite order.
+     *
+     * @private
+     * @param {Object} object The object to iterate over.
+     * @param {Function} iteratee The function invoked per iteration.
+     * @param {Function} keysFunc The function to get the keys of `object`.
+     * @returns {Object} Returns `object`.
+     */
+    var baseForRight = createBaseFor(true);
+
+    /**
+     * The base implementation of `_.forIn` without support for callback
+     * shorthands and `this` binding.
+     *
+     * @private
+     * @param {Object} object The object to iterate over.
+     * @param {Function} iteratee The function invoked per iteration.
+     * @returns {Object} Returns `object`.
+     */
+    function baseForIn(object, iteratee) {
+      return baseFor(object, iteratee, keysIn);
+    }
+
+    /**
+     * The base implementation of `_.forOwn` without support for callback
+     * shorthands and `this` binding.
+     *
+     * @private
+     * @param {Object} object The object to iterate over.
+     * @param {Function} iteratee The function invoked per iteration.
+     * @returns {Object} Returns `object`.
+     */
+    function baseForOwn(object, iteratee) {
+      return baseFor(object, iteratee, keys);
+    }
+
+    /**
+     * The base implementation of `_.forOwnRight` without support for callback
+     * shorthands and `this` binding.
+     *
+     * @private
+     * @param {Object} object The object to iterate over.
+     * @param {Function} iteratee The function invoked per iteration.
+     * @returns {Object} Returns `object`.
+     */
+    function baseForOwnRight(object, iteratee) {
+      return baseForRight(object, iteratee, keys);
+    }
+
+    /**
+     * The base implementation of `_.functions` which creates an array of
+     * `object` function property names filtered from those provided.
+     *
+     * @private
+     * @param {Object} object The object to inspect.
+     * @param {Array} props The property names to filter.
+     * @returns {Array} Returns the new array of filtered property names.
+     */
+    function baseFunctions(object, props) {
+      var index = -1,
+          length = props.length,
+          resIndex = -1,
+          result = [];
+
+      while (++index < length) {
+        var key = props[index];
+        if (isFunction(object[key])) {
+          result[++resIndex] = key;
+        }
+      }
+      return result;
+    }
+
+    /**
+     * The base implementation of `get` without support for string paths
+     * and default values.
+     *
+     * @private
+     * @param {Object} object The object to query.
+     * @param {Array} path The path of the property to get.
+     * @param {string} [pathKey] The key representation of path.
+     * @returns {*} Returns the resolved value.
+     */
+    function baseGet(object, path, pathKey) {
+      if (object == null) {
+        return;
+      }
+      if (pathKey !== undefined && pathKey in toObject(object)) {
+        path = [pathKey];
+      }
+      var index = 0,
+          length = path.length;
+
+      while (object != null && index < length) {
+        object = object[path[index++]];
+      }
+      return (index && index == length) ? object : undefined;
+    }
+
+    /**
+     * The base implementation of `_.isEqual` without support for `this` binding
+     * `customizer` functions.
+     *
+     * @private
+     * @param {*} value The value to compare.
+     * @param {*} other The other value to compare.
+     * @param {Function} [customizer] The function to customize comparing values.
+     * @param {boolean} [isLoose] Specify performing partial comparisons.
+     * @param {Array} [stackA] Tracks traversed `value` objects.
+     * @param {Array} [stackB] Tracks traversed `other` objects.
+     * @returns {boolean} Returns `true` if the values are equivalent, else `false`.
+     */
+    function baseIsEqual(value, other, customizer, isLoose, stackA, stackB) {
+      if (value === other) {
+        return true;
+      }
+      if (value == null || other == null || (!isObject(value) && !isObjectLike(other))) {
+        return value !== value && other !== other;
+      }
+      return baseIsEqualDeep(value, other, baseIsEqual, customizer, isLoose, stackA, stackB);
+    }
+
+    /**
+     * A specialized version of `baseIsEqual` for arrays and objects which performs
+     * deep comparisons and tracks traversed objects enabling objects with circular
+     * references to be compared.
+     *
+     * @private
+     * @param {Object} object The object to compare.
+     * @param {Object} other The other object to compare.
+     * @param {Function} equalFunc The function to determine equivalents of values.
+     * @param {Function} [customizer] The function to customize comparing objects.
+     * @param {boolean} [isLoose] Specify performing partial comparisons.
+     * @param {Array} [stackA=[]] Tracks traversed `value` objects.
+     * @param {Array} [stackB=[]] Tracks traversed `other` objects.
+     * @returns {boolean} Returns `true` if the objects are equivalent, else `false`.
+     */
+    function baseIsEqualDeep(object, other, equalFunc, customizer, isLoose, stackA, stackB) {
+      var objIsArr = isArray(object),
+          othIsArr = isArray(other),
+          objTag = arrayTag,
+          othTag = arrayTag;
+
+      if (!objIsArr) {
+        objTag = objToString.call(object);
+        if (objTag == argsTag) {
+          objTag = objectTag;
+        } else if (objTag != objectTag) {
+          objIsArr = isTypedArray(object);
+        }
+      }
+      if (!othIsArr) {
+        othTag = objToString.call(other);
+        if (othTag == argsTag) {
+          othTag = objectTag;
+        } else if (othTag != objectTag) {
+          othIsArr = isTypedArray(other);
+        }
+      }
+      var objIsObj = objTag == objectTag,
+          othIsObj = othTag == objectTag,
+          isSameTag = objTag == othTag;
+
+      if (isSameTag && !(objIsArr || objIsObj)) {
+        return equalByTag(object, other, objTag);
+      }
+      if (!isLoose) {
+        var objIsWrapped = objIsObj && hasOwnProperty.call(object, '__wrapped__'),
+            othIsWrapped = othIsObj && hasOwnProperty.call(other, '__wrapped__');
+
+        if (objIsWrapped || othIsWrapped) {
+          return equalFunc(objIsWrapped ? object.value() : object, othIsWrapped ? other.value() : other, customizer, isLoose, stackA, stackB);
+        }
+      }
+      if (!isSameTag) {
+        return false;
+      }
+      // Assume cyclic values are equal.
+      // For more information on detecting circular references see https://es5.github.io/#JO.
+      stackA || (stackA = []);
+      stackB || (stackB = []);
+
+      var length = stackA.length;
+      while (length--) {
+        if (stackA[length] == object) {
+          return stackB[length] == other;
+        }
+      }
+      // Add `object` and `other` to the stack of traversed objects.
+      stackA.push(object);
+      stackB.push(other);
+
+      var result = (objIsArr ? equalArrays : equalObjects)(object, other, equalFunc, customizer, isLoose, stackA, stackB);
+
+      stackA.pop();
+      stackB.pop();
+
+      return result;
+    }
+
+    /**
+     * The base implementation of `_.isMatch` without support for callback
+     * shorthands and `this` binding.
+     *
+     * @private
+     * @param {Object} object The object to inspect.
+     * @param {Array} matchData The propery names, values, and compare flags to match.
+     * @param {Function} [customizer] The function to customize comparing objects.
+     * @returns {boolean} Returns `true` if `object` is a match, else `false`.
+     */
+    function baseIsMatch(object, matchData, customizer) {
+      var index = matchData.length,
+          length = index,
+          noCustomizer = !customizer;
+
+      if (object == null) {
+        return !length;
+      }
+      object = toObject(object);
+      while (index--) {
+        var data = matchData[index];
+        if ((noCustomizer && data[2])
+              ? data[1] !== object[data[0]]
+              : !(data[0] in object)
+            ) {
+          return false;
+        }
+      }
+      while (++index < length) {
+        data = matchData[index];
+        var key = data[0],
+            objValue = object[key],
+            srcValue = data[1];
+
+        if (noCustomizer && data[2]) {
+          if (objValue === undefined && !(key in object)) {
+            return false;
+          }
+        } else {
+          var result = customizer ? customizer(objValue, srcValue, key) : undefined;
+          if (!(result === undefined ? baseIsEqual(srcValue, objValue, customizer, true) : result)) {
+            return false;
+          }
+        }
+      }
+      return true;
+    }
+
+    /**
+     * The base implementation of `_.map` without support for callback shorthands
+     * and `this` binding.
+     *
+     * @private
+     * @param {Array|Object|string} collection The collection to iterate over.
+     * @param {Function} iteratee The function invoked per iteration.
+     * @returns {Array} Returns the new mapped array.
+     */
+    function baseMap(collection, iteratee) {
+      var index = -1,
+          result = isArrayLike(collection) ? Array(collection.length) : [];
+
+      baseEach(collection, function(value, key, collection) {
+        result[++index] = iteratee(value, key, collection);
+      });
+      return result;
+    }
+
+    /**
+     * The base implementation of `_.matches` which does not clone `source`.
+     *
+     * @private
+     * @param {Object} source The object of property values to match.
+     * @returns {Function} Returns the new function.
+     */
+    function baseMatches(source) {
+      var matchData = getMatchData(source);
+      if (matchData.length == 1 && matchData[0][2]) {
+        var key = matchData[0][0],
+            value = matchData[0][1];
+
+        return function(object) {
+          if (object == null) {
+            return false;
+          }
+          return object[key] === value && (value !== undefined || (key in toObject(object)));
+        };
+      }
+      return function(object) {
+        return baseIsMatch(object, matchData);
+      };
+    }
+
+    /**
+     * The base implementation of `_.matchesProperty` which does not clone `srcValue`.
+     *
+     * @private
+     * @param {string} path The path of the property to get.
+     * @param {*} srcValue The value to compare.
+     * @returns {Function} Returns the new function.
+     */
+    function baseMatchesProperty(path, srcValue) {
+      var isArr = isArray(path),
+          isCommon = isKey(path) && isStrictComparable(srcValue),
+          pathKey = (path + '');
+
+      path = toPath(path);
+      return function(object) {
+        if (object == null) {
+          return false;
+        }
+        var key = pathKey;
+        object = toObject(object);
+        if ((isArr || !isCommon) && !(key in object)) {
+          object = path.length == 1 ? object : baseGet(object, baseSlice(path, 0, -1));
+          if (object == null) {
+            return false;
+          }
+          key = last(path);
+          object = toObject(object);
+        }
+        return object[key] === srcValue
+          ? (srcValue !== undefined || (key in object))
+          : baseIsEqual(srcValue, object[key], undefined, true);
+      };
+    }
+
+    /**
+     * The base implementation of `_.merge` without support for argument juggling,
+     * multiple sources, and `this` binding `customizer` functions.
+     *
+     * @private
+     * @param {Object} object The destination object.
+     * @param {Object} source The source object.
+     * @param {Function} [customizer] The function to customize merged values.
+     * @param {Array} [stackA=[]] Tracks traversed source objects.
+     * @param {Array} [stackB=[]] Associates values with source counterparts.
+     * @returns {Object} Returns `object`.
+     */
+    function baseMerge(object, source, customizer, stackA, stackB) {
+      if (!isObject(object)) {
+        return object;
+      }
+      var isSrcArr = isArrayLike(source) && (isArray(source) || isTypedArray(source)),
+          props = isSrcArr ? undefined : keys(source);
+
+      arrayEach(props || source, function(srcValue, key) {
+        if (props) {
+          key = srcValue;
+          srcValue = source[key];
+        }
+        if (isObjectLike(srcValue)) {
+          stackA || (stackA = []);
+          stackB || (stackB = []);
+          baseMergeDeep(object, source, key, baseMerge, customizer, stackA, stackB);
+        }
+        else {
+          var value = object[key],
+              result = customizer ? customizer(value, srcValue, key, object, source) : undefined,
+              isCommon = result === undefined;
+
+          if (isCommon) {
+            result = srcValue;
+          }
+          if ((result !== undefined || (isSrcArr && !(key in object))) &&
+              (isCommon || (result === result ? (result !== value) : (value === value)))) {
+            object[key] = result;
+          }
+        }
+      });
+      return object;
+    }
+
+    /**
+     * A specialized version of `baseMerge` for arrays and objects which performs
+     * deep merges and tracks traversed objects enabling objects with circular
+     * references to be merged.
+     *
+     * @private
+     * @param {Object} object The destination object.
+     * @param {Object} source The source object.
+     * @param {string} key The key of the value to merge.
+     * @param {Function} mergeFunc The function to merge values.
+     * @param {Function} [customizer] The function to customize merged values.
+     * @param {Array} [stackA=[]] Tracks traversed source objects.
+     * @param {Array} [stackB=[]] Associates values with source counterparts.
+     * @returns {boolean} Returns `true` if the objects are equivalent, else `false`.
+     */
+    function baseMergeDeep(object, source, key, mergeFunc, customizer, stackA, stackB) {
+      var length = stackA.length,
+          srcValue = source[key];
+
+      while (length--) {
+        if (stackA[length] == srcValue) {
+          object[key] = stackB[length];
+          return;
+        }
+      }
+      var value = object[key],
+          result = customizer ? customizer(value, srcValue, key, object, source) : undefined,
+          isCommon = result === undefined;
+
+      if (isCommon) {
+        result = srcValue;
+        if (isArrayLike(srcValue) && (isArray(srcValue) || isTypedArray(srcValue))) {
+          result = isArray(value)
+            ? value
+            : (isArrayLike(value) ? arrayCopy(value) : []);
+        }
+        else if (isPlainObject(srcValue) || isArguments(srcValue)) {
+          result = isArguments(value)
+            ? toPlainObject(value)
+            : (isPlainObject(value) ? value : {});
+        }
+        else {
+          isCommon = false;
+        }
+      }
+      // Add the source value to the stack of traversed objects and associate
+      // it with its merged value.
+      stackA.push(srcValue);
+      stackB.push(result);
+
+      if (isCommon) {
+        // Recursively merge objects and arrays (susceptible to call stack limits).
+        object[key] = mergeFunc(result, srcValue, customizer, stackA, stackB);
+      } else if (result === result ? (result !== value) : (value === value)) {
+        object[key] = result;
+      }
+    }
+
+    /**
+     * The base implementation of `_.property` without support for deep paths.
+     *
+     * @private
+     * @param {string} key The key of the property to get.
+     * @returns {Function} Returns the new function.
+     */
+    function baseProperty(key) {
+      return function(object) {
+        return object == null ? undefined : object[key];
+      };
+    }
+
+    /**
+     * A specialized version of `baseProperty` which supports deep paths.
+     *
+     * @private
+     * @param {Array|string} path The path of the property to get.
+     * @returns {Function} Returns the new function.
+     */
+    function basePropertyDeep(path) {
+      var pathKey = (path + '');
+      path = toPath(path);
+      return function(object) {
+        return baseGet(object, path, pathKey);
+      };
+    }
+
+    /**
+     * The base implementation of `_.pullAt` without support for individual
+     * index arguments and capturing the removed elements.
+     *
+     * @private
+     * @param {Array} array The array to modify.
+     * @param {number[]} indexes The indexes of elements to remove.
+     * @returns {Array} Returns `array`.
+     */
+    function basePullAt(array, indexes) {
+      var length = array ? indexes.length : 0;
+      while (length--) {
+        var index = indexes[length];
+        if (index != previous && isIndex(index)) {
+          var previous = index;
+          splice.call(array, index, 1);
+        }
+      }
+      return array;
+    }
+
+    /**
+     * The base implementation of `_.random` without support for argument juggling
+     * and returning floating-point numbers.
+     *
+     * @private
+     * @param {number} min The minimum possible value.
+     * @param {number} max The maximum possible value.
+     * @returns {number} Returns the random number.
+     */
+    function baseRandom(min, max) {
+      return min + nativeFloor(nativeRandom() * (max - min + 1));
+    }
+
+    /**
+     * The base implementation of `_.reduce` and `_.reduceRight` without support
+     * for callback shorthands and `this` binding, which iterates over `collection`
+     * using the provided `eachFunc`.
+     *
+     * @private
+     * @param {Array|Object|string} collection The collection to iterate over.
+     * @param {Function} iteratee The function invoked per iteration.
+     * @param {*} accumulator The initial value.
+     * @param {boolean} initFromCollection Specify using the first or last element
+     *  of `collection` as the initial value.
+     * @param {Function} eachFunc The function to iterate over `collection`.
+     * @returns {*} Returns the accumulated value.
+     */
+    function baseReduce(collection, iteratee, accumulator, initFromCollection, eachFunc) {
+      eachFunc(collection, function(value, index, collection) {
+        accumulator = initFromCollection
+          ? (initFromCollection = false, value)
+          : iteratee(accumulator, value, index, collection);
+      });
+      return accumulator;
+    }
+
+    /**
+     * The base implementation of `setData` without support for hot loop detection.
+     *
+     * @private
+     * @param {Function} func The function to associate metadata with.
+     * @param {*} data The metadata.
+     * @returns {Function} Returns `func`.
+     */
+    var baseSetData = !metaMap ? identity : function(func, data) {
+      metaMap.set(func, data);
+      return func;
+    };
+
+    /**
+     * The base implementation of `_.slice` without an iteratee call guard.
+     *
+     * @private
+     * @param {Array} array The array to slice.
+     * @param {number} [start=0] The start position.
+     * @param {number} [end=array.length] The end position.
+     * @returns {Array} Returns the slice of `array`.
+     */
+    function baseSlice(array, start, end) {
+      var index = -1,
+          length = array.length;
+
+      start = start == null ? 0 : (+start || 0);
+      if (start < 0) {
+        start = -start > length ? 0 : (length + start);
+      }
+      end = (end === undefined || end > length) ? length : (+end || 0);
+      if (end < 0) {
+        end += length;
+      }
+      length = start > end ? 0 : ((end - start) >>> 0);
+      start >>>= 0;
+
+      var result = Array(length);
+      while (++index < length) {
+        result[index] = array[index + start];
+      }
+      return result;
+    }
+
+    /**
+     * The base implementation of `_.some` without support for callback shorthands
+     * and `this` binding.
+     *
+     * @private
+     * @param {Array|Object|string} collection The collection to iterate over.
+     * @param {Function} predicate The function invoked per iteration.
+     * @returns {boolean} Returns `true` if any element passes the predicate check,
+     *  else `false`.
+     */
+    function baseSome(collection, predicate) {
+      var result;
+
+      baseEach(collection, function(value, index, collection) {
+        result = predicate(value, index, collection);
+        return !result;
+      });
+      return !!result;
+    }
+
+    /**
+     * The base implementation of `_.sortBy` which uses `comparer` to define
+     * the sort order of `array` and replaces criteria objects with their
+     * corresponding values.
+     *
+     * @private
+     * @param {Array} array The array to sort.
+     * @param {Function} comparer The function to define sort order.
+     * @returns {Array} Returns `array`.
+     */
+    function baseSortBy(array, comparer) {
+      var length = array.length;
+
+      array.sort(comparer);
+      while (length--) {
+        array[length] = array[length].value;
+      }
+      return array;
+    }
+
+    /**
+     * The base implementation of `_.sortByOrder` without param guards.
+     *
+     * @private
+     * @param {Array|Object|string} collection The collection to iterate over.
+     * @param {Function[]|Object[]|string[]} iteratees The iteratees to sort by.
+     * @param {boolean[]} orders The sort orders of `iteratees`.
+     * @returns {Array} Returns the new sorted array.
+     */
+    function baseSortByOrder(collection, iteratees, orders) {
+      var callback = getCallback(),
+          index = -1;
+
+      iteratees = arrayMap(iteratees, function(iteratee) { return callback(iteratee); });
+
+      var result = baseMap(collection, function(value) {
+        var criteria = arrayMap(iteratees, function(iteratee) { return iteratee(value); });
+        return { 'criteria': criteria, 'index': ++index, 'value': value };
+      });
+
+      return baseSortBy(result, function(object, other) {
+        return compareMultiple(object, other, orders);
+      });
+    }
+
+    /**
+     * The base implementation of `_.sum` without support for callback shorthands
+     * and `this` binding.
+     *
+     * @private
+     * @param {Array|Object|string} collection The collection to iterate over.
+     * @param {Function} iteratee The function invoked per iteration.
+     * @returns {number} Returns the sum.
+     */
+    function baseSum(collection, iteratee) {
+      var result = 0;
+      baseEach(collection, function(value, index, collection) {
+        result += +iteratee(value, index, collection) || 0;
+      });
+      return result;
+    }
+
+    /**
+     * The base implementation of `_.uniq` without support for callback shorthands
+     * and `this` binding.
+     *
+     * @private
+     * @param {Array} array The array to inspect.
+     * @param {Function} [iteratee] The function invoked per iteration.
+     * @returns {Array} Returns the new duplicate free array.
+     */
+    function baseUniq(array, iteratee) {
+      var index = -1,
+          indexOf = getIndexOf(),
+          length = array.length,
+          isCommon = indexOf === baseIndexOf,
+          isLarge = isCommon && length >= LARGE_ARRAY_SIZE,
+          seen = isLarge ? createCache() : null,
+          result = [];
+
+      if (seen) {
+        indexOf = cacheIndexOf;
+        isCommon = false;
+      } else {
+        isLarge = false;
+        seen = iteratee ? [] : result;
+      }
+      outer:
+      while (++index < length) {
+        var value = array[index],
+            computed = iteratee ? iteratee(value, index, array) : value;
+
+        if (isCommon && value === value) {
+          var seenIndex = seen.length;
+          while (seenIndex--) {
+            if (seen[seenIndex] === computed) {
+              continue outer;
+            }
+          }
+          if (iteratee) {
+            seen.push(computed);
+          }
+          result.push(value);
+        }
+        else if (indexOf(seen, computed, 0) < 0) {
+          if (iteratee || isLarge) {
+            seen.push(computed);
+          }
+          result.push(value);
+        }
+      }
+      return result;
+    }
+
+    /**
+     * The base implementation of `_.values` and `_.valuesIn` which creates an
+     * array of `object` property values corresponding to the property names
+     * of `props`.
+     *
+     * @private
+     * @param {Object} object The object to query.
+     * @param {Array} props The property names to get values for.
+     * @returns {Object} Returns the array of property values.
+     */
+    function baseValues(object, props) {
+      var index = -1,
+          length = props.length,
+          result = Array(length);
+
+      while (++index < length) {
+        result[index] = object[props[index]];
+      }
+      return result;
+    }
+
+    /**
+     * The base implementation of `_.dropRightWhile`, `_.dropWhile`, `_.takeRightWhile`,
+     * and `_.takeWhile` without support for callback shorthands and `this` binding.
+     *
+     * @private
+     * @param {Array} array The array to query.
+     * @param {Function} predicate The function invoked per iteration.
+     * @param {boolean} [isDrop] Specify dropping elements instead of taking them.
+     * @param {boolean} [fromRight] Specify iterating from right to left.
+     * @returns {Array} Returns the slice of `array`.
+     */
+    function baseWhile(array, predicate, isDrop, fromRight) {
+      var length = array.length,
+          index = fromRight ? length : -1;
+
+      while ((fromRight ? index-- : ++index < length) && predicate(array[index], index, array)) {}
+      return isDrop
+        ? baseSlice(array, (fromRight ? 0 : index), (fromRight ? index + 1 : length))
+        : baseSlice(array, (fromRight ? index + 1 : 0), (fromRight ? length : index));
+    }
+
+    /**
+     * The base implementation of `wrapperValue` which returns the result of
+     * performing a sequence of actions on the unwrapped `value`, where each
+     * successive action is supplied the return value of the previous.
+     *
+     * @private
+     * @param {*} value The unwrapped value.
+     * @param {Array} actions Actions to peform to resolve the unwrapped value.
+     * @returns {*} Returns the resolved value.
+     */
+    function baseWrapperValue(value, actions) {
+      var result = value;
+      if (result instanceof LazyWrapper) {
+        result = result.value();
+      }
+      var index = -1,
+          length = actions.length;
+
+      while (++index < length) {
+        var action = actions[index];
+        result = action.func.apply(action.thisArg, arrayPush([result], action.args));
+      }
+      return result;
+    }
+
+    /**
+     * Performs a binary search of `array` to determine the index at which `value`
+     * should be inserted into `array` in order to maintain its sort order.
+     *
+     * @private
+     * @param {Array} array The sorted array to inspect.
+     * @param {*} value The value to evaluate.
+     * @param {boolean} [retHighest] Specify returning the highest qualified index.
+     * @returns {number} Returns the index at which `value` should be inserted
+     *  into `array`.
+     */
+    function binaryIndex(array, value, retHighest) {
+      var low = 0,
+          high = array ? array.length : low;
+
+      if (typeof value == 'number' && value === value && high <= HALF_MAX_ARRAY_LENGTH) {
+        while (low < high) {
+          var mid = (low + high) >>> 1,
+              computed = array[mid];
+
+          if ((retHighest ? (computed <= value) : (computed < value)) && computed !== null) {
+            low = mid + 1;
+          } else {
+            high = mid;
+          }
+        }
+        return high;
+      }
+      return binaryIndexBy(array, value, identity, retHighest);
+    }
+
+    /**
+     * This function is like `binaryIndex` except that it invokes `iteratee` for
+     * `value` and each element of `array` to compute their sort ranking. The
+     * iteratee is invoked with one argument; (value).
+     *
+     * @private
+     * @param {Array} array The sorted array to inspect.
+     * @param {*} value The value to evaluate.
+     * @param {Function} iteratee The function invoked per iteration.
+     * @param {boolean} [retHighest] Specify returning the highest qualified index.
+     * @returns {number} Returns the index at which `value` should be inserted
+     *  into `array`.
+     */
+    function binaryIndexBy(array, value, iteratee, retHighest) {
+      value = iteratee(value);
+
+      var low = 0,
+          high = array ? array.length : 0,
+          valIsNaN = value !== value,
+          valIsNull = value === null,
+          valIsUndef = value === undefined;
+
+      while (low < high) {
+        var mid = nativeFloor((low + high) / 2),
+            computed = iteratee(array[mid]),
+            isDef = computed !== undefined,
+            isReflexive = computed === computed;
+
+        if (valIsNaN) {
+          var setLow = isReflexive || retHighest;
+        } else if (valIsNull) {
+          setLow = isReflexive && isDef && (retHighest || computed != null);
+        } else if (valIsUndef) {
+          setLow = isReflexive && (retHighest || isDef);
+        } else if (computed == null) {
+          setLow = false;
+        } else {
+          setLow = retHighest ? (computed <= value) : (computed < value);
+        }
+        if (setLow) {
+          low = mid + 1;
+        } else {
+          high = mid;
+        }
+      }
+      return nativeMin(high, MAX_ARRAY_INDEX);
+    }
+
+    /**
+     * A specialized version of `baseCallback` which only supports `this` binding
+     * and specifying the number of arguments to provide to `func`.
+     *
+     * @private
+     * @param {Function} func The function to bind.
+     * @param {*} thisArg The `this` binding of `func`.
+     * @param {number} [argCount] The number of arguments to provide to `func`.
+     * @returns {Function} Returns the callback.
+     */
+    function bindCallback(func, thisArg, argCount) {
+      if (typeof func != 'function') {
+        return identity;
+      }
+      if (thisArg === undefined) {
+        return func;
+      }
+      switch (argCount) {
+        case 1: return function(value) {
+          return func.call(thisArg, value);
+        };
+        case 3: return function(value, index, collection) {
+          return func.call(thisArg, value, index, collection);
+        };
+        case 4: return function(accumulator, value, index, collection) {
+          return func.call(thisArg, accumulator, value, index, collection);
+        };
+        case 5: return function(value, other, key, object, source) {
+          return func.call(thisArg, value, other, key, object, source);
+        };
+      }
+      return function() {
+        return func.apply(thisArg, arguments);
+      };
+    }
+
+    /**
+     * Creates a clone of the given array buffer.
+     *
+     * @private
+     * @param {ArrayBuffer} buffer The array buffer to clone.
+     * @returns {ArrayBuffer} Returns the cloned array buffer.
+     */
+    function bufferClone(buffer) {
+      var result = new ArrayBuffer(buffer.byteLength),
+          view = new Uint8Array(result);
+
+      view.set(new Uint8Array(buffer));
+      return result;
+    }
+
+    /**
+     * Creates an array that is the composition of partially applied arguments,
+     * placeholders, and provided arguments into a single array of arguments.
+     *
+     * @private
+     * @param {Array|Object} args The provided arguments.
+     * @param {Array} partials The arguments to prepend to those provided.
+     * @param {Array} holders The `partials` placeholder indexes.
+     * @returns {Array} Returns the new array of composed arguments.
+     */
+    function composeArgs(args, partials, holders) {
+      var holdersLength = holders.length,
+          argsIndex = -1,
+          argsLength = nativeMax(args.length - holdersLength, 0),
+          leftIndex = -1,
+          leftLength = partials.length,
+          result = Array(leftLength + argsLength);
+
+      while (++leftIndex < leftLength) {
+        result[leftIndex] = partials[leftIndex];
+      }
+      while (++argsIndex < holdersLength) {
+        result[holders[argsIndex]] = args[argsIndex];
+      }
+      while (argsLength--) {
+        result[leftIndex++] = args[argsIndex++];
+      }
+      return result;
+    }
+
+    /**
+     * This function is like `composeArgs` except that the arguments composition
+     * is tailored for `_.partialRight`.
+     *
+     * @private
+     * @param {Array|Object} args The provided arguments.
+     * @param {Array} partials The arguments to append to those provided.
+     * @param {Array} holders The `partials` placeholder indexes.
+     * @returns {Array} Returns the new array of composed arguments.
+     */
+    function composeArgsRight(args, partials, holders) {
+      var holdersIndex = -1,
+          holdersLength = holders.length,
+          argsIndex = -1,
+          argsLength = nativeMax(args.length - holdersLength, 0),
+          rightIndex = -1,
+          rightLength = partials.length,
+          result = Array(argsLength + rightLength);
+
+      while (++argsIndex < argsLength) {
+        result[argsIndex] = args[argsIndex];
+      }
+      var offset = argsIndex;
+      while (++rightIndex < rightLength) {
+        result[offset + rightIndex] = partials[rightIndex];
+      }
+      while (++holdersIndex < holdersLength) {
+        result[offset + holders[holdersIndex]] = args[argsIndex++];
+      }
+      return result;
+    }
+
+    /**
+     * Creates a `_.countBy`, `_.groupBy`, `_.indexBy`, or `_.partition` function.
+     *
+     * @private
+     * @param {Function} setter The function to set keys and values of the accumulator object.
+     * @param {Function} [initializer] The function to initialize the accumulator object.
+     * @returns {Function} Returns the new aggregator function.
+     */
+    function createAggregator(setter, initializer) {
+      return function(collection, iteratee, thisArg) {
+        var result = initializer ? initializer() : {};
+        iteratee = getCallback(iteratee, thisArg, 3);
+
+        if (isArray(collection)) {
+          var index = -1,
+              length = collection.length;
+
+          while (++index < length) {
+            var value = collection[index];
+            setter(result, value, iteratee(value, index, collection), collection);
+          }
+        } else {
+          baseEach(collection, function(value, key, collection) {
+            setter(result, value, iteratee(value, key, collection), collection);
+          });
+        }
+        return result;
+      };
+    }
+
+    /**
+     * Creates a `_.assign`, `_.defaults`, or `_.merge` function.
+     *
+     * @private
+     * @param {Function} assigner The function to assign values.
+     * @returns {Function} Returns the new assigner function.
+     */
+    function createAssigner(assigner) {
+      return restParam(function(object, sources) {
+        var index = -1,
+            length = object == null ? 0 : sources.length,
+            customizer = length > 2 ? sources[length - 2] : undefined,
+            guard = length > 2 ? sources[2] : undefined,
+            thisArg = length > 1 ? sources[length - 1] : undefined;
+
+        if (typeof customizer == 'function') {
+          customizer = bindCallback(customizer, thisArg, 5);
+          length -= 2;
+        } else {
+          customizer = typeof thisArg == 'function' ? thisArg : undefined;
+          length -= (customizer ? 1 : 0);
+        }
+        if (guard && isIterateeCall(sources[0], sources[1], guard)) {
+          customizer = length < 3 ? undefined : customizer;
+          length = 1;
+        }
+        while (++index < length) {
+          var source = sources[index];
+          if (source) {
+            assigner(object, source, customizer);
+          }
+        }
+        return object;
+      });
+    }
+
+    /**
+     * Creates a `baseEach` or `baseEachRight` function.
+     *
+     * @private
+     * @param {Function} eachFunc The function to iterate over a collection.
+     * @param {boolean} [fromRight] Specify iterating from right to left.
+     * @returns {Function} Returns the new base function.
+     */
+    function createBaseEach(eachFunc, fromRight) {
+      return function(collection, iteratee) {
+        var length = collection ? getLength(collection) : 0;
+        if (!isLength(length)) {
+          return eachFunc(collection, iteratee);
+        }
+        var index = fromRight ? length : -1,
+            iterable = toObject(collection);
+
+        while ((fromRight ? index-- : ++index < length)) {
+          if (iteratee(iterable[index], index, iterable) === false) {
+            break;
+          }
+        }
+        return collection;
+      };
+    }
+
+    /**
+     * Creates a base function for `_.forIn` or `_.forInRight`.
+     *
+     * @private
+     * @param {boolean} [fromRight] Specify iterating from right to left.
+     * @returns {Function} Returns the new base function.
+     */
+    function createBaseFor(fromRight) {
+      return function(object, iteratee, keysFunc) {
+        var iterable = toObject(object),
+            props = keysFunc(object),
+            length = props.length,
+            index = fromRight ? length : -1;
+
+        while ((fromRight ? index-- : ++index < length)) {
+          var key = props[index];
+          if (iteratee(iterable[key], key, iterable) === false) {
+            break;
+          }
+        }
+        return object;
+      };
+    }
+
+    /**
+     * Creates a function that wraps `func` and invokes it with the `this`
+     * binding of `thisArg`.
+     *
+     * @private
+     * @param {Function} func The function to bind.
+     * @param {*} [thisArg] The `this` binding of `func`.
+     * @returns {Function} Returns the new bound function.
+     */
+    function createBindWrapper(func, thisArg) {
+      var Ctor = createCtorWrapper(func);
+
+      function wrapper() {
+        var fn = (this && this !== root && this instanceof wrapper) ? Ctor : func;
+        return fn.apply(thisArg, arguments);
+      }
+      return wrapper;
+    }
+
+    /**
+     * Creates a `Set` cache object to optimize linear searches of large arrays.
+     *
+     * @private
+     * @param {Array} [values] The values to cache.
+     * @returns {null|Object} Returns the new cache object if `Set` is supported, else `null`.
+     */
+    function createCache(values) {
+      return (nativeCreate && Set) ? new SetCache(values) : null;
+    }
+
+    /**
+     * Creates a function that produces compound words out of the words in a
+     * given string.
+     *
+     * @private
+     * @param {Function} callback The function to combine each word.
+     * @returns {Function} Returns the new compounder function.
+     */
+    function createCompounder(callback) {
+      return function(string) {
+        var index = -1,
+            array = words(deburr(string)),
+            length = array.length,
+            result = '';
+
+        while (++index < length) {
+          result = callback(result, array[index], index);
+        }
+        return result;
+      };
+    }
+
+    /**
+     * Creates a function that produces an instance of `Ctor` regardless of
+     * whether it was invoked as part of a `new` expression or by `call` or `apply`.
+     *
+     * @private
+     * @param {Function} Ctor The constructor to wrap.
+     * @returns {Function} Returns the new wrapped function.
+     */
+    function createCtorWrapper(Ctor) {
+      return function() {
+        // Use a `switch` statement to work with class constructors.
+        // See http://ecma-international.org/ecma-262/6.0/#sec-ecmascript-function-objects-call-thisargument-argumentslist
+        // for more details.
+        var args = arguments;
+        switch (args.length) {
+          case 0: return new Ctor;
+          case 1: return new Ctor(args[0]);
+          case 2: return new Ctor(args[0], args[1]);
+          case 3: return new Ctor(args[0], args[1], args[2]);
+          case 4: return new Ctor(args[0], args[1], args[2], args[3]);
+          case 5: return new Ctor(args[0], args[1], args[2], args[3], args[4]);
+          case 6: return new Ctor(args[0], args[1], args[2], args[3], args[4], args[5]);
+          case 7: return new Ctor(args[0], args[1], args[2], args[3], args[4], args[5], args[6]);
+        }
+        var thisBinding = baseCreate(Ctor.prototype),
+            result = Ctor.apply(thisBinding, args);
+
+        // Mimic the constructor's `return` behavior.
+        // See https://es5.github.io/#x13.2.2 for more details.
+        return isObject(result) ? result : thisBinding;
+      };
+    }
+
+    /**
+     * Creates a `_.curry` or `_.curryRight` function.
+     *
+     * @private
+     * @param {boolean} flag The curry bit flag.
+     * @returns {Function} Returns the new curry function.
+     */
+    function createCurry(flag) {
+      function curryFunc(func, arity, guard) {
+        if (guard && isIterateeCall(func, arity, guard)) {
+          arity = undefined;
+        }
+        var result = createWrapper(func, flag, undefined, undefined, undefined, undefined, undefined, arity);
+        result.placeholder = curryFunc.placeholder;
+        return result;
+      }
+      return curryFunc;
+    }
+
+    /**
+     * Creates a `_.defaults` or `_.defaultsDeep` function.
+     *
+     * @private
+     * @param {Function} assigner The function to assign values.
+     * @param {Function} customizer The function to customize assigned values.
+     * @returns {Function} Returns the new defaults function.
+     */
+    function createDefaults(assigner, customizer) {
+      return restParam(function(args) {
+        var object = args[0];
+        if (object == null) {
+          return object;
+        }
+        args.push(customizer);
+        return assigner.apply(undefined, args);
+      });
+    }
+
+    /**
+     * Creates a `_.max` or `_.min` function.
+     *
+     * @private
+     * @param {Function} comparator The function used to compare values.
+     * @param {*} exValue The initial extremum value.
+     * @returns {Function} Returns the new extremum function.
+     */
+    function createExtremum(comparator, exValue) {
+      return function(collection, iteratee, thisArg) {
+        if (thisArg && isIterateeCall(collection, iteratee, thisArg)) {
+          iteratee = undefined;
+        }
+        iteratee = getCallback(iteratee, thisArg, 3);
+        if (iteratee.length == 1) {
+          collection = isArray(collection) ? collection : toIterable(collection);
+          var result = arrayExtremum(collection, iteratee, comparator, exValue);
+          if (!(collection.length && result === exValue)) {
+            return result;
+          }
+        }
+        return baseExtremum(collection, iteratee, comparator, exValue);
+      };
+    }
+
+    /**
+     * Creates a `_.find` or `_.findLast` function.
+     *
+     * @private
+     * @param {Function} eachFunc The function to iterate over a collection.
+     * @param {boolean} [fromRight] Specify iterating from right to left.
+     * @returns {Function} Returns the new find function.
+     */
+    function createFind(eachFunc, fromRight) {
+      return function(collection, predicate, thisArg) {
+        predicate = getCallback(predicate, thisArg, 3);
+        if (isArray(collection)) {
+          var index = baseFindIndex(collection, predicate, fromRight);
+          return index > -1 ? collection[index] : undefined;
+        }
+        return baseFind(collection, predicate, eachFunc);
+      };
+    }
+
+    /**
+     * Creates a `_.findIndex` or `_.findLastIndex` function.
+     *
+     * @private
+     * @param {boolean} [fromRight] Specify iterating from right to left.
+     * @returns {Function} Returns the new find function.
+     */
+    function createFindIndex(fromRight) {
+      return function(array, predicate, thisArg) {
+        if (!(array && array.length)) {
+          return -1;
+        }
+        predicate = getCallback(predicate, thisArg, 3);
+        return baseFindIndex(array, predicate, fromRight);
+      };
+    }
+
+    /**
+     * Creates a `_.findKey` or `_.findLastKey` function.
+     *
+     * @private
+     * @param {Function} objectFunc The function to iterate over an object.
+     * @returns {Function} Returns the new find function.
+     */
+    function createFindKey(objectFunc) {
+      return function(object, predicate, thisArg) {
+        predicate = getCallback(predicate, thisArg, 3);
+        return baseFind(object, predicate, objectFunc, true);
+      };
+    }
+
+    /**
+     * Creates a `_.flow` or `_.flowRight` function.
+     *
+     * @private
+     * @param {boolean} [fromRight] Specify iterating from right to left.
+     * @returns {Function} Returns the new flow function.
+     */
+    function createFlow(fromRight) {
+      return function() {
+        var wrapper,
+            length = arguments.length,
+            index = fromRight ? length : -1,
+            leftIndex = 0,
+            funcs = Array(length);
+
+        while ((fromRight ? index-- : ++index < length)) {
+          var func = funcs[leftIndex++] = arguments[index];
+          if (typeof func != 'function') {
+            throw new TypeError(FUNC_ERROR_TEXT);
+          }
+          if (!wrapper && LodashWrapper.prototype.thru && getFuncName(func) == 'wrapper') {
+            wrapper = new LodashWrapper([], true);
+          }
+        }
+        index = wrapper ? -1 : length;
+        while (++index < length) {
+          func = funcs[index];
+
+          var funcName = getFuncName(func),
+              data = funcName == 'wrapper' ? getData(func) : undefined;
+
+          if (data && isLaziable(data[0]) && data[1] == (ARY_FLAG | CURRY_FLAG | PARTIAL_FLAG | REARG_FLAG) && !data[4].length && data[9] == 1) {
+            wrapper = wrapper[getFuncName(data[0])].apply(wrapper, data[3]);
+          } else {
+            wrapper = (func.length == 1 && isLaziable(func)) ? wrapper[funcName]() : wrapper.thru(func);
+          }
+        }
+        return function() {
+          var args = arguments,
+              value = args[0];
+
+          if (wrapper && args.length == 1 && isArray(value) && value.length >= LARGE_ARRAY_SIZE) {
+            return wrapper.plant(value).value();
+          }
+          var index = 0,
+              result = length ? funcs[index].apply(this, args) : value;
+
+          while (++index < length) {
+            result = funcs[index].call(this, result);
+          }
+          return result;
+        };
+      };
+    }
+
+    /**
+     * Creates a function for `_.forEach` or `_.forEachRight`.
+     *
+     * @private
+     * @param {Function} arrayFunc The function to iterate over an array.
+     * @param {Function} eachFunc The function to iterate over a collection.
+     * @returns {Function} Returns the new each function.
+     */
+    function createForEach(arrayFunc, eachFunc) {
+      return function(collection, iteratee, thisArg) {
+        return (typeof iteratee == 'function' && thisArg === undefined && isArray(collection))
+          ? arrayFunc(collection, iteratee)
+          : eachFunc(collection, bindCallback(iteratee, thisArg, 3));
+      };
+    }
+
+    /**
+     * Creates a function for `_.forIn` or `_.forInRight`.
+     *
+     * @private
+     * @param {Function} objectFunc The function to iterate over an object.
+     * @returns {Function} Returns the new each function.
+     */
+    function createForIn(objectFunc) {
+      return function(object, iteratee, thisArg) {
+        if (typeof iteratee != 'function' || thisArg !== undefined) {
+          iteratee = bindCallback(iteratee, thisArg, 3);
+        }
+        return objectFunc(object, iteratee, keysIn);
+      };
+    }
+
+    /**
+     * Creates a function for `_.forOwn` or `_.forOwnRight`.
+     *
+     * @private
+     * @param {Function} objectFunc The function to iterate over an object.
+     * @returns {Function} Returns the new each function.
+     */
+    function createForOwn(objectFunc) {
+      return function(object, iteratee, thisArg) {
+        if (typeof iteratee != 'function' || thisArg !== undefined) {
+          iteratee = bindCallback(iteratee, thisArg, 3);
+        }
+        return objectFunc(object, iteratee);
+      };
+    }
+
+    /**
+     * Creates a function for `_.mapKeys` or `_.mapValues`.
+     *
+     * @private
+     * @param {boolean} [isMapKeys] Specify mapping keys instead of values.
+     * @returns {Function} Returns the new map function.
+     */
+    function createObjectMapper(isMapKeys) {
+      return function(object, iteratee, thisArg) {
+        var result = {};
+        iteratee = getCallback(iteratee, thisArg, 3);
+
+        baseForOwn(object, function(value, key, object) {
+          var mapped = iteratee(value, key, object);
+          key = isMapKeys ? mapped : key;
+          value = isMapKeys ? value : mapped;
+          result[key] = value;
+        });
+        return result;
+      };
+    }
+
+    /**
+     * Creates a function for `_.padLeft` or `_.padRight`.
+     *
+     * @private
+     * @param {boolean} [fromRight] Specify padding from the right.
+     * @returns {Function} Returns the new pad function.
+     */
+    function createPadDir(fromRight) {
+      return function(string, length, chars) {
+        string = baseToString(string);
+        return (fromRight ? string : '') + createPadding(string, length, chars) + (fromRight ? '' : string);
+      };
+    }
+
+    /**
+     * Creates a `_.partial` or `_.partialRight` function.
+     *
+     * @private
+     * @param {boolean} flag The partial bit flag.
+     * @returns {Function} Returns the new partial function.
+     */
+    function createPartial(flag) {
+      var partialFunc = restParam(function(func, partials) {
+        var holders = replaceHolders(partials, partialFunc.placeholder);
+        return createWrapper(func, flag, undefined, partials, holders);
+      });
+      return partialFunc;
+    }
+
+    /**
+     * Creates a function for `_.reduce` or `_.reduceRight`.
+     *
+     * @private
+     * @param {Function} arrayFunc The function to iterate over an array.
+     * @param {Function} eachFunc The function to iterate over a collection.
+     * @returns {Function} Returns the new each function.
+     */
+    function createReduce(arrayFunc, eachFunc) {
+      return function(collection, iteratee, accumulator, thisArg) {
+        var initFromArray = arguments.length < 3;
+        return (typeof iteratee == 'function' && thisArg === undefined && isArray(collection))
+          ? arrayFunc(collection, iteratee, accumulator, initFromArray)
+          : baseReduce(collection, getCallback(iteratee, thisArg, 4), accumulator, initFromArray, eachFunc);
+      };
+    }
+
+    /**
+     * Creates a function that wraps `func` and invokes it with optional `this`
+     * binding of, partial application, and currying.
+     *
+     * @private
+     * @param {Function|string} func The function or method name to reference.
+     * @param {number} bitmask The bitmask of flags. See `createWrapper` for more details.
+     * @param {*} [thisArg] The `this` binding of `func`.
+     * @param {Array} [partials] The arguments to prepend to those provided to the new function.
+     * @param {Array} [holders] The `partials` placeholder indexes.
+     * @param {Array} [partialsRight] The arguments to append to those provided to the new function.
+     * @param {Array} [holdersRight] The `partialsRight` placeholder indexes.
+     * @param {Array} [argPos] The argument positions of the new function.
+     * @param {number} [ary] The arity cap of `func`.
+     * @param {number} [arity] The arity of `func`.
+     * @returns {Function} Returns the new wrapped function.
+     */
+    function createHybridWrapper(func, bitmask, thisArg, partials, holders, partialsRight, holdersRight, argPos, ary, arity) {
+      var isAry = bitmask & ARY_FLAG,
+          isBind = bitmask & BIND_FLAG,
+          isBindKey = bitmask & BIND_KEY_FLAG,
+          isCurry = bitmask & CURRY_FLAG,
+          isCurryBound = bitmask & CURRY_BOUND_FLAG,
+          isCurryRight = bitmask & CURRY_RIGHT_FLAG,
+          Ctor = isBindKey ? undefined : createCtorWrapper(func);
+
+      function wrapper() {
+        // Avoid `arguments` object use disqualifying optimizations by
+        // converting it to an array before providing it to other functions.
+        var length = arguments.length,
+            index = length,
+            args = Array(length);
+
+        while (index--) {
+          args[index] = arguments[index];
+        }
+        if (partials) {
+          args = composeArgs(args, partials, holders);
+        }
+        if (partialsRight) {
+          args = composeArgsRight(args, partialsRight, holdersRight);
+        }
+        if (isCurry || isCurryRight) {
+          var placeholder = wrapper.placeholder,
+              argsHolders = replaceHolders(args, placeholder);
+
+          length -= argsHolders.length;
+          if (length < arity) {
+            var newArgPos = argPos ? arrayCopy(argPos) : undefined,
+                newArity = nativeMax(arity - length, 0),
+                newsHolders = isCurry ? argsHolders : undefined,
+                newHoldersRight = isCurry ? undefined : argsHolders,
+                newPartials = isCurry ? args : undefined,
+                newPartialsRight = isCurry ? undefined : args;
+
+            bitmask |= (isCurry ? PARTIAL_FLAG : PARTIAL_RIGHT_FLAG);
+            bitmask &= ~(isCurry ? PARTIAL_RIGHT_FLAG : PARTIAL_FLAG);
+
+            if (!isCurryBound) {
+              bitmask &= ~(BIND_FLAG | BIND_KEY_FLAG);
+            }
+            var newData = [func, bitmask, thisArg, newPartials, newsHolders, newPartialsRight, newHoldersRight, newArgPos, ary, newArity],
+                result = createHybridWrapper.apply(undefined, newData);
+
+            if (isLaziable(func)) {
+              setData(result, newData);
+            }
+            result.placeholder = placeholder;
+            return result;
+          }
+        }
+        var thisBinding = isBind ? thisArg : this,
+            fn = isBindKey ? thisBinding[func] : func;
+
+        if (argPos) {
+          args = reorder(args, argPos);
+        }
+        if (isAry && ary < args.length) {
+          args.length = ary;
+        }
+        if (this && this !== root && this instanceof wrapper) {
+          fn = Ctor || createCtorWrapper(func);
+        }
+        return fn.apply(thisBinding, args);
+      }
+      return wrapper;
+    }
+
+    /**
+     * Creates the padding required for `string` based on the given `length`.
+     * The `chars` string is truncated if the number of characters exceeds `length`.
+     *
+     * @private
+     * @param {string} string The string to create padding for.
+     * @param {number} [length=0] The padding length.
+     * @param {string} [chars=' '] The string used as padding.
+     * @returns {string} Returns the pad for `string`.
+     */
+    function createPadding(string, length, chars) {
+      var strLength = string.length;
+      length = +length;
+
+      if (strLength >= length || !nativeIsFinite(length)) {
+        return '';
+      }
+      var padLength = length - strLength;
+      chars = chars == null ? ' ' : (chars + '');
+      return repeat(chars, nativeCeil(padLength / chars.length)).slice(0, padLength);
+    }
+
+    /**
+     * Creates a function that wraps `func` and invokes it with the optional `this`
+     * binding of `thisArg` and the `partials` prepended to those provided to
+     * the wrapper.
+     *
+     * @private
+     * @param {Function} func The function to partially apply arguments to.
+     * @param {number} bitmask The bitmask of flags. See `createWrapper` for more details.
+     * @param {*} thisArg The `this` binding of `func`.
+     * @param {Array} partials The arguments to prepend to those provided to the new function.
+     * @returns {Function} Returns the new bound function.
+     */
+    function createPartialWrapper(func, bitmask, thisArg, partials) {
+      var isBind = bitmask & BIND_FLAG,
+          Ctor = createCtorWrapper(func);
+
+      function wrapper() {
+        // Avoid `arguments` object use disqualifying optimizations by
+        // converting it to an array before providing it `func`.
+        var argsIndex = -1,
+            argsLength = arguments.length,
+            leftIndex = -1,
+            leftLength = partials.length,
+            args = Array(leftLength + argsLength);
+
+        while (++leftIndex < leftLength) {
+          args[leftIndex] = partials[leftIndex];
+        }
+        while (argsLength--) {
+          args[leftIndex++] = arguments[++argsIndex];
+        }
+        var fn = (this && this !== root && this instanceof wrapper) ? Ctor : func;
+        return fn.apply(isBind ? thisArg : this, args);
+      }
+      return wrapper;
+    }
+
+    /**
+     * Creates a `_.ceil`, `_.floor`, or `_.round` function.
+     *
+     * @private
+     * @param {string} methodName The name of the `Math` method to use when rounding.
+     * @returns {Function} Returns the new round function.
+     */
+    function createRound(methodName) {
+      var func = Math[methodName];
+      return function(number, precision) {
+        precision = precision === undefined ? 0 : (+precision || 0);
+        if (precision) {
+          precision = pow(10, precision);
+          return func(number * precision) / precision;
+        }
+        return func(number);
+      };
+    }
+
+    /**
+     * Creates a `_.sortedIndex` or `_.sortedLastIndex` function.
+     *
+     * @private
+     * @param {boolean} [retHighest] Specify returning the highest qualified index.
+     * @returns {Function} Returns the new index function.
+     */
+    function createSortedIndex(retHighest) {
+      return function(array, value, iteratee, thisArg) {
+        var callback = getCallback(iteratee);
+        return (iteratee == null && callback === baseCallback)
+          ? binaryIndex(array, value, retHighest)
+          : binaryIndexBy(array, value, callback(iteratee, thisArg, 1), retHighest);
+      };
+    }
+
+    /**
+     * Creates a function that either curries or invokes `func` with optional
+     * `this` binding and partially applied arguments.
+     *
+     * @private
+     * @param {Function|string} func The function or method name to reference.
+     * @param {number} bitmask The bitmask of flags.
+     *  The bitmask may be composed of the following flags:
+     *     1 - `_.bind`
+     *     2 - `_.bindKey`
+     *     4 - `_.curry` or `_.curryRight` of a bound function
+     *     8 - `_.curry`
+     *    16 - `_.curryRight`
+     *    32 - `_.partial`
+     *    64 - `_.partialRight`
+     *   128 - `_.rearg`
+     *   256 - `_.ary`
+     * @param {*} [thisArg] The `this` binding of `func`.
+     * @param {Array} [partials] The arguments to be partially applied.
+     * @param {Array} [holders] The `partials` placeholder indexes.
+     * @param {Array} [argPos] The argument positions of the new function.
+     * @param {number} [ary] The arity cap of `func`.
+     * @param {number} [arity] The arity of `func`.
+     * @returns {Function} Returns the new wrapped function.
+     */
+    function createWrapper(func, bitmask, thisArg, partials, holders, argPos, ary, arity) {
+      var isBindKey = bitmask & BIND_KEY_FLAG;
+      if (!isBindKey && typeof func != 'function') {
+        throw new TypeError(FUNC_ERROR_TEXT);
+      }
+      var length = partials ? partials.length : 0;
+      if (!length) {
+        bitmask &= ~(PARTIAL_FLAG | PARTIAL_RIGHT_FLAG);
+        partials = holders = undefined;
+      }
+      length -= (holders ? holders.length : 0);
+      if (bitmask & PARTIAL_RIGHT_FLAG) {
+        var partialsRight = partials,
+            holdersRight = holders;
+
+        partials = holders = undefined;
+      }
+      var data = isBindKey ? undefined : getData(func),
+          newData = [func, bitmask, thisArg, partials, holders, partialsRight, holdersRight, argPos, ary, arity];
+
+      if (data) {
+        mergeData(newData, data);
+        bitmask = newData[1];
+        arity = newData[9];
+      }
+      newData[9] = arity == null
+        ? (isBindKey ? 0 : func.length)
+        : (nativeMax(arity - length, 0) || 0);
+
+      if (bitmask == BIND_FLAG) {
+        var result = createBindWrapper(newData[0], newData[2]);
+      } else if ((bitmask == PARTIAL_FLAG || bitmask == (BIND_FLAG | PARTIAL_FLAG)) && !newData[4].length) {
+        result = createPartialWrapper.apply(undefined, newData);
+      } else {
+        result = createHybridWrapper.apply(undefined, newData);
+      }
+      var setter = data ? baseSetData : setData;
+      return setter(result, newData);
+    }
+
+    /**
+     * A specialized version of `baseIsEqualDeep` for arrays with support for
+     * partial deep comparisons.
+     *
+     * @private
+     * @param {Array} array The array to compare.
+     * @param {Array} other The other array to compare.
+     * @param {Function} equalFunc The function to determine equivalents of values.
+     * @param {Function} [customizer] The function to customize comparing arrays.
+     * @param {boolean} [isLoose] Specify performing partial comparisons.
+     * @param {Array} [stackA] Tracks traversed `value` objects.
+     * @param {Array} [stackB] Tracks traversed `other` objects.
+     * @returns {boolean} Returns `true` if the arrays are equivalent, else `false`.
+     */
+    function equalArrays(array, other, equalFunc, customizer, isLoose, stackA, stackB) {
+      var index = -1,
+          arrLength = array.length,
+          othLength = other.length;
+
+      if (arrLength != othLength && !(isLoose && othLength > arrLength)) {
+        return false;
+      }
+      // Ignore non-index properties.
+      while (++index < arrLength) {
+        var arrValue = array[index],
+            othValue = other[index],
+            result = customizer ? customizer(isLoose ? othValue : arrValue, isLoose ? arrValue : othValue, index) : undefined;
+
+        if (result !== undefined) {
+          if (result) {
+            continue;
+          }
+          return false;
+        }
+        // Recursively compare arrays (susceptible to call stack limits).
+        if (isLoose) {
+          if (!arraySome(other, function(othValue) {
+                return arrValue === othValue || equalFunc(arrValue, othValue, customizer, isLoose, stackA, stackB);
+              })) {
+            return false;
+          }
+        } else if (!(arrValue === othValue || equalFunc(arrValue, othValue, customizer, isLoose, stackA, stackB))) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    /**
+     * A specialized version of `baseIsEqualDeep` for comparing objects of
+     * the same `toStringTag`.
+     *
+     * **Note:** This function only supports comparing values with tags of
+     * `Boolean`, `Date`, `Error`, `Number`, `RegExp`, or `String`.
+     *
+     * @private
+     * @param {Object} object The object to compare.
+     * @param {Object} other The other object to compare.
+     * @param {string} tag The `toStringTag` of the objects to compare.
+     * @returns {boolean} Returns `true` if the objects are equivalent, else `false`.
+     */
+    function equalByTag(object, other, tag) {
+      switch (tag) {
+        case boolTag:
+        case dateTag:
+          // Coerce dates and booleans to numbers, dates to milliseconds and booleans
+          // to `1` or `0` treating invalid dates coerced to `NaN` as not equal.
+          return +object == +other;
+
+        case errorTag:
+          return object.name == other.name && object.message == other.message;
+
+        case numberTag:
+          // Treat `NaN` vs. `NaN` as equal.
+          return (object != +object)
+            ? other != +other
+            : object == +other;
+
+        case regexpTag:
+        case stringTag:
+          // Coerce regexes to strings and treat strings primitives and string
+          // objects as equal. See https://es5.github.io/#x15.10.6.4 for more details.
+          return object == (other + '');
+      }
+      return false;
+    }
+
+    /**
+     * A specialized version of `baseIsEqualDeep` for objects with support for
+     * partial deep comparisons.
+     *
+     * @private
+     * @param {Object} object The object to compare.
+     * @param {Object} other The other object to compare.
+     * @param {Function} equalFunc The function to determine equivalents of values.
+     * @param {Function} [customizer] The function to customize comparing values.
+     * @param {boolean} [isLoose] Specify performing partial comparisons.
+     * @param {Array} [stackA] Tracks traversed `value` objects.
+     * @param {Array} [stackB] Tracks traversed `other` objects.
+     * @returns {boolean} Returns `true` if the objects are equivalent, else `false`.
+     */
+    function equalObjects(object, other, equalFunc, customizer, isLoose, stackA, stackB) {
+      var objProps = keys(object),
+          objLength = objProps.length,
+          othProps = keys(other),
+          othLength = othProps.length;
+
+      if (objLength != othLength && !isLoose) {
+        return false;
+      }
+      var index = objLength;
+      while (index--) {
+        var key = objProps[index];
+        if (!(isLoose ? key in other : hasOwnProperty.call(other, key))) {
+          return false;
+        }
+      }
+      var skipCtor = isLoose;
+      while (++index < objLength) {
+        key = objProps[index];
+        var objValue = object[key],
+            othValue = other[key],
+            result = customizer ? customizer(isLoose ? othValue : objValue, isLoose? objValue : othValue, key) : undefined;
+
+        // Recursively compare objects (susceptible to call stack limits).
+        if (!(result === undefined ? equalFunc(objValue, othValue, customizer, isLoose, stackA, stackB) : result)) {
+          return false;
+        }
+        skipCtor || (skipCtor = key == 'constructor');
+      }
+      if (!skipCtor) {
+        var objCtor = object.constructor,
+            othCtor = other.constructor;
+
+        // Non `Object` object instances with different constructors are not equal.
+        if (objCtor != othCtor &&
+            ('constructor' in object && 'constructor' in other) &&
+            !(typeof objCtor == 'function' && objCtor instanceof objCtor &&
+              typeof othCtor == 'function' && othCtor instanceof othCtor)) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    /**
+     * Gets the appropriate "callback" function. If the `_.callback` method is
+     * customized this function returns the custom method, otherwise it returns
+     * the `baseCallback` function. If arguments are provided the chosen function
+     * is invoked with them and its result is returned.
+     *
+     * @private
+     * @returns {Function} Returns the chosen function or its result.
+     */
+    function getCallback(func, thisArg, argCount) {
+      var result = lodash.callback || callback;
+      result = result === callback ? baseCallback : result;
+      return argCount ? result(func, thisArg, argCount) : result;
+    }
+
+    /**
+     * Gets metadata for `func`.
+     *
+     * @private
+     * @param {Function} func The function to query.
+     * @returns {*} Returns the metadata for `func`.
+     */
+    var getData = !metaMap ? noop : function(func) {
+      return metaMap.get(func);
+    };
+
+    /**
+     * Gets the name of `func`.
+     *
+     * @private
+     * @param {Function} func The function to query.
+     * @returns {string} Returns the function name.
+     */
+    function getFuncName(func) {
+      var result = (func.name + ''),
+          array = realNames[result],
+          length = array ? array.length : 0;
+
+      while (length--) {
+        var data = array[length],
+            otherFunc = data.func;
+        if (otherFunc == null || otherFunc == func) {
+          return data.name;
+        }
+      }
+      return result;
+    }
+
+    /**
+     * Gets the appropriate "indexOf" function. If the `_.indexOf` method is
+     * customized this function returns the custom method, otherwise it returns
+     * the `baseIndexOf` function. If arguments are provided the chosen function
+     * is invoked with them and its result is returned.
+     *
+     * @private
+     * @returns {Function|number} Returns the chosen function or its result.
+     */
+    function getIndexOf(collection, target, fromIndex) {
+      var result = lodash.indexOf || indexOf;
+      result = result === indexOf ? baseIndexOf : result;
+      return collection ? result(collection, target, fromIndex) : result;
+    }
+
+    /**
+     * Gets the "length" property value of `object`.
+     *
+     * **Note:** This function is used to avoid a [JIT bug](https://bugs.webkit.org/show_bug.cgi?id=142792)
+     * that affects Safari on at least iOS 8.1-8.3 ARM64.
+     *
+     * @private
+     * @param {Object} object The object to query.
+     * @returns {*} Returns the "length" value.
+     */
+    var getLength = baseProperty('length');
+
+    /**
+     * Gets the propery names, values, and compare flags of `object`.
+     *
+     * @private
+     * @param {Object} object The object to query.
+     * @returns {Array} Returns the match data of `object`.
+     */
+    function getMatchData(object) {
+      var result = pairs(object),
+          length = result.length;
+
+      while (length--) {
+        result[length][2] = isStrictComparable(result[length][1]);
+      }
+      return result;
+    }
+
+    /**
+     * Gets the native function at `key` of `object`.
+     *
+     * @private
+     * @param {Object} object The object to query.
+     * @param {string} key The key of the method to get.
+     * @returns {*} Returns the function if it's native, else `undefined`.
+     */
+    function getNative(object, key) {
+      var value = object == null ? undefined : object[key];
+      return isNative(value) ? value : undefined;
+    }
+
+    /**
+     * Gets the view, applying any `transforms` to the `start` and `end` positions.
+     *
+     * @private
+     * @param {number} start The start of the view.
+     * @param {number} end The end of the view.
+     * @param {Array} transforms The transformations to apply to the view.
+     * @returns {Object} Returns an object containing the `start` and `end`
+     *  positions of the view.
+     */
+    function getView(start, end, transforms) {
+      var index = -1,
+          length = transforms.length;
+
+      while (++index < length) {
+        var data = transforms[index],
+            size = data.size;
+
+        switch (data.type) {
+          case 'drop':      start += size; break;
+          case 'dropRight': end -= size; break;
+          case 'take':      end = nativeMin(end, start + size); break;
+          case 'takeRight': start = nativeMax(start, end - size); break;
+        }
+      }
+      return { 'start': start, 'end': end };
+    }
+
+    /**
+     * Initializes an array clone.
+     *
+     * @private
+     * @param {Array} array The array to clone.
+     * @returns {Array} Returns the initialized clone.
+     */
+    function initCloneArray(array) {
+      var length = array.length,
+          result = new array.constructor(length);
+
+      // Add array properties assigned by `RegExp#exec`.
+      if (length && typeof array[0] == 'string' && hasOwnProperty.call(array, 'index')) {
+        result.index = array.index;
+        result.input = array.input;
+      }
+      return result;
+    }
+
+    /**
+     * Initializes an object clone.
+     *
+     * @private
+     * @param {Object} object The object to clone.
+     * @returns {Object} Returns the initialized clone.
+     */
+    function initCloneObject(object) {
+      var Ctor = object.constructor;
+      if (!(typeof Ctor == 'function' && Ctor instanceof Ctor)) {
+        Ctor = Object;
+      }
+      return new Ctor;
+    }
+
+    /**
+     * Initializes an object clone based on its `toStringTag`.
+     *
+     * **Note:** This function only supports cloning values with tags of
+     * `Boolean`, `Date`, `Error`, `Number`, `RegExp`, or `String`.
+     *
+     * @private
+     * @param {Object} object The object to clone.
+     * @param {string} tag The `toStringTag` of the object to clone.
+     * @param {boolean} [isDeep] Specify a deep clone.
+     * @returns {Object} Returns the initialized clone.
+     */
+    function initCloneByTag(object, tag, isDeep) {
+      var Ctor = object.constructor;
+      switch (tag) {
+        case arrayBufferTag:
+          return bufferClone(object);
+
+        case boolTag:
+        case dateTag:
+          return new Ctor(+object);
+
+        case float32Tag: case float64Tag:
+        case int8Tag: case int16Tag: case int32Tag:
+        case uint8Tag: case uint8ClampedTag: case uint16Tag: case uint32Tag:
+          var buffer = object.buffer;
+          return new Ctor(isDeep ? bufferClone(buffer) : buffer, object.byteOffset, object.length);
+
+        case numberTag:
+        case stringTag:
+          return new Ctor(object);
+
+        case regexpTag:
+          var result = new Ctor(object.source, reFlags.exec(object));
+          result.lastIndex = object.lastIndex;
+      }
+      return result;
+    }
+
+    /**
+     * Invokes the method at `path` on `object`.
+     *
+     * @private
+     * @param {Object} object The object to query.
+     * @param {Array|string} path The path of the method to invoke.
+     * @param {Array} args The arguments to invoke the method with.
+     * @returns {*} Returns the result of the invoked method.
+     */
+    function invokePath(object, path, args) {
+      if (object != null && !isKey(path, object)) {
+        path = toPath(path);
+        object = path.length == 1 ? object : baseGet(object, baseSlice(path, 0, -1));
+        path = last(path);
+      }
+      var func = object == null ? object : object[path];
+      return func == null ? undefined : func.apply(object, args);
+    }
+
+    /**
+     * Checks if `value` is array-like.
+     *
+     * @private
+     * @param {*} value The value to check.
+     * @returns {boolean} Returns `true` if `value` is array-like, else `false`.
+     */
+    function isArrayLike(value) {
+      return value != null && isLength(getLength(value));
+    }
+
+    /**
+     * Checks if `value` is a valid array-like index.
+     *
+     * @private
+     * @param {*} value The value to check.
+     * @param {number} [length=MAX_SAFE_INTEGER] The upper bounds of a valid index.
+     * @returns {boolean} Returns `true` if `value` is a valid index, else `false`.
+     */
+    function isIndex(value, length) {
+      value = (typeof value == 'number' || reIsUint.test(value)) ? +value : -1;
+      length = length == null ? MAX_SAFE_INTEGER : length;
+      return value > -1 && value % 1 == 0 && value < length;
+    }
+
+    /**
+     * Checks if the provided arguments are from an iteratee call.
+     *
+     * @private
+     * @param {*} value The potential iteratee value argument.
+     * @param {*} index The potential iteratee index or key argument.
+     * @param {*} object The potential iteratee object argument.
+     * @returns {boolean} Returns `true` if the arguments are from an iteratee call, else `false`.
+     */
+    function isIterateeCall(value, index, object) {
+      if (!isObject(object)) {
+        return false;
+      }
+      var type = typeof index;
+      if (type == 'number'
+          ? (isArrayLike(object) && isIndex(index, object.length))
+          : (type == 'string' && index in object)) {
+        var other = object[index];
+        return value === value ? (value === other) : (other !== other);
+      }
+      return false;
+    }
+
+    /**
+     * Checks if `value` is a property name and not a property path.
+     *
+     * @private
+     * @param {*} value The value to check.
+     * @param {Object} [object] The object to query keys on.
+     * @returns {boolean} Returns `true` if `value` is a property name, else `false`.
+     */
+    function isKey(value, object) {
+      var type = typeof value;
+      if ((type == 'string' && reIsPlainProp.test(value)) || type == 'number') {
+        return true;
+      }
+      if (isArray(value)) {
+        return false;
+      }
+      var result = !reIsDeepProp.test(value);
+      return result || (object != null && value in toObject(object));
+    }
+
+    /**
+     * Checks if `func` has a lazy counterpart.
+     *
+     * @private
+     * @param {Function} func The function to check.
+     * @returns {boolean} Returns `true` if `func` has a lazy counterpart, else `false`.
+     */
+    function isLaziable(func) {
+      var funcName = getFuncName(func),
+          other = lodash[funcName];
+
+      if (typeof other != 'function' || !(funcName in LazyWrapper.prototype)) {
+        return false;
+      }
+      if (func === other) {
+        return true;
+      }
+      var data = getData(other);
+      return !!data && func === data[0];
+    }
+
+    /**
+     * Checks if `value` is a valid array-like length.
+     *
+     * **Note:** This function is based on [`ToLength`](http://ecma-international.org/ecma-262/6.0/#sec-tolength).
+     *
+     * @private
+     * @param {*} value The value to check.
+     * @returns {boolean} Returns `true` if `value` is a valid length, else `false`.
+     */
+    function isLength(value) {
+      return typeof value == 'number' && value > -1 && value % 1 == 0 && value <= MAX_SAFE_INTEGER;
+    }
+
+    /**
+     * Checks if `value` is suitable for strict equality comparisons, i.e. `===`.
+     *
+     * @private
+     * @param {*} value The value to check.
+     * @returns {boolean} Returns `true` if `value` if suitable for strict
+     *  equality comparisons, else `false`.
+     */
+    function isStrictComparable(value) {
+      return value === value && !isObject(value);
+    }
+
+    /**
+     * Merges the function metadata of `source` into `data`.
+     *
+     * Merging metadata reduces the number of wrappers required to invoke a function.
+     * This is possible because methods like `_.bind`, `_.curry`, and `_.partial`
+     * may be applied regardless of execution order. Methods like `_.ary` and `_.rearg`
+     * augment function arguments, making the order in which they are executed important,
+     * preventing the merging of metadata. However, we make an exception for a safe
+     * common case where curried functions have `_.ary` and or `_.rearg` applied.
+     *
+     * @private
+     * @param {Array} data The destination metadata.
+     * @param {Array} source The source metadata.
+     * @returns {Array} Returns `data`.
+     */
+    function mergeData(data, source) {
+      var bitmask = data[1],
+          srcBitmask = source[1],
+          newBitmask = bitmask | srcBitmask,
+          isCommon = newBitmask < ARY_FLAG;
+
+      var isCombo =
+        (srcBitmask == ARY_FLAG && bitmask == CURRY_FLAG) ||
+        (srcBitmask == ARY_FLAG && bitmask == REARG_FLAG && data[7].length <= source[8]) ||
+        (srcBitmask == (ARY_FLAG | REARG_FLAG) && bitmask == CURRY_FLAG);
+
+      // Exit early if metadata can't be merged.
+      if (!(isCommon || isCombo)) {
+        return data;
+      }
+      // Use source `thisArg` if available.
+      if (srcBitmask & BIND_FLAG) {
+        data[2] = source[2];
+        // Set when currying a bound function.
+        newBitmask |= (bitmask & BIND_FLAG) ? 0 : CURRY_BOUND_FLAG;
+      }
+      // Compose partial arguments.
+      var value = source[3];
+      if (value) {
+        var partials = data[3];
+        data[3] = partials ? composeArgs(partials, value, source[4]) : arrayCopy(value);
+        data[4] = partials ? replaceHolders(data[3], PLACEHOLDER) : arrayCopy(source[4]);
+      }
+      // Compose partial right arguments.
+      value = source[5];
+      if (value) {
+        partials = data[5];
+        data[5] = partials ? composeArgsRight(partials, value, source[6]) : arrayCopy(value);
+        data[6] = partials ? replaceHolders(data[5], PLACEHOLDER) : arrayCopy(source[6]);
+      }
+      // Use source `argPos` if available.
+      value = source[7];
+      if (value) {
+        data[7] = arrayCopy(value);
+      }
+      // Use source `ary` if it's smaller.
+      if (srcBitmask & ARY_FLAG) {
+        data[8] = data[8] == null ? source[8] : nativeMin(data[8], source[8]);
+      }
+      // Use source `arity` if one is not provided.
+      if (data[9] == null) {
+        data[9] = source[9];
+      }
+      // Use source `func` and merge bitmasks.
+      data[0] = source[0];
+      data[1] = newBitmask;
+
+      return data;
+    }
+
+    /**
+     * Used by `_.defaultsDeep` to customize its `_.merge` use.
+     *
+     * @private
+     * @param {*} objectValue The destination object property value.
+     * @param {*} sourceValue The source object property value.
+     * @returns {*} Returns the value to assign to the destination object.
+     */
+    function mergeDefaults(objectValue, sourceValue) {
+      return objectValue === undefined ? sourceValue : merge(objectValue, sourceValue, mergeDefaults);
+    }
+
+    /**
+     * A specialized version of `_.pick` which picks `object` properties specified
+     * by `props`.
+     *
+     * @private
+     * @param {Object} object The source object.
+     * @param {string[]} props The property names to pick.
+     * @returns {Object} Returns the new object.
+     */
+    function pickByArray(object, props) {
+      object = toObject(object);
+
+      var index = -1,
+          length = props.length,
+          result = {};
+
+      while (++index < length) {
+        var key = props[index];
+        if (key in object) {
+          result[key] = object[key];
+        }
+      }
+      return result;
+    }
+
+    /**
+     * A specialized version of `_.pick` which picks `object` properties `predicate`
+     * returns truthy for.
+     *
+     * @private
+     * @param {Object} object The source object.
+     * @param {Function} predicate The function invoked per iteration.
+     * @returns {Object} Returns the new object.
+     */
+    function pickByCallback(object, predicate) {
+      var result = {};
+      baseForIn(object, function(value, key, object) {
+        if (predicate(value, key, object)) {
+          result[key] = value;
+        }
+      });
+      return result;
+    }
+
+    /**
+     * Reorder `array` according to the specified indexes where the element at
+     * the first index is assigned as the first element, the element at
+     * the second index is assigned as the second element, and so on.
+     *
+     * @private
+     * @param {Array} array The array to reorder.
+     * @param {Array} indexes The arranged array indexes.
+     * @returns {Array} Returns `array`.
+     */
+    function reorder(array, indexes) {
+      var arrLength = array.length,
+          length = nativeMin(indexes.length, arrLength),
+          oldArray = arrayCopy(array);
+
+      while (length--) {
+        var index = indexes[length];
+        array[length] = isIndex(index, arrLength) ? oldArray[index] : undefined;
+      }
+      return array;
+    }
+
+    /**
+     * Sets metadata for `func`.
+     *
+     * **Note:** If this function becomes hot, i.e. is invoked a lot in a short
+     * period of time, it will trip its breaker and transition to an identity function
+     * to avoid garbage collection pauses in V8. See [V8 issue 2070](https://code.google.com/p/v8/issues/detail?id=2070)
+     * for more details.
+     *
+     * @private
+     * @param {Function} func The function to associate metadata with.
+     * @param {*} data The metadata.
+     * @returns {Function} Returns `func`.
+     */
+    var setData = (function() {
+      var count = 0,
+          lastCalled = 0;
+
+      return function(key, value) {
+        var stamp = now(),
+            remaining = HOT_SPAN - (stamp - lastCalled);
+
+        lastCalled = stamp;
+        if (remaining > 0) {
+          if (++count >= HOT_COUNT) {
+            return key;
+          }
+        } else {
+          count = 0;
+        }
+        return baseSetData(key, value);
+      };
+    }());
+
+    /**
+     * A fallback implementation of `Object.keys` which creates an array of the
+     * own enumerable property names of `object`.
+     *
+     * @private
+     * @param {Object} object The object to query.
+     * @returns {Array} Returns the array of property names.
+     */
+    function shimKeys(object) {
+      var props = keysIn(object),
+          propsLength = props.length,
+          length = propsLength && object.length;
+
+      var allowIndexes = !!length && isLength(length) &&
+        (isArray(object) || isArguments(object));
+
+      var index = -1,
+          result = [];
+
+      while (++index < propsLength) {
+        var key = props[index];
+        if ((allowIndexes && isIndex(key, length)) || hasOwnProperty.call(object, key)) {
+          result.push(key);
+        }
+      }
+      return result;
+    }
+
+    /**
+     * Converts `value` to an array-like object if it's not one.
+     *
+     * @private
+     * @param {*} value The value to process.
+     * @returns {Array|Object} Returns the array-like object.
+     */
+    function toIterable(value) {
+      if (value == null) {
+        return [];
+      }
+      if (!isArrayLike(value)) {
+        return values(value);
+      }
+      return isObject(value) ? value : Object(value);
+    }
+
+    /**
+     * Converts `value` to an object if it's not one.
+     *
+     * @private
+     * @param {*} value The value to process.
+     * @returns {Object} Returns the object.
+     */
+    function toObject(value) {
+      return isObject(value) ? value : Object(value);
+    }
+
+    /**
+     * Converts `value` to property path array if it's not one.
+     *
+     * @private
+     * @param {*} value The value to process.
+     * @returns {Array} Returns the property path array.
+     */
+    function toPath(value) {
+      if (isArray(value)) {
+        return value;
+      }
+      var result = [];
+      baseToString(value).replace(rePropName, function(match, number, quote, string) {
+        result.push(quote ? string.replace(reEscapeChar, '$1') : (number || match));
+      });
+      return result;
+    }
+
+    /**
+     * Creates a clone of `wrapper`.
+     *
+     * @private
+     * @param {Object} wrapper The wrapper to clone.
+     * @returns {Object} Returns the cloned wrapper.
+     */
+    function wrapperClone(wrapper) {
+      return wrapper instanceof LazyWrapper
+        ? wrapper.clone()
+        : new LodashWrapper(wrapper.__wrapped__, wrapper.__chain__, arrayCopy(wrapper.__actions__));
+    }
+
+    /*------------------------------------------------------------------------*/
+
+    /**
+     * Creates an array of elements split into groups the length of `size`.
+     * If `collection` can't be split evenly, the final chunk will be the remaining
+     * elements.
+     *
+     * @static
+     * @memberOf _
+     * @category Array
+     * @param {Array} array The array to process.
+     * @param {number} [size=1] The length of each chunk.
+     * @param- {Object} [guard] Enables use as a callback for functions like `_.map`.
+     * @returns {Array} Returns the new array containing chunks.
+     * @example
+     *
+     * _.chunk(['a', 'b', 'c', 'd'], 2);
+     * // => [['a', 'b'], ['c', 'd']]
+     *
+     * _.chunk(['a', 'b', 'c', 'd'], 3);
+     * // => [['a', 'b', 'c'], ['d']]
+     */
+    function chunk(array, size, guard) {
+      if (guard ? isIterateeCall(array, size, guard) : size == null) {
+        size = 1;
+      } else {
+        size = nativeMax(nativeFloor(size) || 1, 1);
+      }
+      var index = 0,
+          length = array ? array.length : 0,
+          resIndex = -1,
+          result = Array(nativeCeil(length / size));
+
+      while (index < length) {
+        result[++resIndex] = baseSlice(array, index, (index += size));
+      }
+      return result;
+    }
+
+    /**
+     * Creates an array with all falsey values removed. The values `false`, `null`,
+     * `0`, `""`, `undefined`, and `NaN` are falsey.
+     *
+     * @static
+     * @memberOf _
+     * @category Array
+     * @param {Array} array The array to compact.
+     * @returns {Array} Returns the new array of filtered values.
+     * @example
+     *
+     * _.compact([0, 1, false, 2, '', 3]);
+     * // => [1, 2, 3]
+     */
+    function compact(array) {
+      var index = -1,
+          length = array ? array.length : 0,
+          resIndex = -1,
+          result = [];
+
+      while (++index < length) {
+        var value = array[index];
+        if (value) {
+          result[++resIndex] = value;
+        }
+      }
+      return result;
+    }
+
+    /**
+     * Creates an array of unique `array` values not included in the other
+     * provided arrays using [`SameValueZero`](http://ecma-international.org/ecma-262/6.0/#sec-samevaluezero)
+     * for equality comparisons.
+     *
+     * @static
+     * @memberOf _
+     * @category Array
+     * @param {Array} array The array to inspect.
+     * @param {...Array} [values] The arrays of values to exclude.
+     * @returns {Array} Returns the new array of filtered values.
+     * @example
+     *
+     * _.difference([1, 2, 3], [4, 2]);
+     * // => [1, 3]
+     */
+    var difference = restParam(function(array, values) {
+      return (isObjectLike(array) && isArrayLike(array))
+        ? baseDifference(array, baseFlatten(values, false, true))
+        : [];
+    });
+
+    /**
+     * Creates a slice of `array` with `n` elements dropped from the beginning.
+     *
+     * @static
+     * @memberOf _
+     * @category Array
+     * @param {Array} array The array to query.
+     * @param {number} [n=1] The number of elements to drop.
+     * @param- {Object} [guard] Enables use as a callback for functions like `_.map`.
+     * @returns {Array} Returns the slice of `array`.
+     * @example
+     *
+     * _.drop([1, 2, 3]);
+     * // => [2, 3]
+     *
+     * _.drop([1, 2, 3], 2);
+     * // => [3]
+     *
+     * _.drop([1, 2, 3], 5);
+     * // => []
+     *
+     * _.drop([1, 2, 3], 0);
+     * // => [1, 2, 3]
+     */
+    function drop(array, n, guard) {
+      var length = array ? array.length : 0;
+      if (!length) {
+        return [];
+      }
+      if (guard ? isIterateeCall(array, n, guard) : n == null) {
+        n = 1;
+      }
+      return baseSlice(array, n < 0 ? 0 : n);
+    }
+
+    /**
+     * Creates a slice of `array` with `n` elements dropped from the end.
+     *
+     * @static
+     * @memberOf _
+     * @category Array
+     * @param {Array} array The array to query.
+     * @param {number} [n=1] The number of elements to drop.
+     * @param- {Object} [guard] Enables use as a callback for functions like `_.map`.
+     * @returns {Array} Returns the slice of `array`.
+     * @example
+     *
+     * _.dropRight([1, 2, 3]);
+     * // => [1, 2]
+     *
+     * _.dropRight([1, 2, 3], 2);
+     * // => [1]
+     *
+     * _.dropRight([1, 2, 3], 5);
+     * // => []
+     *
+     * _.dropRight([1, 2, 3], 0);
+     * // => [1, 2, 3]
+     */
+    function dropRight(array, n, guard) {
+      var length = array ? array.length : 0;
+      if (!length) {
+        return [];
+      }
+      if (guard ? isIterateeCall(array, n, guard) : n == null) {
+        n = 1;
+      }
+      n = length - (+n || 0);
+      return baseSlice(array, 0, n < 0 ? 0 : n);
+    }
+
+    /**
+     * Creates a slice of `array` excluding elements dropped from the end.
+     * Elements are dropped until `predicate` returns falsey. The predicate is
+     * bound to `thisArg` and invoked with three arguments: (value, index, array).
+     *
+     * If a property name is provided for `predicate` the created `_.property`
+     * style callback returns the property value of the given element.
+     *
+     * If a value is also provided for `thisArg` the created `_.matchesProperty`
+     * style callback returns `true` for elements that have a matching property
+     * value, else `false`.
+     *
+     * If an object is provided for `predicate` the created `_.matches` style
+     * callback returns `true` for elements that match the properties of the given
+     * object, else `false`.
+     *
+     * @static
+     * @memberOf _
+     * @category Array
+     * @param {Array} array The array to query.
+     * @param {Function|Object|string} [predicate=_.identity] The function invoked
+     *  per iteration.
+     * @param {*} [thisArg] The `this` binding of `predicate`.
+     * @returns {Array} Returns the slice of `array`.
+     * @example
+     *
+     * _.dropRightWhile([1, 2, 3], function(n) {
+     *   return n > 1;
+     * });
+     * // => [1]
+     *
+     * var users = [
+     *   { 'user': 'barney',  'active': true },
+     *   { 'user': 'fred',    'active': false },
+     *   { 'user': 'pebbles', 'active': false }
+     * ];
+     *
+     * // using the `_.matches` callback shorthand
+     * _.pluck(_.dropRightWhile(users, { 'user': 'pebbles', 'active': false }), 'user');
+     * // => ['barney', 'fred']
+     *
+     * // using the `_.matchesProperty` callback shorthand
+     * _.pluck(_.dropRightWhile(users, 'active', false), 'user');
+     * // => ['barney']
+     *
+     * // using the `_.property` callback shorthand
+     * _.pluck(_.dropRightWhile(users, 'active'), 'user');
+     * // => ['barney', 'fred', 'pebbles']
+     */
+    function dropRightWhile(array, predicate, thisArg) {
+      return (array && array.length)
+        ? baseWhile(array, getCallback(predicate, thisArg, 3), true, true)
+        : [];
+    }
+
+    /**
+     * Creates a slice of `array` excluding elements dropped from the beginning.
+     * Elements are dropped until `predicate` returns falsey. The predicate is
+     * bound to `thisArg` and invoked with three arguments: (value, index, array).
+     *
+     * If a property name is provided for `predicate` the created `_.property`
+     * style callback returns the property value of the given element.
+     *
+     * If a value is also provided for `thisArg` the created `_.matchesProperty`
+     * style callback returns `true` for elements that have a matching property
+     * value, else `false`.
+     *
+     * If an object is provided for `predicate` the created `_.matches` style
+     * callback returns `true` for elements that have the properties of the given
+     * object, else `false`.
+     *
+     * @static
+     * @memberOf _
+     * @category Array
+     * @param {Array} array The array to query.
+     * @param {Function|Object|string} [predicate=_.identity] The function invoked
+     *  per iteration.
+     * @param {*} [thisArg] The `this` binding of `predicate`.
+     * @returns {Array} Returns the slice of `array`.
+     * @example
+     *
+     * _.dropWhile([1, 2, 3], function(n) {
+     *   return n < 3;
+     * });
+     * // => [3]
+     *
+     * var users = [
+     *   { 'user': 'barney',  'active': false },
+     *   { 'user': 'fred',    'active': false },
+     *   { 'user': 'pebbles', 'active': true }
+     * ];
+     *
+     * // using the `_.matches` callback shorthand
+     * _.pluck(_.dropWhile(users, { 'user': 'barney', 'active': false }), 'user');
+     * // => ['fred', 'pebbles']
+     *
+     * // using the `_.matchesProperty` callback shorthand
+     * _.pluck(_.dropWhile(users, 'active', false), 'user');
+     * // => ['pebbles']
+     *
+     * // using the `_.property` callback shorthand
+     * _.pluck(_.dropWhile(users, 'active'), 'user');
+     * // => ['barney', 'fred', 'pebbles']
+     */
+    function dropWhile(array, predicate, thisArg) {
+      return (array && array.length)
+        ? baseWhile(array, getCallback(predicate, thisArg, 3), true)
+        : [];
+    }
+
+    /**
+     * Fills elements of `array` with `value` from `start` up to, but not
+     * including, `end`.
+     *
+     * **Note:** This method mutates `array`.
+     *
+     * @static
+     * @memberOf _
+     * @category Array
+     * @param {Array} array The array to fill.
+     * @param {*} value The value to fill `array` with.
+     * @param {number} [start=0] The start position.
+     * @param {number} [end=array.length] The end position.
+     * @returns {Array} Returns `array`.
+     * @example
+     *
+     * var array = [1, 2, 3];
+     *
+     * _.fill(array, 'a');
+     * console.log(array);
+     * // => ['a', 'a', 'a']
+     *
+     * _.fill(Array(3), 2);
+     * // => [2, 2, 2]
+     *
+     * _.fill([4, 6, 8], '*', 1, 2);
+     * // => [4, '*', 8]
+     */
+    function fill(array, value, start, end) {
+      var length = array ? array.length : 0;
+      if (!length) {
+        return [];
+      }
+      if (start && typeof start != 'number' && isIterateeCall(array, value, start)) {
+        start = 0;
+        end = length;
+      }
+      return baseFill(array, value, start, end);
+    }
+
+    /**
+     * This method is like `_.find` except that it returns the index of the first
+     * element `predicate` returns truthy for instead of the element itself.
+     *
+     * If a property name is provided for `predicate` the created `_.property`
+     * style callback returns the property value of the given element.
+     *
+     * If a value is also provided for `thisArg` the created `_.matchesProperty`
+     * style callback returns `true` for elements that have a matching property
+     * value, else `false`.
+     *
+     * If an object is provided for `predicate` the created `_.matches` style
+     * callback returns `true` for elements that have the properties of the given
+     * object, else `false`.
+     *
+     * @static
+     * @memberOf _
+     * @category Array
+     * @param {Array} array The array to search.
+     * @param {Function|Object|string} [predicate=_.identity] The function invoked
+     *  per iteration.
+     * @param {*} [thisArg] The `this` binding of `predicate`.
+     * @returns {number} Returns the index of the found element, else `-1`.
+     * @example
+     *
+     * var users = [
+     *   { 'user': 'barney',  'active': false },
+     *   { 'user': 'fred',    'active': false },
+     *   { 'user': 'pebbles', 'active': true }
+     * ];
+     *
+     * _.findIndex(users, function(chr) {
+     *   return chr.user == 'barney';
+     * });
+     * // => 0
+     *
+     * // using the `_.matches` callback shorthand
+     * _.findIndex(users, { 'user': 'fred', 'active': false });
+     * // => 1
+     *
+     * // using the `_.matchesProperty` callback shorthand
+     * _.findIndex(users, 'active', false);
+     * // => 0
+     *
+     * // using the `_.property` callback shorthand
+     * _.findIndex(users, 'active');
+     * // => 2
+     */
+    var findIndex = createFindIndex();
+
+    /**
+     * This method is like `_.findIndex` except that it iterates over elements
+     * of `collection` from right to left.
+     *
+     * If a property name is provided for `predicate` the created `_.property`
+     * style callback returns the property value of the given element.
+     *
+     * If a value is also provided for `thisArg` the created `_.matchesProperty`
+     * style callback returns `true` for elements that have a matching property
+     * value, else `false`.
+     *
+     * If an object is provided for `predicate` the created `_.matches` style
+     * callback returns `true` for elements that have the properties of the given
+     * object, else `false`.
+     *
+     * @static
+     * @memberOf _
+     * @category Array
+     * @param {Array} array The array to search.
+     * @param {Function|Object|string} [predicate=_.identity] The function invoked
+     *  per iteration.
+     * @param {*} [thisArg] The `this` binding of `predicate`.
+     * @returns {number} Returns the index of the found element, else `-1`.
+     * @example
+     *
+     * var users = [
+     *   { 'user': 'barney',  'active': true },
+     *   { 'user': 'fred',    'active': false },
+     *   { 'user': 'pebbles', 'active': false }
+     * ];
+     *
+     * _.findLastIndex(users, function(chr) {
+     *   return chr.user == 'pebbles';
+     * });
+     * // => 2
+     *
+     * // using the `_.matches` callback shorthand
+     * _.findLastIndex(users, { 'user': 'barney', 'active': true });
+     * // => 0
+     *
+     * // using the `_.matchesProperty` callback shorthand
+     * _.findLastIndex(users, 'active', false);
+     * // => 2
+     *
+     * // using the `_.property` callback shorthand
+     * _.findLastIndex(users, 'active');
+     * // => 0
+     */
+    var findLastIndex = createFindIndex(true);
+
+    /**
+     * Gets the first element of `array`.
+     *
+     * @static
+     * @memberOf _
+     * @alias head
+     * @category Array
+     * @param {Array} array The array to query.
+     * @returns {*} Returns the first element of `array`.
+     * @example
+     *
+     * _.first([1, 2, 3]);
+     * // => 1
+     *
+     * _.first([]);
+     * // => undefined
+     */
+    function first(array) {
+      return array ? array[0] : undefined;
+    }
+
+    /**
+     * Flattens a nested array. If `isDeep` is `true` the array is recursively
+     * flattened, otherwise it's only flattened a single level.
+     *
+     * @static
+     * @memberOf _
+     * @category Array
+     * @param {Array} array The array to flatten.
+     * @param {boolean} [isDeep] Specify a deep flatten.
+     * @param- {Object} [guard] Enables use as a callback for functions like `_.map`.
+     * @returns {Array} Returns the new flattened array.
+     * @example
+     *
+     * _.flatten([1, [2, 3, [4]]]);
+     * // => [1, 2, 3, [4]]
+     *
+     * // using `isDeep`
+     * _.flatten([1, [2, 3, [4]]], true);
+     * // => [1, 2, 3, 4]
+     */
+    function flatten(array, isDeep, guard) {
+      var length = array ? array.length : 0;
+      if (guard && isIterateeCall(array, isDeep, guard)) {
+        isDeep = false;
+      }
+      return length ? baseFlatten(array, isDeep) : [];
+    }
+
+    /**
+     * Recursively flattens a nested array.
+     *
+     * @static
+     * @memberOf _
+     * @category Array
+     * @param {Array} array The array to recursively flatten.
+     * @returns {Array} Returns the new flattened array.
+     * @example
+     *
+     * _.flattenDeep([1, [2, 3, [4]]]);
+     * // => [1, 2, 3, 4]
+     */
+    function flattenDeep(array) {
+      var length = array ? array.length : 0;
+      return length ? baseFlatten(array, true) : [];
+    }
+
+    /**
+     * Gets the index at which the first occurrence of `value` is found in `array`
+     * using [`SameValueZero`](http://ecma-international.org/ecma-262/6.0/#sec-samevaluezero)
+     * for equality comparisons. If `fromIndex` is negative, it's used as the offset
+     * from the end of `array`. If `array` is sorted providing `true` for `fromIndex`
+     * performs a faster binary search.
+     *
+     * @static
+     * @memberOf _
+     * @category Array
+     * @param {Array} array The array to search.
+     * @param {*} value The value to search for.
+     * @param {boolean|number} [fromIndex=0] The index to search from or `true`
+     *  to perform a binary search on a sorted array.
+     * @returns {number} Returns the index of the matched value, else `-1`.
+     * @example
+     *
+     * _.indexOf([1, 2, 1, 2], 2);
+     * // => 1
+     *
+     * // using `fromIndex`
+     * _.indexOf([1, 2, 1, 2], 2, 2);
+     * // => 3
+     *
+     * // performing a binary search
+     * _.indexOf([1, 1, 2, 2], 2, true);
+     * // => 2
+     */
+    function indexOf(array, value, fromIndex) {
+      var length = array ? array.length : 0;
+      if (!length) {
+        return -1;
+      }
+      if (typeof fromIndex == 'number') {
+        fromIndex = fromIndex < 0 ? nativeMax(length + fromIndex, 0) : fromIndex;
+      } else if (fromIndex) {
+        var index = binaryIndex(array, value);
+        if (index < length &&
+            (value === value ? (value === array[index]) : (array[index] !== array[index]))) {
+          return index;
+        }
+        return -1;
+      }
+      return baseIndexOf(array, value, fromIndex || 0);
+    }
+
+    /**
+     * Gets all but the last element of `array`.
+     *
+     * @static
+     * @memberOf _
+     * @category Array
+     * @param {Array} array The array to query.
+     * @returns {Array} Returns the slice of `array`.
+     * @example
+     *
+     * _.initial([1, 2, 3]);
+     * // => [1, 2]
+     */
+    function initial(array) {
+      return dropRight(array, 1);
+    }
+
+    /**
+     * Creates an array of unique values that are included in all of the provided
+     * arrays using [`SameValueZero`](http://ecma-international.org/ecma-262/6.0/#sec-samevaluezero)
+     * for equality comparisons.
+     *
+     * @static
+     * @memberOf _
+     * @category Array
+     * @param {...Array} [arrays] The arrays to inspect.
+     * @returns {Array} Returns the new array of shared values.
+     * @example
+     * _.intersection([1, 2], [4, 2], [2, 1]);
+     * // => [2]
+     */
+    var intersection = restParam(function(arrays) {
+      var othLength = arrays.length,
+          othIndex = othLength,
+          caches = Array(length),
+          indexOf = getIndexOf(),
+          isCommon = indexOf === baseIndexOf,
+          result = [];
+
+      while (othIndex--) {
+        var value = arrays[othIndex] = isArrayLike(value = arrays[othIndex]) ? value : [];
+        caches[othIndex] = (isCommon && value.length >= 120) ? createCache(othIndex && value) : null;
+      }
+      var array = arrays[0],
+          index = -1,
+          length = array ? array.length : 0,
+          seen = caches[0];
+
+      outer:
+      while (++index < length) {
+        value = array[index];
+        if ((seen ? cacheIndexOf(seen, value) : indexOf(result, value, 0)) < 0) {
+          var othIndex = othLength;
+          while (--othIndex) {
+            var cache = caches[othIndex];
+            if ((cache ? cacheIndexOf(cache, value) : indexOf(arrays[othIndex], value, 0)) < 0) {
+              continue outer;
+            }
+          }
+          if (seen) {
+            seen.push(value);
+          }
+          result.push(value);
+        }
+      }
+      return result;
+    });
+
+    /**
+     * Gets the last element of `array`.
+     *
+     * @static
+     * @memberOf _
+     * @category Array
+     * @param {Array} array The array to query.
+     * @returns {*} Returns the last element of `array`.
+     * @example
+     *
+     * _.last([1, 2, 3]);
+     * // => 3
+     */
+    function last(array) {
+      var length = array ? array.length : 0;
+      return length ? array[length - 1] : undefined;
+    }
+
+    /**
+     * This method is like `_.indexOf` except that it iterates over elements of
+     * `array` from right to left.
+     *
+     * @static
+     * @memberOf _
+     * @category Array
+     * @param {Array} array The array to search.
+     * @param {*} value The value to search for.
+     * @param {boolean|number} [fromIndex=array.length-1] The index to search from
+     *  or `true` to perform a binary search on a sorted array.
+     * @returns {number} Returns the index of the matched value, else `-1`.
+     * @example
+     *
+     * _.lastIndexOf([1, 2, 1, 2], 2);
+     * // => 3
+     *
+     * // using `fromIndex`
+     * _.lastIndexOf([1, 2, 1, 2], 2, 2);
+     * // => 1
+     *
+     * // performing a binary search
+     * _.lastIndexOf([1, 1, 2, 2], 2, true);
+     * // => 3
+     */
+    function lastIndexOf(array, value, fromIndex) {
+      var length = array ? array.length : 0;
+      if (!length) {
+        return -1;
+      }
+      var index = length;
+      if (typeof fromIndex == 'number') {
+        index = (fromIndex < 0 ? nativeMax(length + fromIndex, 0) : nativeMin(fromIndex || 0, length - 1)) + 1;
+      } else if (fromIndex) {
+        index = binaryIndex(array, value, true) - 1;
+        var other = array[index];
+        if (value === value ? (value === other) : (other !== other)) {
+          return index;
+        }
+        return -1;
+      }
+      if (value !== value) {
+        return indexOfNaN(array, index, true);
+      }
+      while (index--) {
+        if (array[index] === value) {
+          return index;
+        }
+      }
+      return -1;
+    }
+
+    /**
+     * Removes all provided values from `array` using
+     * [`SameValueZero`](http://ecma-international.org/ecma-262/6.0/#sec-samevaluezero)
+     * for equality comparisons.
+     *
+     * **Note:** Unlike `_.without`, this method mutates `array`.
+     *
+     * @static
+     * @memberOf _
+     * @category Array
+     * @param {Array} array The array to modify.
+     * @param {...*} [values] The values to remove.
+     * @returns {Array} Returns `array`.
+     * @example
+     *
+     * var array = [1, 2, 3, 1, 2, 3];
+     *
+     * _.pull(array, 2, 3);
+     * console.log(array);
+     * // => [1, 1]
+     */
+    function pull() {
+      var args = arguments,
+          array = args[0];
+
+      if (!(array && array.length)) {
+        return array;
+      }
+      var index = 0,
+          indexOf = getIndexOf(),
+          length = args.length;
+
+      while (++index < length) {
+        var fromIndex = 0,
+            value = args[index];
+
+        while ((fromIndex = indexOf(array, value, fromIndex)) > -1) {
+          splice.call(array, fromIndex, 1);
+        }
+      }
+      return array;
+    }
+
+    /**
+     * Removes elements from `array` corresponding to the given indexes and returns
+     * an array of the removed elements. Indexes may be specified as an array of
+     * indexes or as individual arguments.
+     *
+     * **Note:** Unlike `_.at`, this method mutates `array`.
+     *
+     * @static
+     * @memberOf _
+     * @category Array
+     * @param {Array} array The array to modify.
+     * @param {...(number|number[])} [indexes] The indexes of elements to remove,
+     *  specified as individual indexes or arrays of indexes.
+     * @returns {Array} Returns the new array of removed elements.
+     * @example
+     *
+     * var array = [5, 10, 15, 20];
+     * var evens = _.pullAt(array, 1, 3);
+     *
+     * console.log(array);
+     * // => [5, 15]
+     *
+     * console.log(evens);
+     * // => [10, 20]
+     */
+    var pullAt = restParam(function(array, indexes) {
+      indexes = baseFlatten(indexes);
+
+      var result = baseAt(array, indexes);
+      basePullAt(array, indexes.sort(baseCompareAscending));
+      return result;
+    });
+
+    /**
+     * Removes all elements from `array` that `predicate` returns truthy for
+     * and returns an array of the removed elements. The predicate is bound to
+     * `thisArg` and invoked with three arguments: (value, index, array).
+     *
+     * If a property name is provided for `predicate` the created `_.property`
+     * style callback returns the property value of the given element.
+     *
+     * If a value is also provided for `thisArg` the created `_.matchesProperty`
+     * style callback returns `true` for elements that have a matching property
+     * value, else `false`.
+     *
+     * If an object is provided for `predicate` the created `_.matches` style
+     * callback returns `true` for elements that have the properties of the given
+     * object, else `false`.
+     *
+     * **Note:** Unlike `_.filter`, this method mutates `array`.
+     *
+     * @static
+     * @memberOf _
+     * @category Array
+     * @param {Array} array The array to modify.
+     * @param {Function|Object|string} [predicate=_.identity] The function invoked
+     *  per iteration.
+     * @param {*} [thisArg] The `this` binding of `predicate`.
+     * @returns {Array} Returns the new array of removed elements.
+     * @example
+     *
+     * var array = [1, 2, 3, 4];
+     * var evens = _.remove(array, function(n) {
+     *   return n % 2 == 0;
+     * });
+     *
+     * console.log(array);
+     * // => [1, 3]
+     *
+     * console.log(evens);
+     * // => [2, 4]
+     */
+    function remove(array, predicate, thisArg) {
+      var result = [];
+      if (!(array && array.length)) {
+        return result;
+      }
+      var index = -1,
+          indexes = [],
+          length = array.length;
+
+      predicate = getCallback(predicate, thisArg, 3);
+      while (++index < length) {
+        var value = array[index];
+        if (predicate(value, index, array)) {
+          result.push(value);
+          indexes.push(index);
+        }
+      }
+      basePullAt(array, indexes);
+      return result;
+    }
+
+    /**
+     * Gets all but the first element of `array`.
+     *
+     * @static
+     * @memberOf _
+     * @alias tail
+     * @category Array
+     * @param {Array} array The array to query.
+     * @returns {Array} Returns the slice of `array`.
+     * @example
+     *
+     * _.rest([1, 2, 3]);
+     * // => [2, 3]
+     */
+    function rest(array) {
+      return drop(array, 1);
+    }
+
+    /**
+     * Creates a slice of `array` from `start` up to, but not including, `end`.
+     *
+     * **Note:** This method is used instead of `Array#slice` to support node
+     * lists in IE < 9 and to ensure dense arrays are returned.
+     *
+     * @static
+     * @memberOf _
+     * @category Array
+     * @param {Array} array The array to slice.
+     * @param {number} [start=0] The start position.
+     * @param {number} [end=array.length] The end position.
+     * @returns {Array} Returns the slice of `array`.
+     */
+    function slice(array, start, end) {
+      var length = array ? array.length : 0;
+      if (!length) {
+        return [];
+      }
+      if (end && typeof end != 'number' && isIterateeCall(array, start, end)) {
+        start = 0;
+        end = length;
+      }
+      return baseSlice(array, start, end);
+    }
+
+    /**
+     * Uses a binary search to determine the lowest index at which `value` should
+     * be inserted into `array` in order to maintain its sort order. If an iteratee
+     * function is provided it's invoked for `value` and each element of `array`
+     * to compute their sort ranking. The iteratee is bound to `thisArg` and
+     * invoked with one argument; (value).
+     *
+     * If a property name is provided for `iteratee` the created `_.property`
+     * style callback returns the property value of the given element.
+     *
+     * If a value is also provided for `thisArg` the created `_.matchesProperty`
+     * style callback returns `true` for elements that have a matching property
+     * value, else `false`.
+     *
+     * If an object is provided for `iteratee` the created `_.matches` style
+     * callback returns `true` for elements that have the properties of the given
+     * object, else `false`.
+     *
+     * @static
+     * @memberOf _
+     * @category Array
+     * @param {Array} array The sorted array to inspect.
+     * @param {*} value The value to evaluate.
+     * @param {Function|Object|string} [iteratee=_.identity] The function invoked
+     *  per iteration.
+     * @param {*} [thisArg] The `this` binding of `iteratee`.
+     * @returns {number} Returns the index at which `value` should be inserted
+     *  into `array`.
+     * @example
+     *
+     * _.sortedIndex([30, 50], 40);
+     * // => 1
+     *
+     * _.sortedIndex([4, 4, 5, 5], 5);
+     * // => 2
+     *
+     * var dict = { 'data': { 'thirty': 30, 'forty': 40, 'fifty': 50 } };
+     *
+     * // using an iteratee function
+     * _.sortedIndex(['thirty', 'fifty'], 'forty', function(word) {
+     *   return this.data[word];
+     * }, dict);
+     * // => 1
+     *
+     * // using the `_.property` callback shorthand
+     * _.sortedIndex([{ 'x': 30 }, { 'x': 50 }], { 'x': 40 }, 'x');
+     * // => 1
+     */
+    var sortedIndex = createSortedIndex();
+
+    /**
+     * This method is like `_.sortedIndex` except that it returns the highest
+     * index at which `value` should be inserted into `array` in order to
+     * maintain its sort order.
+     *
+     * @static
+     * @memberOf _
+     * @category Array
+     * @param {Array} array The sorted array to inspect.
+     * @param {*} value The value to evaluate.
+     * @param {Function|Object|string} [iteratee=_.identity] The function invoked
+     *  per iteration.
+     * @param {*} [thisArg] The `this` binding of `iteratee`.
+     * @returns {number} Returns the index at which `value` should be inserted
+     *  into `array`.
+     * @example
+     *
+     * _.sortedLastIndex([4, 4, 5, 5], 5);
+     * // => 4
+     */
+    var sortedLastIndex = createSortedIndex(true);
+
+    /**
+     * Creates a slice of `array` with `n` elements taken from the beginning.
+     *
+     * @static
+     * @memberOf _
+     * @category Array
+     * @param {Array} array The array to query.
+     * @param {number} [n=1] The number of elements to take.
+     * @param- {Object} [guard] Enables use as a callback for functions like `_.map`.
+     * @returns {Array} Returns the slice of `array`.
+     * @example
+     *
+     * _.take([1, 2, 3]);
+     * // => [1]
+     *
+     * _.take([1, 2, 3], 2);
+     * // => [1, 2]
+     *
+     * _.take([1, 2, 3], 5);
+     * // => [1, 2, 3]
+     *
+     * _.take([1, 2, 3], 0);
+     * // => []
+     */
+    function take(array, n, guard) {
+      var length = array ? array.length : 0;
+      if (!length) {
+        return [];
+      }
+      if (guard ? isIterateeCall(array, n, guard) : n == null) {
+        n = 1;
+      }
+      return baseSlice(array, 0, n < 0 ? 0 : n);
+    }
+
+    /**
+     * Creates a slice of `array` with `n` elements taken from the end.
+     *
+     * @static
+     * @memberOf _
+     * @category Array
+     * @param {Array} array The array to query.
+     * @param {number} [n=1] The number of elements to take.
+     * @param- {Object} [guard] Enables use as a callback for functions like `_.map`.
+     * @returns {Array} Returns the slice of `array`.
+     * @example
+     *
+     * _.takeRight([1, 2, 3]);
+     * // => [3]
+     *
+     * _.takeRight([1, 2, 3], 2);
+     * // => [2, 3]
+     *
+     * _.takeRight([1, 2, 3], 5);
+     * // => [1, 2, 3]
+     *
+     * _.takeRight([1, 2, 3], 0);
+     * // => []
+     */
+    function takeRight(array, n, guard) {
+      var length = array ? array.length : 0;
+      if (!length) {
+        return [];
+      }
+      if (guard ? isIterateeCall(array, n, guard) : n == null) {
+        n = 1;
+      }
+      n = length - (+n || 0);
+      return baseSlice(array, n < 0 ? 0 : n);
+    }
+
+    /**
+     * Creates a slice of `array` with elements taken from the end. Elements are
+     * taken until `predicate` returns falsey. The predicate is bound to `thisArg`
+     * and invoked with three arguments: (value, index, array).
+     *
+     * If a property name is provided for `predicate` the created `_.property`
+     * style callback returns the property value of the given element.
+     *
+     * If a value is also provided for `thisArg` the created `_.matchesProperty`
+     * style callback returns `true` for elements that have a matching property
+     * value, else `false`.
+     *
+     * If an object is provided for `predicate` the created `_.matches` style
+     * callback returns `true` for elements that have the properties of the given
+     * object, else `false`.
+     *
+     * @static
+     * @memberOf _
+     * @category Array
+     * @param {Array} array The array to query.
+     * @param {Function|Object|string} [predicate=_.identity] The function invoked
+     *  per iteration.
+     * @param {*} [thisArg] The `this` binding of `predicate`.
+     * @returns {Array} Returns the slice of `array`.
+     * @example
+     *
+     * _.takeRightWhile([1, 2, 3], function(n) {
+     *   return n > 1;
+     * });
+     * // => [2, 3]
+     *
+     * var users = [
+     *   { 'user': 'barney',  'active': true },
+     *   { 'user': 'fred',    'active': false },
+     *   { 'user': 'pebbles', 'active': false }
+     * ];
+     *
+     * // using the `_.matches` callback shorthand
+     * _.pluck(_.takeRightWhile(users, { 'user': 'pebbles', 'active': false }), 'user');
+     * // => ['pebbles']
+     *
+     * // using the `_.matchesProperty` callback shorthand
+     * _.pluck(_.takeRightWhile(users, 'active', false), 'user');
+     * // => ['fred', 'pebbles']
+     *
+     * // using the `_.property` callback shorthand
+     * _.pluck(_.takeRightWhile(users, 'active'), 'user');
+     * // => []
+     */
+    function takeRightWhile(array, predicate, thisArg) {
+      return (array && array.length)
+        ? baseWhile(array, getCallback(predicate, thisArg, 3), false, true)
+        : [];
+    }
+
+    /**
+     * Creates a slice of `array` with elements taken from the beginning. Elements
+     * are taken until `predicate` returns falsey. The predicate is bound to
+     * `thisArg` and invoked with three arguments: (value, index, array).
+     *
+     * If a property name is provided for `predicate` the created `_.property`
+     * style callback returns the property value of the given element.
+     *
+     * If a value is also provided for `thisArg` the created `_.matchesProperty`
+     * style callback returns `true` for elements that have a matching property
+     * value, else `false`.
+     *
+     * If an object is provided for `predicate` the created `_.matches` style
+     * callback returns `true` for elements that have the properties of the given
+     * object, else `false`.
+     *
+     * @static
+     * @memberOf _
+     * @category Array
+     * @param {Array} array The array to query.
+     * @param {Function|Object|string} [predicate=_.identity] The function invoked
+     *  per iteration.
+     * @param {*} [thisArg] The `this` binding of `predicate`.
+     * @returns {Array} Returns the slice of `array`.
+     * @example
+     *
+     * _.takeWhile([1, 2, 3], function(n) {
+     *   return n < 3;
+     * });
+     * // => [1, 2]
+     *
+     * var users = [
+     *   { 'user': 'barney',  'active': false },
+     *   { 'user': 'fred',    'active': false},
+     *   { 'user': 'pebbles', 'active': true }
+     * ];
+     *
+     * // using the `_.matches` callback shorthand
+     * _.pluck(_.takeWhile(users, { 'user': 'barney', 'active': false }), 'user');
+     * // => ['barney']
+     *
+     * // using the `_.matchesProperty` callback shorthand
+     * _.pluck(_.takeWhile(users, 'active', false), 'user');
+     * // => ['barney', 'fred']
+     *
+     * // using the `_.property` callback shorthand
+     * _.pluck(_.takeWhile(users, 'active'), 'user');
+     * // => []
+     */
+    function takeWhile(array, predicate, thisArg) {
+      return (array && array.length)
+        ? baseWhile(array, getCallback(predicate, thisArg, 3))
+        : [];
+    }
+
+    /**
+     * Creates an array of unique values, in order, from all of the provided arrays
+     * using [`SameValueZero`](http://ecma-international.org/ecma-262/6.0/#sec-samevaluezero)
+     * for equality comparisons.
+     *
+     * @static
+     * @memberOf _
+     * @category Array
+     * @param {...Array} [arrays] The arrays to inspect.
+     * @returns {Array} Returns the new array of combined values.
+     * @example
+     *
+     * _.union([1, 2], [4, 2], [2, 1]);
+     * // => [1, 2, 4]
+     */
+    var union = restParam(function(arrays) {
+      return baseUniq(baseFlatten(arrays, false, true));
+    });
+
+    /**
+     * Creates a duplicate-free version of an array, using
+     * [`SameValueZero`](http://ecma-international.org/ecma-262/6.0/#sec-samevaluezero)
+     * for equality comparisons, in which only the first occurence of each element
+     * is kept. Providing `true` for `isSorted` performs a faster search algorithm
+     * for sorted arrays. If an iteratee function is provided it's invoked for
+     * each element in the array to generate the criterion by which uniqueness
+     * is computed. The `iteratee` is bound to `thisArg` and invoked with three
+     * arguments: (value, index, array).
+     *
+     * If a property name is provided for `iteratee` the created `_.property`
+     * style callback returns the property value of the given element.
+     *
+     * If a value is also provided for `thisArg` the created `_.matchesProperty`
+     * style callback returns `true` for elements that have a matching property
+     * value, else `false`.
+     *
+     * If an object is provided for `iteratee` the created `_.matches` style
+     * callback returns `true` for elements that have the properties of the given
+     * object, else `false`.
+     *
+     * @static
+     * @memberOf _
+     * @alias unique
+     * @category Array
+     * @param {Array} array The array to inspect.
+     * @param {boolean} [isSorted] Specify the array is sorted.
+     * @param {Function|Object|string} [iteratee] The function invoked per iteration.
+     * @param {*} [thisArg] The `this` binding of `iteratee`.
+     * @returns {Array} Returns the new duplicate-value-free array.
+     * @example
+     *
+     * _.uniq([2, 1, 2]);
+     * // => [2, 1]
+     *
+     * // using `isSorted`
+     * _.uniq([1, 1, 2], true);
+     * // => [1, 2]
+     *
+     * // using an iteratee function
+     * _.uniq([1, 2.5, 1.5, 2], function(n) {
+     *   return this.floor(n);
+     * }, Math);
+     * // => [1, 2.5]
+     *
+     * // using the `_.property` callback shorthand
+     * _.uniq([{ 'x': 1 }, { 'x': 2 }, { 'x': 1 }], 'x');
+     * // => [{ 'x': 1 }, { 'x': 2 }]
+     */
+    function uniq(array, isSorted, iteratee, thisArg) {
+      var length = array ? array.length : 0;
+      if (!length) {
+        return [];
+      }
+      if (isSorted != null && typeof isSorted != 'boolean') {
+        thisArg = iteratee;
+        iteratee = isIterateeCall(array, isSorted, thisArg) ? undefined : isSorted;
+        isSorted = false;
+      }
+      var callback = getCallback();
+      if (!(iteratee == null && callback === baseCallback)) {
+        iteratee = callback(iteratee, thisArg, 3);
+      }
+      return (isSorted && getIndexOf() === baseIndexOf)
+        ? sortedUniq(array, iteratee)
+        : baseUniq(array, iteratee);
+    }
+
+    /**
+     * This method is like `_.zip` except that it accepts an array of grouped
+     * elements and creates an array regrouping the elements to their pre-zip
+     * configuration.
+     *
+     * @static
+     * @memberOf _
+     * @category Array
+     * @param {Array} array The array of grouped elements to process.
+     * @returns {Array} Returns the new array of regrouped elements.
+     * @example
+     *
+     * var zipped = _.zip(['fred', 'barney'], [30, 40], [true, false]);
+     * // => [['fred', 30, true], ['barney', 40, false]]
+     *
+     * _.unzip(zipped);
+     * // => [['fred', 'barney'], [30, 40], [true, false]]
+     */
+    function unzip(array) {
+      if (!(array && array.length)) {
+        return [];
+      }
+      var index = -1,
+          length = 0;
+
+      array = arrayFilter(array, function(group) {
+        if (isArrayLike(group)) {
+          length = nativeMax(group.length, length);
+          return true;
+        }
+      });
+      var result = Array(length);
+      while (++index < length) {
+        result[index] = arrayMap(array, baseProperty(index));
+      }
+      return result;
+    }
+
+    /**
+     * This method is like `_.unzip` except that it accepts an iteratee to specify
+     * how regrouped values should be combined. The `iteratee` is bound to `thisArg`
+     * and invoked with four arguments: (accumulator, value, index, group).
+     *
+     * @static
+     * @memberOf _
+     * @category Array
+     * @param {Array} array The array of grouped elements to process.
+     * @param {Function} [iteratee] The function to combine regrouped values.
+     * @param {*} [thisArg] The `this` binding of `iteratee`.
+     * @returns {Array} Returns the new array of regrouped elements.
+     * @example
+     *
+     * var zipped = _.zip([1, 2], [10, 20], [100, 200]);
+     * // => [[1, 10, 100], [2, 20, 200]]
+     *
+     * _.unzipWith(zipped, _.add);
+     * // => [3, 30, 300]
+     */
+    function unzipWith(array, iteratee, thisArg) {
+      var length = array ? array.length : 0;
+      if (!length) {
+        return [];
+      }
+      var result = unzip(array);
+      if (iteratee == null) {
+        return result;
+      }
+      iteratee = bindCallback(iteratee, thisArg, 4);
+      return arrayMap(result, function(group) {
+        return arrayReduce(group, iteratee, undefined, true);
+      });
+    }
+
+    /**
+     * Creates an array excluding all provided values using
+     * [`SameValueZero`](http://ecma-international.org/ecma-262/6.0/#sec-samevaluezero)
+     * for equality comparisons.
+     *
+     * @static
+     * @memberOf _
+     * @category Array
+     * @param {Array} array The array to filter.
+     * @param {...*} [values] The values to exclude.
+     * @returns {Array} Returns the new array of filtered values.
+     * @example
+     *
+     * _.without([1, 2, 1, 3], 1, 2);
+     * // => [3]
+     */
+    var without = restParam(function(array, values) {
+      return isArrayLike(array)
+        ? baseDifference(array, values)
+        : [];
+    });
+
+    /**
+     * Creates an array of unique values that is the [symmetric difference](https://en.wikipedia.org/wiki/Symmetric_difference)
+     * of the provided arrays.
+     *
+     * @static
+     * @memberOf _
+     * @category Array
+     * @param {...Array} [arrays] The arrays to inspect.
+     * @returns {Array} Returns the new array of values.
+     * @example
+     *
+     * _.xor([1, 2], [4, 2]);
+     * // => [1, 4]
+     */
+    function xor() {
+      var index = -1,
+          length = arguments.length;
+
+      while (++index < length) {
+        var array = arguments[index];
+        if (isArrayLike(array)) {
+          var result = result
+            ? arrayPush(baseDifference(result, array), baseDifference(array, result))
+            : array;
+        }
+      }
+      return result ? baseUniq(result) : [];
+    }
+
+    /**
+     * Creates an array of grouped elements, the first of which contains the first
+     * elements of the given arrays, the second of which contains the second elements
+     * of the given arrays, and so on.
+     *
+     * @static
+     * @memberOf _
+     * @category Array
+     * @param {...Array} [arrays] The arrays to process.
+     * @returns {Array} Returns the new array of grouped elements.
+     * @example
+     *
+     * _.zip(['fred', 'barney'], [30, 40], [true, false]);
+     * // => [['fred', 30, true], ['barney', 40, false]]
+     */
+    var zip = restParam(unzip);
+
+    /**
+     * The inverse of `_.pairs`; this method returns an object composed from arrays
+     * of property names and values. Provide either a single two dimensional array,
+     * e.g. `[[key1, value1], [key2, value2]]` or two arrays, one of property names
+     * and one of corresponding values.
+     *
+     * @static
+     * @memberOf _
+     * @alias object
+     * @category Array
+     * @param {Array} props The property names.
+     * @param {Array} [values=[]] The property values.
+     * @returns {Object} Returns the new object.
+     * @example
+     *
+     * _.zipObject([['fred', 30], ['barney', 40]]);
+     * // => { 'fred': 30, 'barney': 40 }
+     *
+     * _.zipObject(['fred', 'barney'], [30, 40]);
+     * // => { 'fred': 30, 'barney': 40 }
+     */
+    function zipObject(props, values) {
+      var index = -1,
+          length = props ? props.length : 0,
+          result = {};
+
+      if (length && !values && !isArray(props[0])) {
+        values = [];
+      }
+      while (++index < length) {
+        var key = props[index];
+        if (values) {
+          result[key] = values[index];
+        } else if (key) {
+          result[key[0]] = key[1];
+        }
+      }
+      return result;
+    }
+
+    /**
+     * This method is like `_.zip` except that it accepts an iteratee to specify
+     * how grouped values should be combined. The `iteratee` is bound to `thisArg`
+     * and invoked with four arguments: (accumulator, value, index, group).
+     *
+     * @static
+     * @memberOf _
+     * @category Array
+     * @param {...Array} [arrays] The arrays to process.
+     * @param {Function} [iteratee] The function to combine grouped values.
+     * @param {*} [thisArg] The `this` binding of `iteratee`.
+     * @returns {Array} Returns the new array of grouped elements.
+     * @example
+     *
+     * _.zipWith([1, 2], [10, 20], [100, 200], _.add);
+     * // => [111, 222]
+     */
+    var zipWith = restParam(function(arrays) {
+      var length = arrays.length,
+          iteratee = length > 2 ? arrays[length - 2] : undefined,
+          thisArg = length > 1 ? arrays[length - 1] : undefined;
+
+      if (length > 2 && typeof iteratee == 'function') {
+        length -= 2;
+      } else {
+        iteratee = (length > 1 && typeof thisArg == 'function') ? (--length, thisArg) : undefined;
+        thisArg = undefined;
+      }
+      arrays.length = length;
+      return unzipWith(arrays, iteratee, thisArg);
+    });
+
+    /*------------------------------------------------------------------------*/
+
+    /**
+     * Creates a `lodash` object that wraps `value` with explicit method
+     * chaining enabled.
+     *
+     * @static
+     * @memberOf _
+     * @category Chain
+     * @param {*} value The value to wrap.
+     * @returns {Object} Returns the new `lodash` wrapper instance.
+     * @example
+     *
+     * var users = [
+     *   { 'user': 'barney',  'age': 36 },
+     *   { 'user': 'fred',    'age': 40 },
+     *   { 'user': 'pebbles', 'age': 1 }
+     * ];
+     *
+     * var youngest = _.chain(users)
+     *   .sortBy('age')
+     *   .map(function(chr) {
+     *     return chr.user + ' is ' + chr.age;
+     *   })
+     *   .first()
+     *   .value();
+     * // => 'pebbles is 1'
+     */
+    function chain(value) {
+      var result = lodash(value);
+      result.__chain__ = true;
+      return result;
+    }
+
+    /**
+     * This method invokes `interceptor` and returns `value`. The interceptor is
+     * bound to `thisArg` and invoked with one argument; (value). The purpose of
+     * this method is to "tap into" a method chain in order to perform operations
+     * on intermediate results within the chain.
+     *
+     * @static
+     * @memberOf _
+     * @category Chain
+     * @param {*} value The value to provide to `interceptor`.
+     * @param {Function} interceptor The function to invoke.
+     * @param {*} [thisArg] The `this` binding of `interceptor`.
+     * @returns {*} Returns `value`.
+     * @example
+     *
+     * _([1, 2, 3])
+     *  .tap(function(array) {
+     *    array.pop();
+     *  })
+     *  .reverse()
+     *  .value();
+     * // => [2, 1]
+     */
+    function tap(value, interceptor, thisArg) {
+      interceptor.call(thisArg, value);
+      return value;
+    }
+
+    /**
+     * This method is like `_.tap` except that it returns the result of `interceptor`.
+     *
+     * @static
+     * @memberOf _
+     * @category Chain
+     * @param {*} value The value to provide to `interceptor`.
+     * @param {Function} interceptor The function to invoke.
+     * @param {*} [thisArg] The `this` binding of `interceptor`.
+     * @returns {*} Returns the result of `interceptor`.
+     * @example
+     *
+     * _('  abc  ')
+     *  .chain()
+     *  .trim()
+     *  .thru(function(value) {
+     *    return [value];
+     *  })
+     *  .value();
+     * // => ['abc']
+     */
+    function thru(value, interceptor, thisArg) {
+      return interceptor.call(thisArg, value);
+    }
+
+    /**
+     * Enables explicit method chaining on the wrapper object.
+     *
+     * @name chain
+     * @memberOf _
+     * @category Chain
+     * @returns {Object} Returns the new `lodash` wrapper instance.
+     * @example
+     *
+     * var users = [
+     *   { 'user': 'barney', 'age': 36 },
+     *   { 'user': 'fred',   'age': 40 }
+     * ];
+     *
+     * // without explicit chaining
+     * _(users).first();
+     * // => { 'user': 'barney', 'age': 36 }
+     *
+     * // with explicit chaining
+     * _(users).chain()
+     *   .first()
+     *   .pick('user')
+     *   .value();
+     * // => { 'user': 'barney' }
+     */
+    function wrapperChain() {
+      return chain(this);
+    }
+
+    /**
+     * Executes the chained sequence and returns the wrapped result.
+     *
+     * @name commit
+     * @memberOf _
+     * @category Chain
+     * @returns {Object} Returns the new `lodash` wrapper instance.
+     * @example
+     *
+     * var array = [1, 2];
+     * var wrapped = _(array).push(3);
+     *
+     * console.log(array);
+     * // => [1, 2]
+     *
+     * wrapped = wrapped.commit();
+     * console.log(array);
+     * // => [1, 2, 3]
+     *
+     * wrapped.last();
+     * // => 3
+     *
+     * console.log(array);
+     * // => [1, 2, 3]
+     */
+    function wrapperCommit() {
+      return new LodashWrapper(this.value(), this.__chain__);
+    }
+
+    /**
+     * Creates a new array joining a wrapped array with any additional arrays
+     * and/or values.
+     *
+     * @name concat
+     * @memberOf _
+     * @category Chain
+     * @param {...*} [values] The values to concatenate.
+     * @returns {Array} Returns the new concatenated array.
+     * @example
+     *
+     * var array = [1];
+     * var wrapped = _(array).concat(2, [3], [[4]]);
+     *
+     * console.log(wrapped.value());
+     * // => [1, 2, 3, [4]]
+     *
+     * console.log(array);
+     * // => [1]
+     */
+    var wrapperConcat = restParam(function(values) {
+      values = baseFlatten(values);
+      return this.thru(function(array) {
+        return arrayConcat(isArray(array) ? array : [toObject(array)], values);
+      });
+    });
+
+    /**
+     * Creates a clone of the chained sequence planting `value` as the wrapped value.
+     *
+     * @name plant
+     * @memberOf _
+     * @category Chain
+     * @returns {Object} Returns the new `lodash` wrapper instance.
+     * @example
+     *
+     * var array = [1, 2];
+     * var wrapped = _(array).map(function(value) {
+     *   return Math.pow(value, 2);
+     * });
+     *
+     * var other = [3, 4];
+     * var otherWrapped = wrapped.plant(other);
+     *
+     * otherWrapped.value();
+     * // => [9, 16]
+     *
+     * wrapped.value();
+     * // => [1, 4]
+     */
+    function wrapperPlant(value) {
+      var result,
+          parent = this;
+
+      while (parent instanceof baseLodash) {
+        var clone = wrapperClone(parent);
+        if (result) {
+          previous.__wrapped__ = clone;
+        } else {
+          result = clone;
+        }
+        var previous = clone;
+        parent = parent.__wrapped__;
+      }
+      previous.__wrapped__ = value;
+      return result;
+    }
+
+    /**
+     * Reverses the wrapped array so the first element becomes the last, the
+     * second element becomes the second to last, and so on.
+     *
+     * **Note:** This method mutates the wrapped array.
+     *
+     * @name reverse
+     * @memberOf _
+     * @category Chain
+     * @returns {Object} Returns the new reversed `lodash` wrapper instance.
+     * @example
+     *
+     * var array = [1, 2, 3];
+     *
+     * _(array).reverse().value()
+     * // => [3, 2, 1]
+     *
+     * console.log(array);
+     * // => [3, 2, 1]
+     */
+    function wrapperReverse() {
+      var value = this.__wrapped__;
+
+      var interceptor = function(value) {
+        return value.reverse();
+      };
+      if (value instanceof LazyWrapper) {
+        var wrapped = value;
+        if (this.__actions__.length) {
+          wrapped = new LazyWrapper(this);
+        }
+        wrapped = wrapped.reverse();
+        wrapped.__actions__.push({ 'func': thru, 'args': [interceptor], 'thisArg': undefined });
+        return new LodashWrapper(wrapped, this.__chain__);
+      }
+      return this.thru(interceptor);
+    }
+
+    /**
+     * Produces the result of coercing the unwrapped value to a string.
+     *
+     * @name toString
+     * @memberOf _
+     * @category Chain
+     * @returns {string} Returns the coerced string value.
+     * @example
+     *
+     * _([1, 2, 3]).toString();
+     * // => '1,2,3'
+     */
+    function wrapperToString() {
+      return (this.value() + '');
+    }
+
+    /**
+     * Executes the chained sequence to extract the unwrapped value.
+     *
+     * @name value
+     * @memberOf _
+     * @alias run, toJSON, valueOf
+     * @category Chain
+     * @returns {*} Returns the resolved unwrapped value.
+     * @example
+     *
+     * _([1, 2, 3]).value();
+     * // => [1, 2, 3]
+     */
+    function wrapperValue() {
+      return baseWrapperValue(this.__wrapped__, this.__actions__);
+    }
+
+    /*------------------------------------------------------------------------*/
+
+    /**
+     * Creates an array of elements corresponding to the given keys, or indexes,
+     * of `collection`. Keys may be specified as individual arguments or as arrays
+     * of keys.
+     *
+     * @static
+     * @memberOf _
+     * @category Collection
+     * @param {Array|Object|string} collection The collection to iterate over.
+     * @param {...(number|number[]|string|string[])} [props] The property names
+     *  or indexes of elements to pick, specified individually or in arrays.
+     * @returns {Array} Returns the new array of picked elements.
+     * @example
+     *
+     * _.at(['a', 'b', 'c'], [0, 2]);
+     * // => ['a', 'c']
+     *
+     * _.at(['barney', 'fred', 'pebbles'], 0, 2);
+     * // => ['barney', 'pebbles']
+     */
+    var at = restParam(function(collection, props) {
+      return baseAt(collection, baseFlatten(props));
+    });
+
+    /**
+     * Creates an object composed of keys generated from the results of running
+     * each element of `collection` through `iteratee`. The corresponding value
+     * of each key is the number of times the key was returned by `iteratee`.
+     * The `iteratee` is bound to `thisArg` and invoked with three arguments:
+     * (value, index|key, collection).
+     *
+     * If a property name is provided for `iteratee` the created `_.property`
+     * style callback returns the property value of the given element.
+     *
+     * If a value is also provided for `thisArg` the created `_.matchesProperty`
+     * style callback returns `true` for elements that have a matching property
+     * value, else `false`.
+     *
+     * If an object is provided for `iteratee` the created `_.matches` style
+     * callback returns `true` for elements that have the properties of the given
+     * object, else `false`.
+     *
+     * @static
+     * @memberOf _
+     * @category Collection
+     * @param {Array|Object|string} collection The collection to iterate over.
+     * @param {Function|Object|string} [iteratee=_.identity] The function invoked
+     *  per iteration.
+     * @param {*} [thisArg] The `this` binding of `iteratee`.
+     * @returns {Object} Returns the composed aggregate object.
+     * @example
+     *
+     * _.countBy([4.3, 6.1, 6.4], function(n) {
+     *   return Math.floor(n);
+     * });
+     * // => { '4': 1, '6': 2 }
+     *
+     * _.countBy([4.3, 6.1, 6.4], function(n) {
+     *   return this.floor(n);
+     * }, Math);
+     * // => { '4': 1, '6': 2 }
+     *
+     * _.countBy(['one', 'two', 'three'], 'length');
+     * // => { '3': 2, '5': 1 }
+     */
+    var countBy = createAggregator(function(result, value, key) {
+      hasOwnProperty.call(result, key) ? ++result[key] : (result[key] = 1);
+    });
+
+    /**
+     * Checks if `predicate` returns truthy for **all** elements of `collection`.
+     * The predicate is bound to `thisArg` and invoked with three arguments:
+     * (value, index|key, collection).
+     *
+     * If a property name is provided for `predicate` the created `_.property`
+     * style callback returns the property value of the given element.
+     *
+     * If a value is also provided for `thisArg` the created `_.matchesProperty`
+     * style callback returns `true` for elements that have a matching property
+     * value, else `false`.
+     *
+     * If an object is provided for `predicate` the created `_.matches` style
+     * callback returns `true` for elements that have the properties of the given
+     * object, else `false`.
+     *
+     * @static
+     * @memberOf _
+     * @alias all
+     * @category Collection
+     * @param {Array|Object|string} collection The collection to iterate over.
+     * @param {Function|Object|string} [predicate=_.identity] The function invoked
+     *  per iteration.
+     * @param {*} [thisArg] The `this` binding of `predicate`.
+     * @returns {boolean} Returns `true` if all elements pass the predicate check,
+     *  else `false`.
+     * @example
+     *
+     * _.every([true, 1, null, 'yes'], Boolean);
+     * // => false
+     *
+     * var users = [
+     *   { 'user': 'barney', 'active': false },
+     *   { 'user': 'fred',   'active': false }
+     * ];
+     *
+     * // using the `_.matches` callback shorthand
+     * _.every(users, { 'user': 'barney', 'active': false });
+     * // => false
+     *
+     * // using the `_.matchesProperty` callback shorthand
+     * _.every(users, 'active', false);
+     * // => true
+     *
+     * // using the `_.property` callback shorthand
+     * _.every(users, 'active');
+     * // => false
+     */
+    function every(collection, predicate, thisArg) {
+      var func = isArray(collection) ? arrayEvery : baseEvery;
+      if (thisArg && isIterateeCall(collection, predicate, thisArg)) {
+        predicate = undefined;
+      }
+      if (typeof predicate != 'function' || thisArg !== undefined) {
+        predicate = getCallback(predicate, thisArg, 3);
+      }
+      return func(collection, predicate);
+    }
+
+    /**
+     * Iterates over elements of `collection`, returning an array of all elements
+     * `predicate` returns truthy for. The predicate is bound to `thisArg` and
+     * invoked with three arguments: (value, index|key, collection).
+     *
+     * If a property name is provided for `predicate` the created `_.property`
+     * style callback returns the property value of the given element.
+     *
+     * If a value is also provided for `thisArg` the created `_.matchesProperty`
+     * style callback returns `true` for elements that have a matching property
+     * value, else `false`.
+     *
+     * If an object is provided for `predicate` the created `_.matches` style
+     * callback returns `true` for elements that have the properties of the given
+     * object, else `false`.
+     *
+     * @static
+     * @memberOf _
+     * @alias select
+     * @category Collection
+     * @param {Array|Object|string} collection The collection to iterate over.
+     * @param {Function|Object|string} [predicate=_.identity] The function invoked
+     *  per iteration.
+     * @param {*} [thisArg] The `this` binding of `predicate`.
+     * @returns {Array} Returns the new filtered array.
+     * @example
+     *
+     * _.filter([4, 5, 6], function(n) {
+     *   return n % 2 == 0;
+     * });
+     * // => [4, 6]
+     *
+     * var users = [
+     *   { 'user': 'barney', 'age': 36, 'active': true },
+     *   { 'user': 'fred',   'age': 40, 'active': false }
+     * ];
+     *
+     * // using the `_.matches` callback shorthand
+     * _.pluck(_.filter(users, { 'age': 36, 'active': true }), 'user');
+     * // => ['barney']
+     *
+     * // using the `_.matchesProperty` callback shorthand
+     * _.pluck(_.filter(users, 'active', false), 'user');
+     * // => ['fred']
+     *
+     * // using the `_.property` callback shorthand
+     * _.pluck(_.filter(users, 'active'), 'user');
+     * // => ['barney']
+     */
+    function filter(collection, predicate, thisArg) {
+      var func = isArray(collection) ? arrayFilter : baseFilter;
+      predicate = getCallback(predicate, thisArg, 3);
+      return func(collection, predicate);
+    }
+
+    /**
+     * Iterates over elements of `collection`, returning the first element
+     * `predicate` returns truthy for. The predicate is bound to `thisArg` and
+     * invoked with three arguments: (value, index|key, collection).
+     *
+     * If a property name is provided for `predicate` the created `_.property`
+     * style callback returns the property value of the given element.
+     *
+     * If a value is also provided for `thisArg` the created `_.matchesProperty`
+     * style callback returns `true` for elements that have a matching property
+     * value, else `false`.
+     *
+     * If an object is provided for `predicate` the created `_.matches` style
+     * callback returns `true` for elements that have the properties of the given
+     * object, else `false`.
+     *
+     * @static
+     * @memberOf _
+     * @alias detect
+     * @category Collection
+     * @param {Array|Object|string} collection The collection to search.
+     * @param {Function|Object|string} [predicate=_.identity] The function invoked
+     *  per iteration.
+     * @param {*} [thisArg] The `this` binding of `predicate`.
+     * @returns {*} Returns the matched element, else `undefined`.
+     * @example
+     *
+     * var users = [
+     *   { 'user': 'barney',  'age': 36, 'active': true },
+     *   { 'user': 'fred',    'age': 40, 'active': false },
+     *   { 'user': 'pebbles', 'age': 1,  'active': true }
+     * ];
+     *
+     * _.result(_.find(users, function(chr) {
+     *   return chr.age < 40;
+     * }), 'user');
+     * // => 'barney'
+     *
+     * // using the `_.matches` callback shorthand
+     * _.result(_.find(users, { 'age': 1, 'active': true }), 'user');
+     * // => 'pebbles'
+     *
+     * // using the `_.matchesProperty` callback shorthand
+     * _.result(_.find(users, 'active', false), 'user');
+     * // => 'fred'
+     *
+     * // using the `_.property` callback shorthand
+     * _.result(_.find(users, 'active'), 'user');
+     * // => 'barney'
+     */
+    var find = createFind(baseEach);
+
+    /**
+     * This method is like `_.find` except that it iterates over elements of
+     * `collection` from right to left.
+     *
+     * @static
+     * @memberOf _
+     * @category Collection
+     * @param {Array|Object|string} collection The collection to search.
+     * @param {Function|Object|string} [predicate=_.identity] The function invoked
+     *  per iteration.
+     * @param {*} [thisArg] The `this` binding of `predicate`.
+     * @returns {*} Returns the matched element, else `undefined`.
+     * @example
+     *
+     * _.findLast([1, 2, 3, 4], function(n) {
+     *   return n % 2 == 1;
+     * });
+     * // => 3
+     */
+    var findLast = createFind(baseEachRight, true);
+
+    /**
+     * Performs a deep comparison between each element in `collection` and the
+     * source object, returning the first element that has equivalent property
+     * values.
+     *
+     * **Note:** This method supports comparing arrays, booleans, `Date` objects,
+     * numbers, `Object` objects, regexes, and strings. Objects are compared by
+     * their own, not inherited, enumerable properties. For comparing a single
+     * own or inherited property value see `_.matchesProperty`.
+     *
+     * @static
+     * @memberOf _
+     * @category Collection
+     * @param {Array|Object|string} collection The collection to search.
+     * @param {Object} source The object of property values to match.
+     * @returns {*} Returns the matched element, else `undefined`.
+     * @example
+     *
+     * var users = [
+     *   { 'user': 'barney', 'age': 36, 'active': true },
+     *   { 'user': 'fred',   'age': 40, 'active': false }
+     * ];
+     *
+     * _.result(_.findWhere(users, { 'age': 36, 'active': true }), 'user');
+     * // => 'barney'
+     *
+     * _.result(_.findWhere(users, { 'age': 40, 'active': false }), 'user');
+     * // => 'fred'
+     */
+    function findWhere(collection, source) {
+      return find(collection, baseMatches(source));
+    }
+
+    /**
+     * Iterates over elements of `collection` invoking `iteratee` for each element.
+     * The `iteratee` is bound to `thisArg` and invoked with three arguments:
+     * (value, index|key, collection). Iteratee functions may exit iteration early
+     * by explicitly returning `false`.
+     *
+     * **Note:** As with other "Collections" methods, objects with a "length" property
+     * are iterated like arrays. To avoid this behavior `_.forIn` or `_.forOwn`
+     * may be used for object iteration.
+     *
+     * @static
+     * @memberOf _
+     * @alias each
+     * @category Collection
+     * @param {Array|Object|string} collection The collection to iterate over.
+     * @param {Function} [iteratee=_.identity] The function invoked per iteration.
+     * @param {*} [thisArg] The `this` binding of `iteratee`.
+     * @returns {Array|Object|string} Returns `collection`.
+     * @example
+     *
+     * _([1, 2]).forEach(function(n) {
+     *   console.log(n);
+     * }).value();
+     * // => logs each value from left to right and returns the array
+     *
+     * _.forEach({ 'a': 1, 'b': 2 }, function(n, key) {
+     *   console.log(n, key);
+     * });
+     * // => logs each value-key pair and returns the object (iteration order is not guaranteed)
+     */
+    var forEach = createForEach(arrayEach, baseEach);
+
+    /**
+     * This method is like `_.forEach` except that it iterates over elements of
+     * `collection` from right to left.
+     *
+     * @static
+     * @memberOf _
+     * @alias eachRight
+     * @category Collection
+     * @param {Array|Object|string} collection The collection to iterate over.
+     * @param {Function} [iteratee=_.identity] The function invoked per iteration.
+     * @param {*} [thisArg] The `this` binding of `iteratee`.
+     * @returns {Array|Object|string} Returns `collection`.
+     * @example
+     *
+     * _([1, 2]).forEachRight(function(n) {
+     *   console.log(n);
+     * }).value();
+     * // => logs each value from right to left and returns the array
+     */
+    var forEachRight = createForEach(arrayEachRight, baseEachRight);
+
+    /**
+     * Creates an object composed of keys generated from the results of running
+     * each element of `collection` through `iteratee`. The corresponding value
+     * of each key is an array of the elements responsible for generating the key.
+     * The `iteratee` is bound to `thisArg` and invoked with three arguments:
+     * (value, index|key, collection).
+     *
+     * If a property name is provided for `iteratee` the created `_.property`
+     * style callback returns the property value of the given element.
+     *
+     * If a value is also provided for `thisArg` the created `_.matchesProperty`
+     * style callback returns `true` for elements that have a matching property
+     * value, else `false`.
+     *
+     * If an object is provided for `iteratee` the created `_.matches` style
+     * callback returns `true` for elements that have the properties of the given
+     * object, else `false`.
+     *
+     * @static
+     * @memberOf _
+     * @category Collection
+     * @param {Array|Object|string} collection The collection to iterate over.
+     * @param {Function|Object|string} [iteratee=_.identity] The function invoked
+     *  per iteration.
+     * @param {*} [thisArg] The `this` binding of `iteratee`.
+     * @returns {Object} Returns the composed aggregate object.
+     * @example
+     *
+     * _.groupBy([4.2, 6.1, 6.4], function(n) {
+     *   return Math.floor(n);
+     * });
+     * // => { '4': [4.2], '6': [6.1, 6.4] }
+     *
+     * _.groupBy([4.2, 6.1, 6.4], function(n) {
+     *   return this.floor(n);
+     * }, Math);
+     * // => { '4': [4.2], '6': [6.1, 6.4] }
+     *
+     * // using the `_.property` callback shorthand
+     * _.groupBy(['one', 'two', 'three'], 'length');
+     * // => { '3': ['one', 'two'], '5': ['three'] }
+     */
+    var groupBy = createAggregator(function(result, value, key) {
+      if (hasOwnProperty.call(result, key)) {
+        result[key].push(value);
+      } else {
+        result[key] = [value];
+      }
+    });
+
+    /**
+     * Checks if `target` is in `collection` using
+     * [`SameValueZero`](http://ecma-international.org/ecma-262/6.0/#sec-samevaluezero)
+     * for equality comparisons. If `fromIndex` is negative, it's used as the offset
+     * from the end of `collection`.
+     *
+     * @static
+     * @memberOf _
+     * @alias contains, include
+     * @category Collection
+     * @param {Array|Object|string} collection The collection to search.
+     * @param {*} target The value to search for.
+     * @param {number} [fromIndex=0] The index to search from.
+     * @param- {Object} [guard] Enables use as a callback for functions like `_.reduce`.
+     * @returns {boolean} Returns `true` if a matching element is found, else `false`.
+     * @example
+     *
+     * _.includes([1, 2, 3], 1);
+     * // => true
+     *
+     * _.includes([1, 2, 3], 1, 2);
+     * // => false
+     *
+     * _.includes({ 'user': 'fred', 'age': 40 }, 'fred');
+     * // => true
+     *
+     * _.includes('pebbles', 'eb');
+     * // => true
+     */
+    function includes(collection, target, fromIndex, guard) {
+      var length = collection ? getLength(collection) : 0;
+      if (!isLength(length)) {
+        collection = values(collection);
+        length = collection.length;
+      }
+      if (typeof fromIndex != 'number' || (guard && isIterateeCall(target, fromIndex, guard))) {
+        fromIndex = 0;
+      } else {
+        fromIndex = fromIndex < 0 ? nativeMax(length + fromIndex, 0) : (fromIndex || 0);
+      }
+      return (typeof collection == 'string' || !isArray(collection) && isString(collection))
+        ? (fromIndex <= length && collection.indexOf(target, fromIndex) > -1)
+        : (!!length && getIndexOf(collection, target, fromIndex) > -1);
+    }
+
+    /**
+     * Creates an object composed of keys generated from the results of running
+     * each element of `collection` through `iteratee`. The corresponding value
+     * of each key is the last element responsible for generating the key. The
+     * iteratee function is bound to `thisArg` and invoked with three arguments:
+     * (value, index|key, collection).
+     *
+     * If a property name is provided for `iteratee` the created `_.property`
+     * style callback returns the property value of the given element.
+     *
+     * If a value is also provided for `thisArg` the created `_.matchesProperty`
+     * style callback returns `true` for elements that have a matching property
+     * value, else `false`.
+     *
+     * If an object is provided for `iteratee` the created `_.matches` style
+     * callback returns `true` for elements that have the properties of the given
+     * object, else `false`.
+     *
+     * @static
+     * @memberOf _
+     * @category Collection
+     * @param {Array|Object|string} collection The collection to iterate over.
+     * @param {Function|Object|string} [iteratee=_.identity] The function invoked
+     *  per iteration.
+     * @param {*} [thisArg] The `this` binding of `iteratee`.
+     * @returns {Object} Returns the composed aggregate object.
+     * @example
+     *
+     * var keyData = [
+     *   { 'dir': 'left', 'code': 97 },
+     *   { 'dir': 'right', 'code': 100 }
+     * ];
+     *
+     * _.indexBy(keyData, 'dir');
+     * // => { 'left': { 'dir': 'left', 'code': 97 }, 'right': { 'dir': 'right', 'code': 100 } }
+     *
+     * _.indexBy(keyData, function(object) {
+     *   return String.fromCharCode(object.code);
+     * });
+     * // => { 'a': { 'dir': 'left', 'code': 97 }, 'd': { 'dir': 'right', 'code': 100 } }
+     *
+     * _.indexBy(keyData, function(object) {
+     *   return this.fromCharCode(object.code);
+     * }, String);
+     * // => { 'a': { 'dir': 'left', 'code': 97 }, 'd': { 'dir': 'right', 'code': 100 } }
+     */
+    var indexBy = createAggregator(function(result, value, key) {
+      result[key] = value;
+    });
+
+    /**
+     * Invokes the method at `path` of each element in `collection`, returning
+     * an array of the results of each invoked method. Any additional arguments
+     * are provided to each invoked method. If `methodName` is a function it's
+     * invoked for, and `this` bound to, each element in `collection`.
+     *
+     * @static
+     * @memberOf _
+     * @category Collection
+     * @param {Array|Object|string} collection The collection to iterate over.
+     * @param {Array|Function|string} path The path of the method to invoke or
+     *  the function invoked per iteration.
+     * @param {...*} [args] The arguments to invoke the method with.
+     * @returns {Array} Returns the array of results.
+     * @example
+     *
+     * _.invoke([[5, 1, 7], [3, 2, 1]], 'sort');
+     * // => [[1, 5, 7], [1, 2, 3]]
+     *
+     * _.invoke([123, 456], String.prototype.split, '');
+     * // => [['1', '2', '3'], ['4', '5', '6']]
+     */
+    var invoke = restParam(function(collection, path, args) {
+      var index = -1,
+          isFunc = typeof path == 'function',
+          isProp = isKey(path),
+          result = isArrayLike(collection) ? Array(collection.length) : [];
+
+      baseEach(collection, function(value) {
+        var func = isFunc ? path : ((isProp && value != null) ? value[path] : undefined);
+        result[++index] = func ? func.apply(value, args) : invokePath(value, path, args);
+      });
+      return result;
+    });
+
+    /**
+     * Creates an array of values by running each element in `collection` through
+     * `iteratee`. The `iteratee` is bound to `thisArg` and invoked with three
+     * arguments: (value, index|key, collection).
+     *
+     * If a property name is provided for `iteratee` the created `_.property`
+     * style callback returns the property value of the given element.
+     *
+     * If a value is also provided for `thisArg` the created `_.matchesProperty`
+     * style callback returns `true` for elements that have a matching property
+     * value, else `false`.
+     *
+     * If an object is provided for `iteratee` the created `_.matches` style
+     * callback returns `true` for elements that have the properties of the given
+     * object, else `false`.
+     *
+     * Many lodash methods are guarded to work as iteratees for methods like
+     * `_.every`, `_.filter`, `_.map`, `_.mapValues`, `_.reject`, and `_.some`.
+     *
+     * The guarded methods are:
+     * `ary`, `callback`, `chunk`, `clone`, `create`, `curry`, `curryRight`,
+     * `drop`, `dropRight`, `every`, `fill`, `flatten`, `invert`, `max`, `min`,
+     * `parseInt`, `slice`, `sortBy`, `take`, `takeRight`, `template`, `trim`,
+     * `trimLeft`, `trimRight`, `trunc`, `random`, `range`, `sample`, `some`,
+     * `sum`, `uniq`, and `words`
+     *
+     * @static
+     * @memberOf _
+     * @alias collect
+     * @category Collection
+     * @param {Array|Object|string} collection The collection to iterate over.
+     * @param {Function|Object|string} [iteratee=_.identity] The function invoked
+     *  per iteration.
+     * @param {*} [thisArg] The `this` binding of `iteratee`.
+     * @returns {Array} Returns the new mapped array.
+     * @example
+     *
+     * function timesThree(n) {
+     *   return n * 3;
+     * }
+     *
+     * _.map([1, 2], timesThree);
+     * // => [3, 6]
+     *
+     * _.map({ 'a': 1, 'b': 2 }, timesThree);
+     * // => [3, 6] (iteration order is not guaranteed)
+     *
+     * var users = [
+     *   { 'user': 'barney' },
+     *   { 'user': 'fred' }
+     * ];
+     *
+     * // using the `_.property` callback shorthand
+     * _.map(users, 'user');
+     * // => ['barney', 'fred']
+     */
+    function map(collection, iteratee, thisArg) {
+      var func = isArray(collection) ? arrayMap : baseMap;
+      iteratee = getCallback(iteratee, thisArg, 3);
+      return func(collection, iteratee);
+    }
+
+    /**
+     * Creates an array of elements split into two groups, the first of which
+     * contains elements `predicate` returns truthy for, while the second of which
+     * contains elements `predicate` returns falsey for. The predicate is bound
+     * to `thisArg` and invoked with three arguments: (value, index|key, collection).
+     *
+     * If a property name is provided for `predicate` the created `_.property`
+     * style callback returns the property value of the given element.
+     *
+     * If a value is also provided for `thisArg` the created `_.matchesProperty`
+     * style callback returns `true` for elements that have a matching property
+     * value, else `false`.
+     *
+     * If an object is provided for `predicate` the created `_.matches` style
+     * callback returns `true` for elements that have the properties of the given
+     * object, else `false`.
+     *
+     * @static
+     * @memberOf _
+     * @category Collection
+     * @param {Array|Object|string} collection The collection to iterate over.
+     * @param {Function|Object|string} [predicate=_.identity] The function invoked
+     *  per iteration.
+     * @param {*} [thisArg] The `this` binding of `predicate`.
+     * @returns {Array} Returns the array of grouped elements.
+     * @example
+     *
+     * _.partition([1, 2, 3], function(n) {
+     *   return n % 2;
+     * });
+     * // => [[1, 3], [2]]
+     *
+     * _.partition([1.2, 2.3, 3.4], function(n) {
+     *   return this.floor(n) % 2;
+     * }, Math);
+     * // => [[1.2, 3.4], [2.3]]
+     *
+     * var users = [
+     *   { 'user': 'barney',  'age': 36, 'active': false },
+     *   { 'user': 'fred',    'age': 40, 'active': true },
+     *   { 'user': 'pebbles', 'age': 1,  'active': false }
+     * ];
+     *
+     * var mapper = function(array) {
+     *   return _.pluck(array, 'user');
+     * };
+     *
+     * // using the `_.matches` callback shorthand
+     * _.map(_.partition(users, { 'age': 1, 'active': false }), mapper);
+     * // => [['pebbles'], ['barney', 'fred']]
+     *
+     * // using the `_.matchesProperty` callback shorthand
+     * _.map(_.partition(users, 'active', false), mapper);
+     * // => [['barney', 'pebbles'], ['fred']]
+     *
+     * // using the `_.property` callback shorthand
+     * _.map(_.partition(users, 'active'), mapper);
+     * // => [['fred'], ['barney', 'pebbles']]
+     */
+    var partition = createAggregator(function(result, value, key) {
+      result[key ? 0 : 1].push(value);
+    }, function() { return [[], []]; });
+
+    /**
+     * Gets the property value of `path` from all elements in `collection`.
+     *
+     * @static
+     * @memberOf _
+     * @category Collection
+     * @param {Array|Object|string} collection The collection to iterate over.
+     * @param {Array|string} path The path of the property to pluck.
+     * @returns {Array} Returns the property values.
+     * @example
+     *
+     * var users = [
+     *   { 'user': 'barney', 'age': 36 },
+     *   { 'user': 'fred',   'age': 40 }
+     * ];
+     *
+     * _.pluck(users, 'user');
+     * // => ['barney', 'fred']
+     *
+     * var userIndex = _.indexBy(users, 'user');
+     * _.pluck(userIndex, 'age');
+     * // => [36, 40] (iteration order is not guaranteed)
+     */
+    function pluck(collection, path) {
+      return map(collection, property(path));
+    }
+
+    /**
+     * Reduces `collection` to a value which is the accumulated result of running
+     * each element in `collection` through `iteratee`, where each successive
+     * invocation is supplied the return value of the previous. If `accumulator`
+     * is not provided the first element of `collection` is used as the initial
+     * value. The `iteratee` is bound to `thisArg` and invoked with four arguments:
+     * (accumulator, value, index|key, collection).
+     *
+     * Many lodash methods are guarded to work as iteratees for methods like
+     * `_.reduce`, `_.reduceRight`, and `_.transform`.
+     *
+     * The guarded methods are:
+     * `assign`, `defaults`, `defaultsDeep`, `includes`, `merge`, `sortByAll`,
+     * and `sortByOrder`
+     *
+     * @static
+     * @memberOf _
+     * @alias foldl, inject
+     * @category Collection
+     * @param {Array|Object|string} collection The collection to iterate over.
+     * @param {Function} [iteratee=_.identity] The function invoked per iteration.
+     * @param {*} [accumulator] The initial value.
+     * @param {*} [thisArg] The `this` binding of `iteratee`.
+     * @returns {*} Returns the accumulated value.
+     * @example
+     *
+     * _.reduce([1, 2], function(total, n) {
+     *   return total + n;
+     * });
+     * // => 3
+     *
+     * _.reduce({ 'a': 1, 'b': 2 }, function(result, n, key) {
+     *   result[key] = n * 3;
+     *   return result;
+     * }, {});
+     * // => { 'a': 3, 'b': 6 } (iteration order is not guaranteed)
+     */
+    var reduce = createReduce(arrayReduce, baseEach);
+
+    /**
+     * This method is like `_.reduce` except that it iterates over elements of
+     * `collection` from right to left.
+     *
+     * @static
+     * @memberOf _
+     * @alias foldr
+     * @category Collection
+     * @param {Array|Object|string} collection The collection to iterate over.
+     * @param {Function} [iteratee=_.identity] The function invoked per iteration.
+     * @param {*} [accumulator] The initial value.
+     * @param {*} [thisArg] The `this` binding of `iteratee`.
+     * @returns {*} Returns the accumulated value.
+     * @example
+     *
+     * var array = [[0, 1], [2, 3], [4, 5]];
+     *
+     * _.reduceRight(array, function(flattened, other) {
+     *   return flattened.concat(other);
+     * }, []);
+     * // => [4, 5, 2, 3, 0, 1]
+     */
+    var reduceRight = createReduce(arrayReduceRight, baseEachRight);
+
+    /**
+     * The opposite of `_.filter`; this method returns the elements of `collection`
+     * that `predicate` does **not** return truthy for.
+     *
+     * @static
+     * @memberOf _
+     * @category Collection
+     * @param {Array|Object|string} collection The collection to iterate over.
+     * @param {Function|Object|string} [predicate=_.identity] The function invoked
+     *  per iteration.
+     * @param {*} [thisArg] The `this` binding of `predicate`.
+     * @returns {Array} Returns the new filtered array.
+     * @example
+     *
+     * _.reject([1, 2, 3, 4], function(n) {
+     *   return n % 2 == 0;
+     * });
+     * // => [1, 3]
+     *
+     * var users = [
+     *   { 'user': 'barney', 'age': 36, 'active': false },
+     *   { 'user': 'fred',   'age': 40, 'active': true }
+     * ];
+     *
+     * // using the `_.matches` callback shorthand
+     * _.pluck(_.reject(users, { 'age': 40, 'active': true }), 'user');
+     * // => ['barney']
+     *
+     * // using the `_.matchesProperty` callback shorthand
+     * _.pluck(_.reject(users, 'active', false), 'user');
+     * // => ['fred']
+     *
+     * // using the `_.property` callback shorthand
+     * _.pluck(_.reject(users, 'active'), 'user');
+     * // => ['barney']
+     */
+    function reject(collection, predicate, thisArg) {
+      var func = isArray(collection) ? arrayFilter : baseFilter;
+      predicate = getCallback(predicate, thisArg, 3);
+      return func(collection, function(value, index, collection) {
+        return !predicate(value, index, collection);
+      });
+    }
+
+    /**
+     * Gets a random element or `n` random elements from a collection.
+     *
+     * @static
+     * @memberOf _
+     * @category Collection
+     * @param {Array|Object|string} collection The collection to sample.
+     * @param {number} [n] The number of elements to sample.
+     * @param- {Object} [guard] Enables use as a callback for functions like `_.map`.
+     * @returns {*} Returns the random sample(s).
+     * @example
+     *
+     * _.sample([1, 2, 3, 4]);
+     * // => 2
+     *
+     * _.sample([1, 2, 3, 4], 2);
+     * // => [3, 1]
+     */
+    function sample(collection, n, guard) {
+      if (guard ? isIterateeCall(collection, n, guard) : n == null) {
+        collection = toIterable(collection);
+        var length = collection.length;
+        return length > 0 ? collection[baseRandom(0, length - 1)] : undefined;
+      }
+      var index = -1,
+          result = toArray(collection),
+          length = result.length,
+          lastIndex = length - 1;
+
+      n = nativeMin(n < 0 ? 0 : (+n || 0), length);
+      while (++index < n) {
+        var rand = baseRandom(index, lastIndex),
+            value = result[rand];
+
+        result[rand] = result[index];
+        result[index] = value;
+      }
+      result.length = n;
+      return result;
+    }
+
+    /**
+     * Creates an array of shuffled values, using a version of the
+     * [Fisher-Yates shuffle](https://en.wikipedia.org/wiki/Fisher-Yates_shuffle).
+     *
+     * @static
+     * @memberOf _
+     * @category Collection
+     * @param {Array|Object|string} collection The collection to shuffle.
+     * @returns {Array} Returns the new shuffled array.
+     * @example
+     *
+     * _.shuffle([1, 2, 3, 4]);
+     * // => [4, 1, 3, 2]
+     */
+    function shuffle(collection) {
+      return sample(collection, POSITIVE_INFINITY);
+    }
+
+    /**
+     * Gets the size of `collection` by returning its length for array-like
+     * values or the number of own enumerable properties for objects.
+     *
+     * @static
+     * @memberOf _
+     * @category Collection
+     * @param {Array|Object|string} collection The collection to inspect.
+     * @returns {number} Returns the size of `collection`.
+     * @example
+     *
+     * _.size([1, 2, 3]);
+     * // => 3
+     *
+     * _.size({ 'a': 1, 'b': 2 });
+     * // => 2
+     *
+     * _.size('pebbles');
+     * // => 7
+     */
+    function size(collection) {
+      var length = collection ? getLength(collection) : 0;
+      return isLength(length) ? length : keys(collection).length;
+    }
+
+    /**
+     * Checks if `predicate` returns truthy for **any** element of `collection`.
+     * The function returns as soon as it finds a passing value and does not iterate
+     * over the entire collection. The predicate is bound to `thisArg` and invoked
+     * with three arguments: (value, index|key, collection).
+     *
+     * If a property name is provided for `predicate` the created `_.property`
+     * style callback returns the property value of the given element.
+     *
+     * If a value is also provided for `thisArg` the created `_.matchesProperty`
+     * style callback returns `true` for elements that have a matching property
+     * value, else `false`.
+     *
+     * If an object is provided for `predicate` the created `_.matches` style
+     * callback returns `true` for elements that have the properties of the given
+     * object, else `false`.
+     *
+     * @static
+     * @memberOf _
+     * @alias any
+     * @category Collection
+     * @param {Array|Object|string} collection The collection to iterate over.
+     * @param {Function|Object|string} [predicate=_.identity] The function invoked
+     *  per iteration.
+     * @param {*} [thisArg] The `this` binding of `predicate`.
+     * @returns {boolean} Returns `true` if any element passes the predicate check,
+     *  else `false`.
+     * @example
+     *
+     * _.some([null, 0, 'yes', false], Boolean);
+     * // => true
+     *
+     * var users = [
+     *   { 'user': 'barney', 'active': true },
+     *   { 'user': 'fred',   'active': false }
+     * ];
+     *
+     * // using the `_.matches` callback shorthand
+     * _.some(users, { 'user': 'barney', 'active': false });
+     * // => false
+     *
+     * // using the `_.matchesProperty` callback shorthand
+     * _.some(users, 'active', false);
+     * // => true
+     *
+     * // using the `_.property` callback shorthand
+     * _.some(users, 'active');
+     * // => true
+     */
+    function some(collection, predicate, thisArg) {
+      var func = isArray(collection) ? arraySome : baseSome;
+      if (thisArg && isIterateeCall(collection, predicate, thisArg)) {
+        predicate = undefined;
+      }
+      if (typeof predicate != 'function' || thisArg !== undefined) {
+        predicate = getCallback(predicate, thisArg, 3);
+      }
+      return func(collection, predicate);
+    }
+
+    /**
+     * Creates an array of elements, sorted in ascending order by the results of
+     * running each element in a collection through `iteratee`. This method performs
+     * a stable sort, that is, it preserves the original sort order of equal elements.
+     * The `iteratee` is bound to `thisArg` and invoked with three arguments:
+     * (value, index|key, collection).
+     *
+     * If a property name is provided for `iteratee` the created `_.property`
+     * style callback returns the property value of the given element.
+     *
+     * If a value is also provided for `thisArg` the created `_.matchesProperty`
+     * style callback returns `true` for elements that have a matching property
+     * value, else `false`.
+     *
+     * If an object is provided for `iteratee` the created `_.matches` style
+     * callback returns `true` for elements that have the properties of the given
+     * object, else `false`.
+     *
+     * @static
+     * @memberOf _
+     * @category Collection
+     * @param {Array|Object|string} collection The collection to iterate over.
+     * @param {Function|Object|string} [iteratee=_.identity] The function invoked
+     *  per iteration.
+     * @param {*} [thisArg] The `this` binding of `iteratee`.
+     * @returns {Array} Returns the new sorted array.
+     * @example
+     *
+     * _.sortBy([1, 2, 3], function(n) {
+     *   return Math.sin(n);
+     * });
+     * // => [3, 1, 2]
+     *
+     * _.sortBy([1, 2, 3], function(n) {
+     *   return this.sin(n);
+     * }, Math);
+     * // => [3, 1, 2]
+     *
+     * var users = [
+     *   { 'user': 'fred' },
+     *   { 'user': 'pebbles' },
+     *   { 'user': 'barney' }
+     * ];
+     *
+     * // using the `_.property` callback shorthand
+     * _.pluck(_.sortBy(users, 'user'), 'user');
+     * // => ['barney', 'fred', 'pebbles']
+     */
+    function sortBy(collection, iteratee, thisArg) {
+      if (collection == null) {
+        return [];
+      }
+      if (thisArg && isIterateeCall(collection, iteratee, thisArg)) {
+        iteratee = undefined;
+      }
+      var index = -1;
+      iteratee = getCallback(iteratee, thisArg, 3);
+
+      var result = baseMap(collection, function(value, key, collection) {
+        return { 'criteria': iteratee(value, key, collection), 'index': ++index, 'value': value };
+      });
+      return baseSortBy(result, compareAscending);
+    }
+
+    /**
+     * This method is like `_.sortBy` except that it can sort by multiple iteratees
+     * or property names.
+     *
+     * If a property name is provided for an iteratee the created `_.property`
+     * style callback returns the property value of the given element.
+     *
+     * If an object is provided for an iteratee the created `_.matches` style
+     * callback returns `true` for elements that have the properties of the given
+     * object, else `false`.
+     *
+     * @static
+     * @memberOf _
+     * @category Collection
+     * @param {Array|Object|string} collection The collection to iterate over.
+     * @param {...(Function|Function[]|Object|Object[]|string|string[])} iteratees
+     *  The iteratees to sort by, specified as individual values or arrays of values.
+     * @returns {Array} Returns the new sorted array.
+     * @example
+     *
+     * var users = [
+     *   { 'user': 'fred',   'age': 48 },
+     *   { 'user': 'barney', 'age': 36 },
+     *   { 'user': 'fred',   'age': 42 },
+     *   { 'user': 'barney', 'age': 34 }
+     * ];
+     *
+     * _.map(_.sortByAll(users, ['user', 'age']), _.values);
+     * // => [['barney', 34], ['barney', 36], ['fred', 42], ['fred', 48]]
+     *
+     * _.map(_.sortByAll(users, 'user', function(chr) {
+     *   return Math.floor(chr.age / 10);
+     * }), _.values);
+     * // => [['barney', 36], ['barney', 34], ['fred', 48], ['fred', 42]]
+     */
+    var sortByAll = restParam(function(collection, iteratees) {
+      if (collection == null) {
+        return [];
+      }
+      var guard = iteratees[2];
+      if (guard && isIterateeCall(iteratees[0], iteratees[1], guard)) {
+        iteratees.length = 1;
+      }
+      return baseSortByOrder(collection, baseFlatten(iteratees), []);
+    });
+
+    /**
+     * This method is like `_.sortByAll` except that it allows specifying the
+     * sort orders of the iteratees to sort by. If `orders` is unspecified, all
+     * values are sorted in ascending order. Otherwise, a value is sorted in
+     * ascending order if its corresponding order is "asc", and descending if "desc".
+     *
+     * If a property name is provided for an iteratee the created `_.property`
+     * style callback returns the property value of the given element.
+     *
+     * If an object is provided for an iteratee the created `_.matches` style
+     * callback returns `true` for elements that have the properties of the given
+     * object, else `false`.
+     *
+     * @static
+     * @memberOf _
+     * @category Collection
+     * @param {Array|Object|string} collection The collection to iterate over.
+     * @param {Function[]|Object[]|string[]} iteratees The iteratees to sort by.
+     * @param {boolean[]} [orders] The sort orders of `iteratees`.
+     * @param- {Object} [guard] Enables use as a callback for functions like `_.reduce`.
+     * @returns {Array} Returns the new sorted array.
+     * @example
+     *
+     * var users = [
+     *   { 'user': 'fred',   'age': 48 },
+     *   { 'user': 'barney', 'age': 34 },
+     *   { 'user': 'fred',   'age': 42 },
+     *   { 'user': 'barney', 'age': 36 }
+     * ];
+     *
+     * // sort by `user` in ascending order and by `age` in descending order
+     * _.map(_.sortByOrder(users, ['user', 'age'], ['asc', 'desc']), _.values);
+     * // => [['barney', 36], ['barney', 34], ['fred', 48], ['fred', 42]]
+     */
+    function sortByOrder(collection, iteratees, orders, guard) {
+      if (collection == null) {
+        return [];
+      }
+      if (guard && isIterateeCall(iteratees, orders, guard)) {
+        orders = undefined;
+      }
+      if (!isArray(iteratees)) {
+        iteratees = iteratees == null ? [] : [iteratees];
+      }
+      if (!isArray(orders)) {
+        orders = orders == null ? [] : [orders];
+      }
+      return baseSortByOrder(collection, iteratees, orders);
+    }
+
+    /**
+     * Performs a deep comparison between each element in `collection` and the
+     * source object, returning an array of all elements that have equivalent
+     * property values.
+     *
+     * **Note:** This method supports comparing arrays, booleans, `Date` objects,
+     * numbers, `Object` objects, regexes, and strings. Objects are compared by
+     * their own, not inherited, enumerable properties. For comparing a single
+     * own or inherited property value see `_.matchesProperty`.
+     *
+     * @static
+     * @memberOf _
+     * @category Collection
+     * @param {Array|Object|string} collection The collection to search.
+     * @param {Object} source The object of property values to match.
+     * @returns {Array} Returns the new filtered array.
+     * @example
+     *
+     * var users = [
+     *   { 'user': 'barney', 'age': 36, 'active': false, 'pets': ['hoppy'] },
+     *   { 'user': 'fred',   'age': 40, 'active': true, 'pets': ['baby puss', 'dino'] }
+     * ];
+     *
+     * _.pluck(_.where(users, { 'age': 36, 'active': false }), 'user');
+     * // => ['barney']
+     *
+     * _.pluck(_.where(users, { 'pets': ['dino'] }), 'user');
+     * // => ['fred']
+     */
+    function where(collection, source) {
+      return filter(collection, baseMatches(source));
+    }
+
+    /*------------------------------------------------------------------------*/
+
+    /**
+     * Gets the number of milliseconds that have elapsed since the Unix epoch
+     * (1 January 1970 00:00:00 UTC).
+     *
+     * @static
+     * @memberOf _
+     * @category Date
+     * @example
+     *
+     * _.defer(function(stamp) {
+     *   console.log(_.now() - stamp);
+     * }, _.now());
+     * // => logs the number of milliseconds it took for the deferred function to be invoked
+     */
+    var now = nativeNow || function() {
+      return new Date().getTime();
+    };
+
+    /*------------------------------------------------------------------------*/
+
+    /**
+     * The opposite of `_.before`; this method creates a function that invokes
+     * `func` once it's called `n` or more times.
+     *
+     * @static
+     * @memberOf _
+     * @category Function
+     * @param {number} n The number of calls before `func` is invoked.
+     * @param {Function} func The function to restrict.
+     * @returns {Function} Returns the new restricted function.
+     * @example
+     *
+     * var saves = ['profile', 'settings'];
+     *
+     * var done = _.after(saves.length, function() {
+     *   console.log('done saving!');
+     * });
+     *
+     * _.forEach(saves, function(type) {
+     *   asyncSave({ 'type': type, 'complete': done });
+     * });
+     * // => logs 'done saving!' after the two async saves have completed
+     */
+    function after(n, func) {
+      if (typeof func != 'function') {
+        if (typeof n == 'function') {
+          var temp = n;
+          n = func;
+          func = temp;
+        } else {
+          throw new TypeError(FUNC_ERROR_TEXT);
+        }
+      }
+      n = nativeIsFinite(n = +n) ? n : 0;
+      return function() {
+        if (--n < 1) {
+          return func.apply(this, arguments);
+        }
+      };
+    }
+
+    /**
+     * Creates a function that accepts up to `n` arguments ignoring any
+     * additional arguments.
+     *
+     * @static
+     * @memberOf _
+     * @category Function
+     * @param {Function} func The function to cap arguments for.
+     * @param {number} [n=func.length] The arity cap.
+     * @param- {Object} [guard] Enables use as a callback for functions like `_.map`.
+     * @returns {Function} Returns the new function.
+     * @example
+     *
+     * _.map(['6', '8', '10'], _.ary(parseInt, 1));
+     * // => [6, 8, 10]
+     */
+    function ary(func, n, guard) {
+      if (guard && isIterateeCall(func, n, guard)) {
+        n = undefined;
+      }
+      n = (func && n == null) ? func.length : nativeMax(+n || 0, 0);
+      return createWrapper(func, ARY_FLAG, undefined, undefined, undefined, undefined, n);
+    }
+
+    /**
+     * Creates a function that invokes `func`, with the `this` binding and arguments
+     * of the created function, while it's called less than `n` times. Subsequent
+     * calls to the created function return the result of the last `func` invocation.
+     *
+     * @static
+     * @memberOf _
+     * @category Function
+     * @param {number} n The number of calls at which `func` is no longer invoked.
+     * @param {Function} func The function to restrict.
+     * @returns {Function} Returns the new restricted function.
+     * @example
+     *
+     * jQuery('#add').on('click', _.before(5, addContactToList));
+     * // => allows adding up to 4 contacts to the list
+     */
+    function before(n, func) {
+      var result;
+      if (typeof func != 'function') {
+        if (typeof n == 'function') {
+          var temp = n;
+          n = func;
+          func = temp;
+        } else {
+          throw new TypeError(FUNC_ERROR_TEXT);
+        }
+      }
+      return function() {
+        if (--n > 0) {
+          result = func.apply(this, arguments);
+        }
+        if (n <= 1) {
+          func = undefined;
+        }
+        return result;
+      };
+    }
+
+    /**
+     * Creates a function that invokes `func` with the `this` binding of `thisArg`
+     * and prepends any additional `_.bind` arguments to those provided to the
+     * bound function.
+     *
+     * The `_.bind.placeholder` value, which defaults to `_` in monolithic builds,
+     * may be used as a placeholder for partially applied arguments.
+     *
+     * **Note:** Unlike native `Function#bind` this method does not set the "length"
+     * property of bound functions.
+     *
+     * @static
+     * @memberOf _
+     * @category Function
+     * @param {Function} func The function to bind.
+     * @param {*} thisArg The `this` binding of `func`.
+     * @param {...*} [partials] The arguments to be partially applied.
+     * @returns {Function} Returns the new bound function.
+     * @example
+     *
+     * var greet = function(greeting, punctuation) {
+     *   return greeting + ' ' + this.user + punctuation;
+     * };
+     *
+     * var object = { 'user': 'fred' };
+     *
+     * var bound = _.bind(greet, object, 'hi');
+     * bound('!');
+     * // => 'hi fred!'
+     *
+     * // using placeholders
+     * var bound = _.bind(greet, object, _, '!');
+     * bound('hi');
+     * // => 'hi fred!'
+     */
+    var bind = restParam(function(func, thisArg, partials) {
+      var bitmask = BIND_FLAG;
+      if (partials.length) {
+        var holders = replaceHolders(partials, bind.placeholder);
+        bitmask |= PARTIAL_FLAG;
+      }
+      return createWrapper(func, bitmask, thisArg, partials, holders);
+    });
+
+    /**
+     * Binds methods of an object to the object itself, overwriting the existing
+     * method. Method names may be specified as individual arguments or as arrays
+     * of method names. If no method names are provided all enumerable function
+     * properties, own and inherited, of `object` are bound.
+     *
+     * **Note:** This method does not set the "length" property of bound functions.
+     *
+     * @static
+     * @memberOf _
+     * @category Function
+     * @param {Object} object The object to bind and assign the bound methods to.
+     * @param {...(string|string[])} [methodNames] The object method names to bind,
+     *  specified as individual method names or arrays of method names.
+     * @returns {Object} Returns `object`.
+     * @example
+     *
+     * var view = {
+     *   'label': 'docs',
+     *   'onClick': function() {
+     *     console.log('clicked ' + this.label);
+     *   }
+     * };
+     *
+     * _.bindAll(view);
+     * jQuery('#docs').on('click', view.onClick);
+     * // => logs 'clicked docs' when the element is clicked
+     */
+    var bindAll = restParam(function(object, methodNames) {
+      methodNames = methodNames.length ? baseFlatten(methodNames) : functions(object);
+
+      var index = -1,
+          length = methodNames.length;
+
+      while (++index < length) {
+        var key = methodNames[index];
+        object[key] = createWrapper(object[key], BIND_FLAG, object);
+      }
+      return object;
+    });
+
+    /**
+     * Creates a function that invokes the method at `object[key]` and prepends
+     * any additional `_.bindKey` arguments to those provided to the bound function.
+     *
+     * This method differs from `_.bind` by allowing bound functions to reference
+     * methods that may be redefined or don't yet exist.
+     * See [Peter Michaux's article](http://peter.michaux.ca/articles/lazy-function-definition-pattern)
+     * for more details.
+     *
+     * The `_.bindKey.placeholder` value, which defaults to `_` in monolithic
+     * builds, may be used as a placeholder for partially applied arguments.
+     *
+     * @static
+     * @memberOf _
+     * @category Function
+     * @param {Object} object The object the method belongs to.
+     * @param {string} key The key of the method.
+     * @param {...*} [partials] The arguments to be partially applied.
+     * @returns {Function} Returns the new bound function.
+     * @example
+     *
+     * var object = {
+     *   'user': 'fred',
+     *   'greet': function(greeting, punctuation) {
+     *     return greeting + ' ' + this.user + punctuation;
+     *   }
+     * };
+     *
+     * var bound = _.bindKey(object, 'greet', 'hi');
+     * bound('!');
+     * // => 'hi fred!'
+     *
+     * object.greet = function(greeting, punctuation) {
+     *   return greeting + 'ya ' + this.user + punctuation;
+     * };
+     *
+     * bound('!');
+     * // => 'hiya fred!'
+     *
+     * // using placeholders
+     * var bound = _.bindKey(object, 'greet', _, '!');
+     * bound('hi');
+     * // => 'hiya fred!'
+     */
+    var bindKey = restParam(function(object, key, partials) {
+      var bitmask = BIND_FLAG | BIND_KEY_FLAG;
+      if (partials.length) {
+        var holders = replaceHolders(partials, bindKey.placeholder);
+        bitmask |= PARTIAL_FLAG;
+      }
+      return createWrapper(key, bitmask, object, partials, holders);
+    });
+
+    /**
+     * Creates a function that accepts one or more arguments of `func` that when
+     * called either invokes `func` returning its result, if all `func` arguments
+     * have been provided, or returns a function that accepts one or more of the
+     * remaining `func` arguments, and so on. The arity of `func` may be specified
+     * if `func.length` is not sufficient.
+     *
+     * The `_.curry.placeholder` value, which defaults to `_` in monolithic builds,
+     * may be used as a placeholder for provided arguments.
+     *
+     * **Note:** This method does not set the "length" property of curried functions.
+     *
+     * @static
+     * @memberOf _
+     * @category Function
+     * @param {Function} func The function to curry.
+     * @param {number} [arity=func.length] The arity of `func`.
+     * @param- {Object} [guard] Enables use as a callback for functions like `_.map`.
+     * @returns {Function} Returns the new curried function.
+     * @example
+     *
+     * var abc = function(a, b, c) {
+     *   return [a, b, c];
+     * };
+     *
+     * var curried = _.curry(abc);
+     *
+     * curried(1)(2)(3);
+     * // => [1, 2, 3]
+     *
+     * curried(1, 2)(3);
+     * // => [1, 2, 3]
+     *
+     * curried(1, 2, 3);
+     * // => [1, 2, 3]
+     *
+     * // using placeholders
+     * curried(1)(_, 3)(2);
+     * // => [1, 2, 3]
+     */
+    var curry = createCurry(CURRY_FLAG);
+
+    /**
+     * This method is like `_.curry` except that arguments are applied to `func`
+     * in the manner of `_.partialRight` instead of `_.partial`.
+     *
+     * The `_.curryRight.placeholder` value, which defaults to `_` in monolithic
+     * builds, may be used as a placeholder for provided arguments.
+     *
+     * **Note:** This method does not set the "length" property of curried functions.
+     *
+     * @static
+     * @memberOf _
+     * @category Function
+     * @param {Function} func The function to curry.
+     * @param {number} [arity=func.length] The arity of `func`.
+     * @param- {Object} [guard] Enables use as a callback for functions like `_.map`.
+     * @returns {Function} Returns the new curried function.
+     * @example
+     *
+     * var abc = function(a, b, c) {
+     *   return [a, b, c];
+     * };
+     *
+     * var curried = _.curryRight(abc);
+     *
+     * curried(3)(2)(1);
+     * // => [1, 2, 3]
+     *
+     * curried(2, 3)(1);
+     * // => [1, 2, 3]
+     *
+     * curried(1, 2, 3);
+     * // => [1, 2, 3]
+     *
+     * // using placeholders
+     * curried(3)(1, _)(2);
+     * // => [1, 2, 3]
+     */
+    var curryRight = createCurry(CURRY_RIGHT_FLAG);
+
+    /**
+     * Creates a debounced function that delays invoking `func` until after `wait`
+     * milliseconds have elapsed since the last time the debounced function was
+     * invoked. The debounced function comes with a `cancel` method to cancel
+     * delayed invocations. Provide an options object to indicate that `func`
+     * should be invoked on the leading and/or trailing edge of the `wait` timeout.
+     * Subsequent calls to the debounced function return the result of the last
+     * `func` invocation.
+     *
+     * **Note:** If `leading` and `trailing` options are `true`, `func` is invoked
+     * on the trailing edge of the timeout only if the the debounced function is
+     * invoked more than once during the `wait` timeout.
+     *
+     * See [David Corbacho's article](http://drupalmotion.com/article/debounce-and-throttle-visual-explanation)
+     * for details over the differences between `_.debounce` and `_.throttle`.
+     *
+     * @static
+     * @memberOf _
+     * @category Function
+     * @param {Function} func The function to debounce.
+     * @param {number} [wait=0] The number of milliseconds to delay.
+     * @param {Object} [options] The options object.
+     * @param {boolean} [options.leading=false] Specify invoking on the leading
+     *  edge of the timeout.
+     * @param {number} [options.maxWait] The maximum time `func` is allowed to be
+     *  delayed before it's invoked.
+     * @param {boolean} [options.trailing=true] Specify invoking on the trailing
+     *  edge of the timeout.
+     * @returns {Function} Returns the new debounced function.
+     * @example
+     *
+     * // avoid costly calculations while the window size is in flux
+     * jQuery(window).on('resize', _.debounce(calculateLayout, 150));
+     *
+     * // invoke `sendMail` when the click event is fired, debouncing subsequent calls
+     * jQuery('#postbox').on('click', _.debounce(sendMail, 300, {
+     *   'leading': true,
+     *   'trailing': false
+     * }));
+     *
+     * // ensure `batchLog` is invoked once after 1 second of debounced calls
+     * var source = new EventSource('/stream');
+     * jQuery(source).on('message', _.debounce(batchLog, 250, {
+     *   'maxWait': 1000
+     * }));
+     *
+     * // cancel a debounced call
+     * var todoChanges = _.debounce(batchLog, 1000);
+     * Object.observe(models.todo, todoChanges);
+     *
+     * Object.observe(models, function(changes) {
+     *   if (_.find(changes, { 'user': 'todo', 'type': 'delete'})) {
+     *     todoChanges.cancel();
+     *   }
+     * }, ['delete']);
+     *
+     * // ...at some point `models.todo` is changed
+     * models.todo.completed = true;
+     *
+     * // ...before 1 second has passed `models.todo` is deleted
+     * // which cancels the debounced `todoChanges` call
+     * delete models.todo;
+     */
+    function debounce(func, wait, options) {
+      var args,
+          maxTimeoutId,
+          result,
+          stamp,
+          thisArg,
+          timeoutId,
+          trailingCall,
+          lastCalled = 0,
+          maxWait = false,
+          trailing = true;
+
+      if (typeof func != 'function') {
+        throw new TypeError(FUNC_ERROR_TEXT);
+      }
+      wait = wait < 0 ? 0 : (+wait || 0);
+      if (options === true) {
+        var leading = true;
+        trailing = false;
+      } else if (isObject(options)) {
+        leading = !!options.leading;
+        maxWait = 'maxWait' in options && nativeMax(+options.maxWait || 0, wait);
+        trailing = 'trailing' in options ? !!options.trailing : trailing;
+      }
+
+      function cancel() {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+        if (maxTimeoutId) {
+          clearTimeout(maxTimeoutId);
+        }
+        lastCalled = 0;
+        maxTimeoutId = timeoutId = trailingCall = undefined;
+      }
+
+      function complete(isCalled, id) {
+        if (id) {
+          clearTimeout(id);
+        }
+        maxTimeoutId = timeoutId = trailingCall = undefined;
+        if (isCalled) {
+          lastCalled = now();
+          result = func.apply(thisArg, args);
+          if (!timeoutId && !maxTimeoutId) {
+            args = thisArg = undefined;
+          }
+        }
+      }
+
+      function delayed() {
+        var remaining = wait - (now() - stamp);
+        if (remaining <= 0 || remaining > wait) {
+          complete(trailingCall, maxTimeoutId);
+        } else {
+          timeoutId = setTimeout(delayed, remaining);
+        }
+      }
+
+      function maxDelayed() {
+        complete(trailing, timeoutId);
+      }
+
+      function debounced() {
+        args = arguments;
+        stamp = now();
+        thisArg = this;
+        trailingCall = trailing && (timeoutId || !leading);
+
+        if (maxWait === false) {
+          var leadingCall = leading && !timeoutId;
+        } else {
+          if (!maxTimeoutId && !leading) {
+            lastCalled = stamp;
+          }
+          var remaining = maxWait - (stamp - lastCalled),
+              isCalled = remaining <= 0 || remaining > maxWait;
+
+          if (isCalled) {
+            if (maxTimeoutId) {
+              maxTimeoutId = clearTimeout(maxTimeoutId);
+            }
+            lastCalled = stamp;
+            result = func.apply(thisArg, args);
+          }
+          else if (!maxTimeoutId) {
+            maxTimeoutId = setTimeout(maxDelayed, remaining);
+          }
+        }
+        if (isCalled && timeoutId) {
+          timeoutId = clearTimeout(timeoutId);
+        }
+        else if (!timeoutId && wait !== maxWait) {
+          timeoutId = setTimeout(delayed, wait);
+        }
+        if (leadingCall) {
+          isCalled = true;
+          result = func.apply(thisArg, args);
+        }
+        if (isCalled && !timeoutId && !maxTimeoutId) {
+          args = thisArg = undefined;
+        }
+        return result;
+      }
+      debounced.cancel = cancel;
+      return debounced;
+    }
+
+    /**
+     * Defers invoking the `func` until the current call stack has cleared. Any
+     * additional arguments are provided to `func` when it's invoked.
+     *
+     * @static
+     * @memberOf _
+     * @category Function
+     * @param {Function} func The function to defer.
+     * @param {...*} [args] The arguments to invoke the function with.
+     * @returns {number} Returns the timer id.
+     * @example
+     *
+     * _.defer(function(text) {
+     *   console.log(text);
+     * }, 'deferred');
+     * // logs 'deferred' after one or more milliseconds
+     */
+    var defer = restParam(function(func, args) {
+      return baseDelay(func, 1, args);
+    });
+
+    /**
+     * Invokes `func` after `wait` milliseconds. Any additional arguments are
+     * provided to `func` when it's invoked.
+     *
+     * @static
+     * @memberOf _
+     * @category Function
+     * @param {Function} func The function to delay.
+     * @param {number} wait The number of milliseconds to delay invocation.
+     * @param {...*} [args] The arguments to invoke the function with.
+     * @returns {number} Returns the timer id.
+     * @example
+     *
+     * _.delay(function(text) {
+     *   console.log(text);
+     * }, 1000, 'later');
+     * // => logs 'later' after one second
+     */
+    var delay = restParam(function(func, wait, args) {
+      return baseDelay(func, wait, args);
+    });
+
+    /**
+     * Creates a function that returns the result of invoking the provided
+     * functions with the `this` binding of the created function, where each
+     * successive invocation is supplied the return value of the previous.
+     *
+     * @static
+     * @memberOf _
+     * @category Function
+     * @param {...Function} [funcs] Functions to invoke.
+     * @returns {Function} Returns the new function.
+     * @example
+     *
+     * function square(n) {
+     *   return n * n;
+     * }
+     *
+     * var addSquare = _.flow(_.add, square);
+     * addSquare(1, 2);
+     * // => 9
+     */
+    var flow = createFlow();
+
+    /**
+     * This method is like `_.flow` except that it creates a function that
+     * invokes the provided functions from right to left.
+     *
+     * @static
+     * @memberOf _
+     * @alias backflow, compose
+     * @category Function
+     * @param {...Function} [funcs] Functions to invoke.
+     * @returns {Function} Returns the new function.
+     * @example
+     *
+     * function square(n) {
+     *   return n * n;
+     * }
+     *
+     * var addSquare = _.flowRight(square, _.add);
+     * addSquare(1, 2);
+     * // => 9
+     */
+    var flowRight = createFlow(true);
+
+    /**
+     * Creates a function that memoizes the result of `func`. If `resolver` is
+     * provided it determines the cache key for storing the result based on the
+     * arguments provided to the memoized function. By default, the first argument
+     * provided to the memoized function is coerced to a string and used as the
+     * cache key. The `func` is invoked with the `this` binding of the memoized
+     * function.
+     *
+     * **Note:** The cache is exposed as the `cache` property on the memoized
+     * function. Its creation may be customized by replacing the `_.memoize.Cache`
+     * constructor with one whose instances implement the [`Map`](http://ecma-international.org/ecma-262/6.0/#sec-properties-of-the-map-prototype-object)
+     * method interface of `get`, `has`, and `set`.
+     *
+     * @static
+     * @memberOf _
+     * @category Function
+     * @param {Function} func The function to have its output memoized.
+     * @param {Function} [resolver] The function to resolve the cache key.
+     * @returns {Function} Returns the new memoizing function.
+     * @example
+     *
+     * var upperCase = _.memoize(function(string) {
+     *   return string.toUpperCase();
+     * });
+     *
+     * upperCase('fred');
+     * // => 'FRED'
+     *
+     * // modifying the result cache
+     * upperCase.cache.set('fred', 'BARNEY');
+     * upperCase('fred');
+     * // => 'BARNEY'
+     *
+     * // replacing `_.memoize.Cache`
+     * var object = { 'user': 'fred' };
+     * var other = { 'user': 'barney' };
+     * var identity = _.memoize(_.identity);
+     *
+     * identity(object);
+     * // => { 'user': 'fred' }
+     * identity(other);
+     * // => { 'user': 'fred' }
+     *
+     * _.memoize.Cache = WeakMap;
+     * var identity = _.memoize(_.identity);
+     *
+     * identity(object);
+     * // => { 'user': 'fred' }
+     * identity(other);
+     * // => { 'user': 'barney' }
+     */
+    function memoize(func, resolver) {
+      if (typeof func != 'function' || (resolver && typeof resolver != 'function')) {
+        throw new TypeError(FUNC_ERROR_TEXT);
+      }
+      var memoized = function() {
+        var args = arguments,
+            key = resolver ? resolver.apply(this, args) : args[0],
+            cache = memoized.cache;
+
+        if (cache.has(key)) {
+          return cache.get(key);
+        }
+        var result = func.apply(this, args);
+        memoized.cache = cache.set(key, result);
+        return result;
+      };
+      memoized.cache = new memoize.Cache;
+      return memoized;
+    }
+
+    /**
+     * Creates a function that runs each argument through a corresponding
+     * transform function.
+     *
+     * @static
+     * @memberOf _
+     * @category Function
+     * @param {Function} func The function to wrap.
+     * @param {...(Function|Function[])} [transforms] The functions to transform
+     * arguments, specified as individual functions or arrays of functions.
+     * @returns {Function} Returns the new function.
+     * @example
+     *
+     * function doubled(n) {
+     *   return n * 2;
+     * }
+     *
+     * function square(n) {
+     *   return n * n;
+     * }
+     *
+     * var modded = _.modArgs(function(x, y) {
+     *   return [x, y];
+     * }, square, doubled);
+     *
+     * modded(1, 2);
+     * // => [1, 4]
+     *
+     * modded(5, 10);
+     * // => [25, 20]
+     */
+    var modArgs = restParam(function(func, transforms) {
+      transforms = baseFlatten(transforms);
+      if (typeof func != 'function' || !arrayEvery(transforms, baseIsFunction)) {
+        throw new TypeError(FUNC_ERROR_TEXT);
+      }
+      var length = transforms.length;
+      return restParam(function(args) {
+        var index = nativeMin(args.length, length);
+        while (index--) {
+          args[index] = transforms[index](args[index]);
+        }
+        return func.apply(this, args);
+      });
+    });
+
+    /**
+     * Creates a function that negates the result of the predicate `func`. The
+     * `func` predicate is invoked with the `this` binding and arguments of the
+     * created function.
+     *
+     * @static
+     * @memberOf _
+     * @category Function
+     * @param {Function} predicate The predicate to negate.
+     * @returns {Function} Returns the new function.
+     * @example
+     *
+     * function isEven(n) {
+     *   return n % 2 == 0;
+     * }
+     *
+     * _.filter([1, 2, 3, 4, 5, 6], _.negate(isEven));
+     * // => [1, 3, 5]
+     */
+    function negate(predicate) {
+      if (typeof predicate != 'function') {
+        throw new TypeError(FUNC_ERROR_TEXT);
+      }
+      return function() {
+        return !predicate.apply(this, arguments);
+      };
+    }
+
+    /**
+     * Creates a function that is restricted to invoking `func` once. Repeat calls
+     * to the function return the value of the first call. The `func` is invoked
+     * with the `this` binding and arguments of the created function.
+     *
+     * @static
+     * @memberOf _
+     * @category Function
+     * @param {Function} func The function to restrict.
+     * @returns {Function} Returns the new restricted function.
+     * @example
+     *
+     * var initialize = _.once(createApplication);
+     * initialize();
+     * initialize();
+     * // `initialize` invokes `createApplication` once
+     */
+    function once(func) {
+      return before(2, func);
+    }
+
+    /**
+     * Creates a function that invokes `func` with `partial` arguments prepended
+     * to those provided to the new function. This method is like `_.bind` except
+     * it does **not** alter the `this` binding.
+     *
+     * The `_.partial.placeholder` value, which defaults to `_` in monolithic
+     * builds, may be used as a placeholder for partially applied arguments.
+     *
+     * **Note:** This method does not set the "length" property of partially
+     * applied functions.
+     *
+     * @static
+     * @memberOf _
+     * @category Function
+     * @param {Function} func The function to partially apply arguments to.
+     * @param {...*} [partials] The arguments to be partially applied.
+     * @returns {Function} Returns the new partially applied function.
+     * @example
+     *
+     * var greet = function(greeting, name) {
+     *   return greeting + ' ' + name;
+     * };
+     *
+     * var sayHelloTo = _.partial(greet, 'hello');
+     * sayHelloTo('fred');
+     * // => 'hello fred'
+     *
+     * // using placeholders
+     * var greetFred = _.partial(greet, _, 'fred');
+     * greetFred('hi');
+     * // => 'hi fred'
+     */
+    var partial = createPartial(PARTIAL_FLAG);
+
+    /**
+     * This method is like `_.partial` except that partially applied arguments
+     * are appended to those provided to the new function.
+     *
+     * The `_.partialRight.placeholder` value, which defaults to `_` in monolithic
+     * builds, may be used as a placeholder for partially applied arguments.
+     *
+     * **Note:** This method does not set the "length" property of partially
+     * applied functions.
+     *
+     * @static
+     * @memberOf _
+     * @category Function
+     * @param {Function} func The function to partially apply arguments to.
+     * @param {...*} [partials] The arguments to be partially applied.
+     * @returns {Function} Returns the new partially applied function.
+     * @example
+     *
+     * var greet = function(greeting, name) {
+     *   return greeting + ' ' + name;
+     * };
+     *
+     * var greetFred = _.partialRight(greet, 'fred');
+     * greetFred('hi');
+     * // => 'hi fred'
+     *
+     * // using placeholders
+     * var sayHelloTo = _.partialRight(greet, 'hello', _);
+     * sayHelloTo('fred');
+     * // => 'hello fred'
+     */
+    var partialRight = createPartial(PARTIAL_RIGHT_FLAG);
+
+    /**
+     * Creates a function that invokes `func` with arguments arranged according
+     * to the specified indexes where the argument value at the first index is
+     * provided as the first argument, the argument value at the second index is
+     * provided as the second argument, and so on.
+     *
+     * @static
+     * @memberOf _
+     * @category Function
+     * @param {Function} func The function to rearrange arguments for.
+     * @param {...(number|number[])} indexes The arranged argument indexes,
+     *  specified as individual indexes or arrays of indexes.
+     * @returns {Function} Returns the new function.
+     * @example
+     *
+     * var rearged = _.rearg(function(a, b, c) {
+     *   return [a, b, c];
+     * }, 2, 0, 1);
+     *
+     * rearged('b', 'c', 'a')
+     * // => ['a', 'b', 'c']
+     *
+     * var map = _.rearg(_.map, [1, 0]);
+     * map(function(n) {
+     *   return n * 3;
+     * }, [1, 2, 3]);
+     * // => [3, 6, 9]
+     */
+    var rearg = restParam(function(func, indexes) {
+      return createWrapper(func, REARG_FLAG, undefined, undefined, undefined, baseFlatten(indexes));
+    });
+
+    /**
+     * Creates a function that invokes `func` with the `this` binding of the
+     * created function and arguments from `start` and beyond provided as an array.
+     *
+     * **Note:** This method is based on the [rest parameter](https://developer.mozilla.org/Web/JavaScript/Reference/Functions/rest_parameters).
+     *
+     * @static
+     * @memberOf _
+     * @category Function
+     * @param {Function} func The function to apply a rest parameter to.
+     * @param {number} [start=func.length-1] The start position of the rest parameter.
+     * @returns {Function} Returns the new function.
+     * @example
+     *
+     * var say = _.restParam(function(what, names) {
+     *   return what + ' ' + _.initial(names).join(', ') +
+     *     (_.size(names) > 1 ? ', & ' : '') + _.last(names);
+     * });
+     *
+     * say('hello', 'fred', 'barney', 'pebbles');
+     * // => 'hello fred, barney, & pebbles'
+     */
+    function restParam(func, start) {
+      if (typeof func != 'function') {
+        throw new TypeError(FUNC_ERROR_TEXT);
+      }
+      start = nativeMax(start === undefined ? (func.length - 1) : (+start || 0), 0);
+      return function() {
+        var args = arguments,
+            index = -1,
+            length = nativeMax(args.length - start, 0),
+            rest = Array(length);
+
+        while (++index < length) {
+          rest[index] = args[start + index];
+        }
+        switch (start) {
+          case 0: return func.call(this, rest);
+          case 1: return func.call(this, args[0], rest);
+          case 2: return func.call(this, args[0], args[1], rest);
+        }
+        var otherArgs = Array(start + 1);
+        index = -1;
+        while (++index < start) {
+          otherArgs[index] = args[index];
+        }
+        otherArgs[start] = rest;
+        return func.apply(this, otherArgs);
+      };
+    }
+
+    /**
+     * Creates a function that invokes `func` with the `this` binding of the created
+     * function and an array of arguments much like [`Function#apply`](https://es5.github.io/#x15.3.4.3).
+     *
+     * **Note:** This method is based on the [spread operator](https://developer.mozilla.org/Web/JavaScript/Reference/Operators/Spread_operator).
+     *
+     * @static
+     * @memberOf _
+     * @category Function
+     * @param {Function} func The function to spread arguments over.
+     * @returns {Function} Returns the new function.
+     * @example
+     *
+     * var say = _.spread(function(who, what) {
+     *   return who + ' says ' + what;
+     * });
+     *
+     * say(['fred', 'hello']);
+     * // => 'fred says hello'
+     *
+     * // with a Promise
+     * var numbers = Promise.all([
+     *   Promise.resolve(40),
+     *   Promise.resolve(36)
+     * ]);
+     *
+     * numbers.then(_.spread(function(x, y) {
+     *   return x + y;
+     * }));
+     * // => a Promise of 76
+     */
+    function spread(func) {
+      if (typeof func != 'function') {
+        throw new TypeError(FUNC_ERROR_TEXT);
+      }
+      return function(array) {
+        return func.apply(this, array);
+      };
+    }
+
+    /**
+     * Creates a throttled function that only invokes `func` at most once per
+     * every `wait` milliseconds. The throttled function comes with a `cancel`
+     * method to cancel delayed invocations. Provide an options object to indicate
+     * that `func` should be invoked on the leading and/or trailing edge of the
+     * `wait` timeout. Subsequent calls to the throttled function return the
+     * result of the last `func` call.
+     *
+     * **Note:** If `leading` and `trailing` options are `true`, `func` is invoked
+     * on the trailing edge of the timeout only if the the throttled function is
+     * invoked more than once during the `wait` timeout.
+     *
+     * See [David Corbacho's article](http://drupalmotion.com/article/debounce-and-throttle-visual-explanation)
+     * for details over the differences between `_.throttle` and `_.debounce`.
+     *
+     * @static
+     * @memberOf _
+     * @category Function
+     * @param {Function} func The function to throttle.
+     * @param {number} [wait=0] The number of milliseconds to throttle invocations to.
+     * @param {Object} [options] The options object.
+     * @param {boolean} [options.leading=true] Specify invoking on the leading
+     *  edge of the timeout.
+     * @param {boolean} [options.trailing=true] Specify invoking on the trailing
+     *  edge of the timeout.
+     * @returns {Function} Returns the new throttled function.
+     * @example
+     *
+     * // avoid excessively updating the position while scrolling
+     * jQuery(window).on('scroll', _.throttle(updatePosition, 100));
+     *
+     * // invoke `renewToken` when the click event is fired, but not more than once every 5 minutes
+     * jQuery('.interactive').on('click', _.throttle(renewToken, 300000, {
+     *   'trailing': false
+     * }));
+     *
+     * // cancel a trailing throttled call
+     * jQuery(window).on('popstate', throttled.cancel);
+     */
+    function throttle(func, wait, options) {
+      var leading = true,
+          trailing = true;
+
+      if (typeof func != 'function') {
+        throw new TypeError(FUNC_ERROR_TEXT);
+      }
+      if (options === false) {
+        leading = false;
+      } else if (isObject(options)) {
+        leading = 'leading' in options ? !!options.leading : leading;
+        trailing = 'trailing' in options ? !!options.trailing : trailing;
+      }
+      return debounce(func, wait, { 'leading': leading, 'maxWait': +wait, 'trailing': trailing });
+    }
+
+    /**
+     * Creates a function that provides `value` to the wrapper function as its
+     * first argument. Any additional arguments provided to the function are
+     * appended to those provided to the wrapper function. The wrapper is invoked
+     * with the `this` binding of the created function.
+     *
+     * @static
+     * @memberOf _
+     * @category Function
+     * @param {*} value The value to wrap.
+     * @param {Function} wrapper The wrapper function.
+     * @returns {Function} Returns the new function.
+     * @example
+     *
+     * var p = _.wrap(_.escape, function(func, text) {
+     *   return '<p>' + func(text) + '</p>';
+     * });
+     *
+     * p('fred, barney, & pebbles');
+     * // => '<p>fred, barney, &amp; pebbles</p>'
+     */
+    function wrap(value, wrapper) {
+      wrapper = wrapper == null ? identity : wrapper;
+      return createWrapper(wrapper, PARTIAL_FLAG, undefined, [value], []);
+    }
+
+    /*------------------------------------------------------------------------*/
+
+    /**
+     * Creates a clone of `value`. If `isDeep` is `true` nested objects are cloned,
+     * otherwise they are assigned by reference. If `customizer` is provided it's
+     * invoked to produce the cloned values. If `customizer` returns `undefined`
+     * cloning is handled by the method instead. The `customizer` is bound to
+     * `thisArg` and invoked with up to three argument; (value [, index|key, object]).
+     *
+     * **Note:** This method is loosely based on the
+     * [structured clone algorithm](http://www.w3.org/TR/html5/infrastructure.html#internal-structured-cloning-algorithm).
+     * The enumerable properties of `arguments` objects and objects created by
+     * constructors other than `Object` are cloned to plain `Object` objects. An
+     * empty object is returned for uncloneable values such as functions, DOM nodes,
+     * Maps, Sets, and WeakMaps.
+     *
+     * @static
+     * @memberOf _
+     * @category Lang
+     * @param {*} value The value to clone.
+     * @param {boolean} [isDeep] Specify a deep clone.
+     * @param {Function} [customizer] The function to customize cloning values.
+     * @param {*} [thisArg] The `this` binding of `customizer`.
+     * @returns {*} Returns the cloned value.
+     * @example
+     *
+     * var users = [
+     *   { 'user': 'barney' },
+     *   { 'user': 'fred' }
+     * ];
+     *
+     * var shallow = _.clone(users);
+     * shallow[0] === users[0];
+     * // => true
+     *
+     * var deep = _.clone(users, true);
+     * deep[0] === users[0];
+     * // => false
+     *
+     * // using a customizer callback
+     * var el = _.clone(document.body, function(value) {
+     *   if (_.isElement(value)) {
+     *     return value.cloneNode(false);
+     *   }
+     * });
+     *
+     * el === document.body
+     * // => false
+     * el.nodeName
+     * // => BODY
+     * el.childNodes.length;
+     * // => 0
+     */
+    function clone(value, isDeep, customizer, thisArg) {
+      if (isDeep && typeof isDeep != 'boolean' && isIterateeCall(value, isDeep, customizer)) {
+        isDeep = false;
+      }
+      else if (typeof isDeep == 'function') {
+        thisArg = customizer;
+        customizer = isDeep;
+        isDeep = false;
+      }
+      return typeof customizer == 'function'
+        ? baseClone(value, isDeep, bindCallback(customizer, thisArg, 3))
+        : baseClone(value, isDeep);
+    }
+
+    /**
+     * Creates a deep clone of `value`. If `customizer` is provided it's invoked
+     * to produce the cloned values. If `customizer` returns `undefined` cloning
+     * is handled by the method instead. The `customizer` is bound to `thisArg`
+     * and invoked with up to three argument; (value [, index|key, object]).
+     *
+     * **Note:** This method is loosely based on the
+     * [structured clone algorithm](http://www.w3.org/TR/html5/infrastructure.html#internal-structured-cloning-algorithm).
+     * The enumerable properties of `arguments` objects and objects created by
+     * constructors other than `Object` are cloned to plain `Object` objects. An
+     * empty object is returned for uncloneable values such as functions, DOM nodes,
+     * Maps, Sets, and WeakMaps.
+     *
+     * @static
+     * @memberOf _
+     * @category Lang
+     * @param {*} value The value to deep clone.
+     * @param {Function} [customizer] The function to customize cloning values.
+     * @param {*} [thisArg] The `this` binding of `customizer`.
+     * @returns {*} Returns the deep cloned value.
+     * @example
+     *
+     * var users = [
+     *   { 'user': 'barney' },
+     *   { 'user': 'fred' }
+     * ];
+     *
+     * var deep = _.cloneDeep(users);
+     * deep[0] === users[0];
+     * // => false
+     *
+     * // using a customizer callback
+     * var el = _.cloneDeep(document.body, function(value) {
+     *   if (_.isElement(value)) {
+     *     return value.cloneNode(true);
+     *   }
+     * });
+     *
+     * el === document.body
+     * // => false
+     * el.nodeName
+     * // => BODY
+     * el.childNodes.length;
+     * // => 20
+     */
+    function cloneDeep(value, customizer, thisArg) {
+      return typeof customizer == 'function'
+        ? baseClone(value, true, bindCallback(customizer, thisArg, 3))
+        : baseClone(value, true);
+    }
+
+    /**
+     * Checks if `value` is greater than `other`.
+     *
+     * @static
+     * @memberOf _
+     * @category Lang
+     * @param {*} value The value to compare.
+     * @param {*} other The other value to compare.
+     * @returns {boolean} Returns `true` if `value` is greater than `other`, else `false`.
+     * @example
+     *
+     * _.gt(3, 1);
+     * // => true
+     *
+     * _.gt(3, 3);
+     * // => false
+     *
+     * _.gt(1, 3);
+     * // => false
+     */
+    function gt(value, other) {
+      return value > other;
+    }
+
+    /**
+     * Checks if `value` is greater than or equal to `other`.
+     *
+     * @static
+     * @memberOf _
+     * @category Lang
+     * @param {*} value The value to compare.
+     * @param {*} other The other value to compare.
+     * @returns {boolean} Returns `true` if `value` is greater than or equal to `other`, else `false`.
+     * @example
+     *
+     * _.gte(3, 1);
+     * // => true
+     *
+     * _.gte(3, 3);
+     * // => true
+     *
+     * _.gte(1, 3);
+     * // => false
+     */
+    function gte(value, other) {
+      return value >= other;
+    }
+
+    /**
+     * Checks if `value` is classified as an `arguments` object.
+     *
+     * @static
+     * @memberOf _
+     * @category Lang
+     * @param {*} value The value to check.
+     * @returns {boolean} Returns `true` if `value` is correctly classified, else `false`.
+     * @example
+     *
+     * _.isArguments(function() { return arguments; }());
+     * // => true
+     *
+     * _.isArguments([1, 2, 3]);
+     * // => false
+     */
+    function isArguments(value) {
+      return isObjectLike(value) && isArrayLike(value) &&
+        hasOwnProperty.call(value, 'callee') && !propertyIsEnumerable.call(value, 'callee');
+    }
+
+    /**
+     * Checks if `value` is classified as an `Array` object.
+     *
+     * @static
+     * @memberOf _
+     * @category Lang
+     * @param {*} value The value to check.
+     * @returns {boolean} Returns `true` if `value` is correctly classified, else `false`.
+     * @example
+     *
+     * _.isArray([1, 2, 3]);
+     * // => true
+     *
+     * _.isArray(function() { return arguments; }());
+     * // => false
+     */
+    var isArray = nativeIsArray || function(value) {
+      return isObjectLike(value) && isLength(value.length) && objToString.call(value) == arrayTag;
+    };
+
+    /**
+     * Checks if `value` is classified as a boolean primitive or object.
+     *
+     * @static
+     * @memberOf _
+     * @category Lang
+     * @param {*} value The value to check.
+     * @returns {boolean} Returns `true` if `value` is correctly classified, else `false`.
+     * @example
+     *
+     * _.isBoolean(false);
+     * // => true
+     *
+     * _.isBoolean(null);
+     * // => false
+     */
+    function isBoolean(value) {
+      return value === true || value === false || (isObjectLike(value) && objToString.call(value) == boolTag);
+    }
+
+    /**
+     * Checks if `value` is classified as a `Date` object.
+     *
+     * @static
+     * @memberOf _
+     * @category Lang
+     * @param {*} value The value to check.
+     * @returns {boolean} Returns `true` if `value` is correctly classified, else `false`.
+     * @example
+     *
+     * _.isDate(new Date);
+     * // => true
+     *
+     * _.isDate('Mon April 23 2012');
+     * // => false
+     */
+    function isDate(value) {
+      return isObjectLike(value) && objToString.call(value) == dateTag;
+    }
+
+    /**
+     * Checks if `value` is a DOM element.
+     *
+     * @static
+     * @memberOf _
+     * @category Lang
+     * @param {*} value The value to check.
+     * @returns {boolean} Returns `true` if `value` is a DOM element, else `false`.
+     * @example
+     *
+     * _.isElement(document.body);
+     * // => true
+     *
+     * _.isElement('<body>');
+     * // => false
+     */
+    function isElement(value) {
+      return !!value && value.nodeType === 1 && isObjectLike(value) && !isPlainObject(value);
+    }
+
+    /**
+     * Checks if `value` is empty. A value is considered empty unless it's an
+     * `arguments` object, array, string, or jQuery-like collection with a length
+     * greater than `0` or an object with own enumerable properties.
+     *
+     * @static
+     * @memberOf _
+     * @category Lang
+     * @param {Array|Object|string} value The value to inspect.
+     * @returns {boolean} Returns `true` if `value` is empty, else `false`.
+     * @example
+     *
+     * _.isEmpty(null);
+     * // => true
+     *
+     * _.isEmpty(true);
+     * // => true
+     *
+     * _.isEmpty(1);
+     * // => true
+     *
+     * _.isEmpty([1, 2, 3]);
+     * // => false
+     *
+     * _.isEmpty({ 'a': 1 });
+     * // => false
+     */
+    function isEmpty(value) {
+      if (value == null) {
+        return true;
+      }
+      if (isArrayLike(value) && (isArray(value) || isString(value) || isArguments(value) ||
+          (isObjectLike(value) && isFunction(value.splice)))) {
+        return !value.length;
+      }
+      return !keys(value).length;
+    }
+
+    /**
+     * Performs a deep comparison between two values to determine if they are
+     * equivalent. If `customizer` is provided it's invoked to compare values.
+     * If `customizer` returns `undefined` comparisons are handled by the method
+     * instead. The `customizer` is bound to `thisArg` and invoked with up to
+     * three arguments: (value, other [, index|key]).
+     *
+     * **Note:** This method supports comparing arrays, booleans, `Date` objects,
+     * numbers, `Object` objects, regexes, and strings. Objects are compared by
+     * their own, not inherited, enumerable properties. Functions and DOM nodes
+     * are **not** supported. Provide a customizer function to extend support
+     * for comparing other values.
+     *
+     * @static
+     * @memberOf _
+     * @alias eq
+     * @category Lang
+     * @param {*} value The value to compare.
+     * @param {*} other The other value to compare.
+     * @param {Function} [customizer] The function to customize value comparisons.
+     * @param {*} [thisArg] The `this` binding of `customizer`.
+     * @returns {boolean} Returns `true` if the values are equivalent, else `false`.
+     * @example
+     *
+     * var object = { 'user': 'fred' };
+     * var other = { 'user': 'fred' };
+     *
+     * object == other;
+     * // => false
+     *
+     * _.isEqual(object, other);
+     * // => true
+     *
+     * // using a customizer callback
+     * var array = ['hello', 'goodbye'];
+     * var other = ['hi', 'goodbye'];
+     *
+     * _.isEqual(array, other, function(value, other) {
+     *   if (_.every([value, other], RegExp.prototype.test, /^h(?:i|ello)$/)) {
+     *     return true;
+     *   }
+     * });
+     * // => true
+     */
+    function isEqual(value, other, customizer, thisArg) {
+      customizer = typeof customizer == 'function' ? bindCallback(customizer, thisArg, 3) : undefined;
+      var result = customizer ? customizer(value, other) : undefined;
+      return  result === undefined ? baseIsEqual(value, other, customizer) : !!result;
+    }
+
+    /**
+     * Checks if `value` is an `Error`, `EvalError`, `RangeError`, `ReferenceError`,
+     * `SyntaxError`, `TypeError`, or `URIError` object.
+     *
+     * @static
+     * @memberOf _
+     * @category Lang
+     * @param {*} value The value to check.
+     * @returns {boolean} Returns `true` if `value` is an error object, else `false`.
+     * @example
+     *
+     * _.isError(new Error);
+     * // => true
+     *
+     * _.isError(Error);
+     * // => false
+     */
+    function isError(value) {
+      return isObjectLike(value) && typeof value.message == 'string' && objToString.call(value) == errorTag;
+    }
+
+    /**
+     * Checks if `value` is a finite primitive number.
+     *
+     * **Note:** This method is based on [`Number.isFinite`](http://ecma-international.org/ecma-262/6.0/#sec-number.isfinite).
+     *
+     * @static
+     * @memberOf _
+     * @category Lang
+     * @param {*} value The value to check.
+     * @returns {boolean} Returns `true` if `value` is a finite number, else `false`.
+     * @example
+     *
+     * _.isFinite(10);
+     * // => true
+     *
+     * _.isFinite('10');
+     * // => false
+     *
+     * _.isFinite(true);
+     * // => false
+     *
+     * _.isFinite(Object(10));
+     * // => false
+     *
+     * _.isFinite(Infinity);
+     * // => false
+     */
+    function isFinite(value) {
+      return typeof value == 'number' && nativeIsFinite(value);
+    }
+
+    /**
+     * Checks if `value` is classified as a `Function` object.
+     *
+     * @static
+     * @memberOf _
+     * @category Lang
+     * @param {*} value The value to check.
+     * @returns {boolean} Returns `true` if `value` is correctly classified, else `false`.
+     * @example
+     *
+     * _.isFunction(_);
+     * // => true
+     *
+     * _.isFunction(/abc/);
+     * // => false
+     */
+    function isFunction(value) {
+      // The use of `Object#toString` avoids issues with the `typeof` operator
+      // in older versions of Chrome and Safari which return 'function' for regexes
+      // and Safari 8 which returns 'object' for typed array constructors.
+      return isObject(value) && objToString.call(value) == funcTag;
+    }
+
+    /**
+     * Checks if `value` is the [language type](https://es5.github.io/#x8) of `Object`.
+     * (e.g. arrays, functions, objects, regexes, `new Number(0)`, and `new String('')`)
+     *
+     * @static
+     * @memberOf _
+     * @category Lang
+     * @param {*} value The value to check.
+     * @returns {boolean} Returns `true` if `value` is an object, else `false`.
+     * @example
+     *
+     * _.isObject({});
+     * // => true
+     *
+     * _.isObject([1, 2, 3]);
+     * // => true
+     *
+     * _.isObject(1);
+     * // => false
+     */
+    function isObject(value) {
+      // Avoid a V8 JIT bug in Chrome 19-20.
+      // See https://code.google.com/p/v8/issues/detail?id=2291 for more details.
+      var type = typeof value;
+      return !!value && (type == 'object' || type == 'function');
+    }
+
+    /**
+     * Performs a deep comparison between `object` and `source` to determine if
+     * `object` contains equivalent property values. If `customizer` is provided
+     * it's invoked to compare values. If `customizer` returns `undefined`
+     * comparisons are handled by the method instead. The `customizer` is bound
+     * to `thisArg` and invoked with three arguments: (value, other, index|key).
+     *
+     * **Note:** This method supports comparing properties of arrays, booleans,
+     * `Date` objects, numbers, `Object` objects, regexes, and strings. Functions
+     * and DOM nodes are **not** supported. Provide a customizer function to extend
+     * support for comparing other values.
+     *
+     * @static
+     * @memberOf _
+     * @category Lang
+     * @param {Object} object The object to inspect.
+     * @param {Object} source The object of property values to match.
+     * @param {Function} [customizer] The function to customize value comparisons.
+     * @param {*} [thisArg] The `this` binding of `customizer`.
+     * @returns {boolean} Returns `true` if `object` is a match, else `false`.
+     * @example
+     *
+     * var object = { 'user': 'fred', 'age': 40 };
+     *
+     * _.isMatch(object, { 'age': 40 });
+     * // => true
+     *
+     * _.isMatch(object, { 'age': 36 });
+     * // => false
+     *
+     * // using a customizer callback
+     * var object = { 'greeting': 'hello' };
+     * var source = { 'greeting': 'hi' };
+     *
+     * _.isMatch(object, source, function(value, other) {
+     *   return _.every([value, other], RegExp.prototype.test, /^h(?:i|ello)$/) || undefined;
+     * });
+     * // => true
+     */
+    function isMatch(object, source, customizer, thisArg) {
+      customizer = typeof customizer == 'function' ? bindCallback(customizer, thisArg, 3) : undefined;
+      return baseIsMatch(object, getMatchData(source), customizer);
+    }
+
+    /**
+     * Checks if `value` is `NaN`.
+     *
+     * **Note:** This method is not the same as [`isNaN`](https://es5.github.io/#x15.1.2.4)
+     * which returns `true` for `undefined` and other non-numeric values.
+     *
+     * @static
+     * @memberOf _
+     * @category Lang
+     * @param {*} value The value to check.
+     * @returns {boolean} Returns `true` if `value` is `NaN`, else `false`.
+     * @example
+     *
+     * _.isNaN(NaN);
+     * // => true
+     *
+     * _.isNaN(new Number(NaN));
+     * // => true
+     *
+     * isNaN(undefined);
+     * // => true
+     *
+     * _.isNaN(undefined);
+     * // => false
+     */
+    function isNaN(value) {
+      // An `NaN` primitive is the only value that is not equal to itself.
+      // Perform the `toStringTag` check first to avoid errors with some host objects in IE.
+      return isNumber(value) && value != +value;
+    }
+
+    /**
+     * Checks if `value` is a native function.
+     *
+     * @static
+     * @memberOf _
+     * @category Lang
+     * @param {*} value The value to check.
+     * @returns {boolean} Returns `true` if `value` is a native function, else `false`.
+     * @example
+     *
+     * _.isNative(Array.prototype.push);
+     * // => true
+     *
+     * _.isNative(_);
+     * // => false
+     */
+    function isNative(value) {
+      if (value == null) {
+        return false;
+      }
+      if (isFunction(value)) {
+        return reIsNative.test(fnToString.call(value));
+      }
+      return isObjectLike(value) && reIsHostCtor.test(value);
+    }
+
+    /**
+     * Checks if `value` is `null`.
+     *
+     * @static
+     * @memberOf _
+     * @category Lang
+     * @param {*} value The value to check.
+     * @returns {boolean} Returns `true` if `value` is `null`, else `false`.
+     * @example
+     *
+     * _.isNull(null);
+     * // => true
+     *
+     * _.isNull(void 0);
+     * // => false
+     */
+    function isNull(value) {
+      return value === null;
+    }
+
+    /**
+     * Checks if `value` is classified as a `Number` primitive or object.
+     *
+     * **Note:** To exclude `Infinity`, `-Infinity`, and `NaN`, which are classified
+     * as numbers, use the `_.isFinite` method.
+     *
+     * @static
+     * @memberOf _
+     * @category Lang
+     * @param {*} value The value to check.
+     * @returns {boolean} Returns `true` if `value` is correctly classified, else `false`.
+     * @example
+     *
+     * _.isNumber(8.4);
+     * // => true
+     *
+     * _.isNumber(NaN);
+     * // => true
+     *
+     * _.isNumber('8.4');
+     * // => false
+     */
+    function isNumber(value) {
+      return typeof value == 'number' || (isObjectLike(value) && objToString.call(value) == numberTag);
+    }
+
+    /**
+     * Checks if `value` is a plain object, that is, an object created by the
+     * `Object` constructor or one with a `[[Prototype]]` of `null`.
+     *
+     * **Note:** This method assumes objects created by the `Object` constructor
+     * have no inherited enumerable properties.
+     *
+     * @static
+     * @memberOf _
+     * @category Lang
+     * @param {*} value The value to check.
+     * @returns {boolean} Returns `true` if `value` is a plain object, else `false`.
+     * @example
+     *
+     * function Foo() {
+     *   this.a = 1;
+     * }
+     *
+     * _.isPlainObject(new Foo);
+     * // => false
+     *
+     * _.isPlainObject([1, 2, 3]);
+     * // => false
+     *
+     * _.isPlainObject({ 'x': 0, 'y': 0 });
+     * // => true
+     *
+     * _.isPlainObject(Object.create(null));
+     * // => true
+     */
+    function isPlainObject(value) {
+      var Ctor;
+
+      // Exit early for non `Object` objects.
+      if (!(isObjectLike(value) && objToString.call(value) == objectTag && !isArguments(value)) ||
+          (!hasOwnProperty.call(value, 'constructor') && (Ctor = value.constructor, typeof Ctor == 'function' && !(Ctor instanceof Ctor)))) {
+        return false;
+      }
+      // IE < 9 iterates inherited properties before own properties. If the first
+      // iterated property is an object's own property then there are no inherited
+      // enumerable properties.
+      var result;
+      // In most environments an object's own properties are iterated before
+      // its inherited properties. If the last iterated property is an object's
+      // own property then there are no inherited enumerable properties.
+      baseForIn(value, function(subValue, key) {
+        result = key;
+      });
+      return result === undefined || hasOwnProperty.call(value, result);
+    }
+
+    /**
+     * Checks if `value` is classified as a `RegExp` object.
+     *
+     * @static
+     * @memberOf _
+     * @category Lang
+     * @param {*} value The value to check.
+     * @returns {boolean} Returns `true` if `value` is correctly classified, else `false`.
+     * @example
+     *
+     * _.isRegExp(/abc/);
+     * // => true
+     *
+     * _.isRegExp('/abc/');
+     * // => false
+     */
+    function isRegExp(value) {
+      return isObject(value) && objToString.call(value) == regexpTag;
+    }
+
+    /**
+     * Checks if `value` is classified as a `String` primitive or object.
+     *
+     * @static
+     * @memberOf _
+     * @category Lang
+     * @param {*} value The value to check.
+     * @returns {boolean} Returns `true` if `value` is correctly classified, else `false`.
+     * @example
+     *
+     * _.isString('abc');
+     * // => true
+     *
+     * _.isString(1);
+     * // => false
+     */
+    function isString(value) {
+      return typeof value == 'string' || (isObjectLike(value) && objToString.call(value) == stringTag);
+    }
+
+    /**
+     * Checks if `value` is classified as a typed array.
+     *
+     * @static
+     * @memberOf _
+     * @category Lang
+     * @param {*} value The value to check.
+     * @returns {boolean} Returns `true` if `value` is correctly classified, else `false`.
+     * @example
+     *
+     * _.isTypedArray(new Uint8Array);
+     * // => true
+     *
+     * _.isTypedArray([]);
+     * // => false
+     */
+    function isTypedArray(value) {
+      return isObjectLike(value) && isLength(value.length) && !!typedArrayTags[objToString.call(value)];
+    }
+
+    /**
+     * Checks if `value` is `undefined`.
+     *
+     * @static
+     * @memberOf _
+     * @category Lang
+     * @param {*} value The value to check.
+     * @returns {boolean} Returns `true` if `value` is `undefined`, else `false`.
+     * @example
+     *
+     * _.isUndefined(void 0);
+     * // => true
+     *
+     * _.isUndefined(null);
+     * // => false
+     */
+    function isUndefined(value) {
+      return value === undefined;
+    }
+
+    /**
+     * Checks if `value` is less than `other`.
+     *
+     * @static
+     * @memberOf _
+     * @category Lang
+     * @param {*} value The value to compare.
+     * @param {*} other The other value to compare.
+     * @returns {boolean} Returns `true` if `value` is less than `other`, else `false`.
+     * @example
+     *
+     * _.lt(1, 3);
+     * // => true
+     *
+     * _.lt(3, 3);
+     * // => false
+     *
+     * _.lt(3, 1);
+     * // => false
+     */
+    function lt(value, other) {
+      return value < other;
+    }
+
+    /**
+     * Checks if `value` is less than or equal to `other`.
+     *
+     * @static
+     * @memberOf _
+     * @category Lang
+     * @param {*} value The value to compare.
+     * @param {*} other The other value to compare.
+     * @returns {boolean} Returns `true` if `value` is less than or equal to `other`, else `false`.
+     * @example
+     *
+     * _.lte(1, 3);
+     * // => true
+     *
+     * _.lte(3, 3);
+     * // => true
+     *
+     * _.lte(3, 1);
+     * // => false
+     */
+    function lte(value, other) {
+      return value <= other;
+    }
+
+    /**
+     * Converts `value` to an array.
+     *
+     * @static
+     * @memberOf _
+     * @category Lang
+     * @param {*} value The value to convert.
+     * @returns {Array} Returns the converted array.
+     * @example
+     *
+     * (function() {
+     *   return _.toArray(arguments).slice(1);
+     * }(1, 2, 3));
+     * // => [2, 3]
+     */
+    function toArray(value) {
+      var length = value ? getLength(value) : 0;
+      if (!isLength(length)) {
+        return values(value);
+      }
+      if (!length) {
+        return [];
+      }
+      return arrayCopy(value);
+    }
+
+    /**
+     * Converts `value` to a plain object flattening inherited enumerable
+     * properties of `value` to own properties of the plain object.
+     *
+     * @static
+     * @memberOf _
+     * @category Lang
+     * @param {*} value The value to convert.
+     * @returns {Object} Returns the converted plain object.
+     * @example
+     *
+     * function Foo() {
+     *   this.b = 2;
+     * }
+     *
+     * Foo.prototype.c = 3;
+     *
+     * _.assign({ 'a': 1 }, new Foo);
+     * // => { 'a': 1, 'b': 2 }
+     *
+     * _.assign({ 'a': 1 }, _.toPlainObject(new Foo));
+     * // => { 'a': 1, 'b': 2, 'c': 3 }
+     */
+    function toPlainObject(value) {
+      return baseCopy(value, keysIn(value));
+    }
+
+    /*------------------------------------------------------------------------*/
+
+    /**
+     * Recursively merges own enumerable properties of the source object(s), that
+     * don't resolve to `undefined` into the destination object. Subsequent sources
+     * overwrite property assignments of previous sources. If `customizer` is
+     * provided it's invoked to produce the merged values of the destination and
+     * source properties. If `customizer` returns `undefined` merging is handled
+     * by the method instead. The `customizer` is bound to `thisArg` and invoked
+     * with five arguments: (objectValue, sourceValue, key, object, source).
+     *
+     * @static
+     * @memberOf _
+     * @category Object
+     * @param {Object} object The destination object.
+     * @param {...Object} [sources] The source objects.
+     * @param {Function} [customizer] The function to customize assigned values.
+     * @param {*} [thisArg] The `this` binding of `customizer`.
+     * @returns {Object} Returns `object`.
+     * @example
+     *
+     * var users = {
+     *   'data': [{ 'user': 'barney' }, { 'user': 'fred' }]
+     * };
+     *
+     * var ages = {
+     *   'data': [{ 'age': 36 }, { 'age': 40 }]
+     * };
+     *
+     * _.merge(users, ages);
+     * // => { 'data': [{ 'user': 'barney', 'age': 36 }, { 'user': 'fred', 'age': 40 }] }
+     *
+     * // using a customizer callback
+     * var object = {
+     *   'fruits': ['apple'],
+     *   'vegetables': ['beet']
+     * };
+     *
+     * var other = {
+     *   'fruits': ['banana'],
+     *   'vegetables': ['carrot']
+     * };
+     *
+     * _.merge(object, other, function(a, b) {
+     *   if (_.isArray(a)) {
+     *     return a.concat(b);
+     *   }
+     * });
+     * // => { 'fruits': ['apple', 'banana'], 'vegetables': ['beet', 'carrot'] }
+     */
+    var merge = createAssigner(baseMerge);
+
+    /**
+     * Assigns own enumerable properties of source object(s) to the destination
+     * object. Subsequent sources overwrite property assignments of previous sources.
+     * If `customizer` is provided it's invoked to produce the assigned values.
+     * The `customizer` is bound to `thisArg` and invoked with five arguments:
+     * (objectValue, sourceValue, key, object, source).
+     *
+     * **Note:** This method mutates `object` and is based on
+     * [`Object.assign`](http://ecma-international.org/ecma-262/6.0/#sec-object.assign).
+     *
+     * @static
+     * @memberOf _
+     * @alias extend
+     * @category Object
+     * @param {Object} object The destination object.
+     * @param {...Object} [sources] The source objects.
+     * @param {Function} [customizer] The function to customize assigned values.
+     * @param {*} [thisArg] The `this` binding of `customizer`.
+     * @returns {Object} Returns `object`.
+     * @example
+     *
+     * _.assign({ 'user': 'barney' }, { 'age': 40 }, { 'user': 'fred' });
+     * // => { 'user': 'fred', 'age': 40 }
+     *
+     * // using a customizer callback
+     * var defaults = _.partialRight(_.assign, function(value, other) {
+     *   return _.isUndefined(value) ? other : value;
+     * });
+     *
+     * defaults({ 'user': 'barney' }, { 'age': 36 }, { 'user': 'fred' });
+     * // => { 'user': 'barney', 'age': 36 }
+     */
+    var assign = createAssigner(function(object, source, customizer) {
+      return customizer
+        ? assignWith(object, source, customizer)
+        : baseAssign(object, source);
+    });
+
+    /**
+     * Creates an object that inherits from the given `prototype` object. If a
+     * `properties` object is provided its own enumerable properties are assigned
+     * to the created object.
+     *
+     * @static
+     * @memberOf _
+     * @category Object
+     * @param {Object} prototype The object to inherit from.
+     * @param {Object} [properties] The properties to assign to the object.
+     * @param- {Object} [guard] Enables use as a callback for functions like `_.map`.
+     * @returns {Object} Returns the new object.
+     * @example
+     *
+     * function Shape() {
+     *   this.x = 0;
+     *   this.y = 0;
+     * }
+     *
+     * function Circle() {
+     *   Shape.call(this);
+     * }
+     *
+     * Circle.prototype = _.create(Shape.prototype, {
+     *   'constructor': Circle
+     * });
+     *
+     * var circle = new Circle;
+     * circle instanceof Circle;
+     * // => true
+     *
+     * circle instanceof Shape;
+     * // => true
+     */
+    function create(prototype, properties, guard) {
+      var result = baseCreate(prototype);
+      if (guard && isIterateeCall(prototype, properties, guard)) {
+        properties = undefined;
+      }
+      return properties ? baseAssign(result, properties) : result;
+    }
+
+    /**
+     * Assigns own enumerable properties of source object(s) to the destination
+     * object for all destination properties that resolve to `undefined`. Once a
+     * property is set, additional values of the same property are ignored.
+     *
+     * **Note:** This method mutates `object`.
+     *
+     * @static
+     * @memberOf _
+     * @category Object
+     * @param {Object} object The destination object.
+     * @param {...Object} [sources] The source objects.
+     * @returns {Object} Returns `object`.
+     * @example
+     *
+     * _.defaults({ 'user': 'barney' }, { 'age': 36 }, { 'user': 'fred' });
+     * // => { 'user': 'barney', 'age': 36 }
+     */
+    var defaults = createDefaults(assign, assignDefaults);
+
+    /**
+     * This method is like `_.defaults` except that it recursively assigns
+     * default properties.
+     *
+     * **Note:** This method mutates `object`.
+     *
+     * @static
+     * @memberOf _
+     * @category Object
+     * @param {Object} object The destination object.
+     * @param {...Object} [sources] The source objects.
+     * @returns {Object} Returns `object`.
+     * @example
+     *
+     * _.defaultsDeep({ 'user': { 'name': 'barney' } }, { 'user': { 'name': 'fred', 'age': 36 } });
+     * // => { 'user': { 'name': 'barney', 'age': 36 } }
+     *
+     */
+    var defaultsDeep = createDefaults(merge, mergeDefaults);
+
+    /**
+     * This method is like `_.find` except that it returns the key of the first
+     * element `predicate` returns truthy for instead of the element itself.
+     *
+     * If a property name is provided for `predicate` the created `_.property`
+     * style callback returns the property value of the given element.
+     *
+     * If a value is also provided for `thisArg` the created `_.matchesProperty`
+     * style callback returns `true` for elements that have a matching property
+     * value, else `false`.
+     *
+     * If an object is provided for `predicate` the created `_.matches` style
+     * callback returns `true` for elements that have the properties of the given
+     * object, else `false`.
+     *
+     * @static
+     * @memberOf _
+     * @category Object
+     * @param {Object} object The object to search.
+     * @param {Function|Object|string} [predicate=_.identity] The function invoked
+     *  per iteration.
+     * @param {*} [thisArg] The `this` binding of `predicate`.
+     * @returns {string|undefined} Returns the key of the matched element, else `undefined`.
+     * @example
+     *
+     * var users = {
+     *   'barney':  { 'age': 36, 'active': true },
+     *   'fred':    { 'age': 40, 'active': false },
+     *   'pebbles': { 'age': 1,  'active': true }
+     * };
+     *
+     * _.findKey(users, function(chr) {
+     *   return chr.age < 40;
+     * });
+     * // => 'barney' (iteration order is not guaranteed)
+     *
+     * // using the `_.matches` callback shorthand
+     * _.findKey(users, { 'age': 1, 'active': true });
+     * // => 'pebbles'
+     *
+     * // using the `_.matchesProperty` callback shorthand
+     * _.findKey(users, 'active', false);
+     * // => 'fred'
+     *
+     * // using the `_.property` callback shorthand
+     * _.findKey(users, 'active');
+     * // => 'barney'
+     */
+    var findKey = createFindKey(baseForOwn);
+
+    /**
+     * This method is like `_.findKey` except that it iterates over elements of
+     * a collection in the opposite order.
+     *
+     * If a property name is provided for `predicate` the created `_.property`
+     * style callback returns the property value of the given element.
+     *
+     * If a value is also provided for `thisArg` the created `_.matchesProperty`
+     * style callback returns `true` for elements that have a matching property
+     * value, else `false`.
+     *
+     * If an object is provided for `predicate` the created `_.matches` style
+     * callback returns `true` for elements that have the properties of the given
+     * object, else `false`.
+     *
+     * @static
+     * @memberOf _
+     * @category Object
+     * @param {Object} object The object to search.
+     * @param {Function|Object|string} [predicate=_.identity] The function invoked
+     *  per iteration.
+     * @param {*} [thisArg] The `this` binding of `predicate`.
+     * @returns {string|undefined} Returns the key of the matched element, else `undefined`.
+     * @example
+     *
+     * var users = {
+     *   'barney':  { 'age': 36, 'active': true },
+     *   'fred':    { 'age': 40, 'active': false },
+     *   'pebbles': { 'age': 1,  'active': true }
+     * };
+     *
+     * _.findLastKey(users, function(chr) {
+     *   return chr.age < 40;
+     * });
+     * // => returns `pebbles` assuming `_.findKey` returns `barney`
+     *
+     * // using the `_.matches` callback shorthand
+     * _.findLastKey(users, { 'age': 36, 'active': true });
+     * // => 'barney'
+     *
+     * // using the `_.matchesProperty` callback shorthand
+     * _.findLastKey(users, 'active', false);
+     * // => 'fred'
+     *
+     * // using the `_.property` callback shorthand
+     * _.findLastKey(users, 'active');
+     * // => 'pebbles'
+     */
+    var findLastKey = createFindKey(baseForOwnRight);
+
+    /**
+     * Iterates over own and inherited enumerable properties of an object invoking
+     * `iteratee` for each property. The `iteratee` is bound to `thisArg` and invoked
+     * with three arguments: (value, key, object). Iteratee functions may exit
+     * iteration early by explicitly returning `false`.
+     *
+     * @static
+     * @memberOf _
+     * @category Object
+     * @param {Object} object The object to iterate over.
+     * @param {Function} [iteratee=_.identity] The function invoked per iteration.
+     * @param {*} [thisArg] The `this` binding of `iteratee`.
+     * @returns {Object} Returns `object`.
+     * @example
+     *
+     * function Foo() {
+     *   this.a = 1;
+     *   this.b = 2;
+     * }
+     *
+     * Foo.prototype.c = 3;
+     *
+     * _.forIn(new Foo, function(value, key) {
+     *   console.log(key);
+     * });
+     * // => logs 'a', 'b', and 'c' (iteration order is not guaranteed)
+     */
+    var forIn = createForIn(baseFor);
+
+    /**
+     * This method is like `_.forIn` except that it iterates over properties of
+     * `object` in the opposite order.
+     *
+     * @static
+     * @memberOf _
+     * @category Object
+     * @param {Object} object The object to iterate over.
+     * @param {Function} [iteratee=_.identity] The function invoked per iteration.
+     * @param {*} [thisArg] The `this` binding of `iteratee`.
+     * @returns {Object} Returns `object`.
+     * @example
+     *
+     * function Foo() {
+     *   this.a = 1;
+     *   this.b = 2;
+     * }
+     *
+     * Foo.prototype.c = 3;
+     *
+     * _.forInRight(new Foo, function(value, key) {
+     *   console.log(key);
+     * });
+     * // => logs 'c', 'b', and 'a' assuming `_.forIn ` logs 'a', 'b', and 'c'
+     */
+    var forInRight = createForIn(baseForRight);
+
+    /**
+     * Iterates over own enumerable properties of an object invoking `iteratee`
+     * for each property. The `iteratee` is bound to `thisArg` and invoked with
+     * three arguments: (value, key, object). Iteratee functions may exit iteration
+     * early by explicitly returning `false`.
+     *
+     * @static
+     * @memberOf _
+     * @category Object
+     * @param {Object} object The object to iterate over.
+     * @param {Function} [iteratee=_.identity] The function invoked per iteration.
+     * @param {*} [thisArg] The `this` binding of `iteratee`.
+     * @returns {Object} Returns `object`.
+     * @example
+     *
+     * function Foo() {
+     *   this.a = 1;
+     *   this.b = 2;
+     * }
+     *
+     * Foo.prototype.c = 3;
+     *
+     * _.forOwn(new Foo, function(value, key) {
+     *   console.log(key);
+     * });
+     * // => logs 'a' and 'b' (iteration order is not guaranteed)
+     */
+    var forOwn = createForOwn(baseForOwn);
+
+    /**
+     * This method is like `_.forOwn` except that it iterates over properties of
+     * `object` in the opposite order.
+     *
+     * @static
+     * @memberOf _
+     * @category Object
+     * @param {Object} object The object to iterate over.
+     * @param {Function} [iteratee=_.identity] The function invoked per iteration.
+     * @param {*} [thisArg] The `this` binding of `iteratee`.
+     * @returns {Object} Returns `object`.
+     * @example
+     *
+     * function Foo() {
+     *   this.a = 1;
+     *   this.b = 2;
+     * }
+     *
+     * Foo.prototype.c = 3;
+     *
+     * _.forOwnRight(new Foo, function(value, key) {
+     *   console.log(key);
+     * });
+     * // => logs 'b' and 'a' assuming `_.forOwn` logs 'a' and 'b'
+     */
+    var forOwnRight = createForOwn(baseForOwnRight);
+
+    /**
+     * Creates an array of function property names from all enumerable properties,
+     * own and inherited, of `object`.
+     *
+     * @static
+     * @memberOf _
+     * @alias methods
+     * @category Object
+     * @param {Object} object The object to inspect.
+     * @returns {Array} Returns the new array of property names.
+     * @example
+     *
+     * _.functions(_);
+     * // => ['after', 'ary', 'assign', ...]
+     */
+    function functions(object) {
+      return baseFunctions(object, keysIn(object));
+    }
+
+    /**
+     * Gets the property value at `path` of `object`. If the resolved value is
+     * `undefined` the `defaultValue` is used in its place.
+     *
+     * @static
+     * @memberOf _
+     * @category Object
+     * @param {Object} object The object to query.
+     * @param {Array|string} path The path of the property to get.
+     * @param {*} [defaultValue] The value returned if the resolved value is `undefined`.
+     * @returns {*} Returns the resolved value.
+     * @example
+     *
+     * var object = { 'a': [{ 'b': { 'c': 3 } }] };
+     *
+     * _.get(object, 'a[0].b.c');
+     * // => 3
+     *
+     * _.get(object, ['a', '0', 'b', 'c']);
+     * // => 3
+     *
+     * _.get(object, 'a.b.c', 'default');
+     * // => 'default'
+     */
+    function get(object, path, defaultValue) {
+      var result = object == null ? undefined : baseGet(object, toPath(path), (path + ''));
+      return result === undefined ? defaultValue : result;
+    }
+
+    /**
+     * Checks if `path` is a direct property.
+     *
+     * @static
+     * @memberOf _
+     * @category Object
+     * @param {Object} object The object to query.
+     * @param {Array|string} path The path to check.
+     * @returns {boolean} Returns `true` if `path` is a direct property, else `false`.
+     * @example
+     *
+     * var object = { 'a': { 'b': { 'c': 3 } } };
+     *
+     * _.has(object, 'a');
+     * // => true
+     *
+     * _.has(object, 'a.b.c');
+     * // => true
+     *
+     * _.has(object, ['a', 'b', 'c']);
+     * // => true
+     */
+    function has(object, path) {
+      if (object == null) {
+        return false;
+      }
+      var result = hasOwnProperty.call(object, path);
+      if (!result && !isKey(path)) {
+        path = toPath(path);
+        object = path.length == 1 ? object : baseGet(object, baseSlice(path, 0, -1));
+        if (object == null) {
+          return false;
+        }
+        path = last(path);
+        result = hasOwnProperty.call(object, path);
+      }
+      return result || (isLength(object.length) && isIndex(path, object.length) &&
+        (isArray(object) || isArguments(object)));
+    }
+
+    /**
+     * Creates an object composed of the inverted keys and values of `object`.
+     * If `object` contains duplicate values, subsequent values overwrite property
+     * assignments of previous values unless `multiValue` is `true`.
+     *
+     * @static
+     * @memberOf _
+     * @category Object
+     * @param {Object} object The object to invert.
+     * @param {boolean} [multiValue] Allow multiple values per key.
+     * @param- {Object} [guard] Enables use as a callback for functions like `_.map`.
+     * @returns {Object} Returns the new inverted object.
+     * @example
+     *
+     * var object = { 'a': 1, 'b': 2, 'c': 1 };
+     *
+     * _.invert(object);
+     * // => { '1': 'c', '2': 'b' }
+     *
+     * // with `multiValue`
+     * _.invert(object, true);
+     * // => { '1': ['a', 'c'], '2': ['b'] }
+     */
+    function invert(object, multiValue, guard) {
+      if (guard && isIterateeCall(object, multiValue, guard)) {
+        multiValue = undefined;
+      }
+      var index = -1,
+          props = keys(object),
+          length = props.length,
+          result = {};
+
+      while (++index < length) {
+        var key = props[index],
+            value = object[key];
+
+        if (multiValue) {
+          if (hasOwnProperty.call(result, value)) {
+            result[value].push(key);
+          } else {
+            result[value] = [key];
+          }
+        }
+        else {
+          result[value] = key;
+        }
+      }
+      return result;
+    }
+
+    /**
+     * Creates an array of the own enumerable property names of `object`.
+     *
+     * **Note:** Non-object values are coerced to objects. See the
+     * [ES spec](http://ecma-international.org/ecma-262/6.0/#sec-object.keys)
+     * for more details.
+     *
+     * @static
+     * @memberOf _
+     * @category Object
+     * @param {Object} object The object to query.
+     * @returns {Array} Returns the array of property names.
+     * @example
+     *
+     * function Foo() {
+     *   this.a = 1;
+     *   this.b = 2;
+     * }
+     *
+     * Foo.prototype.c = 3;
+     *
+     * _.keys(new Foo);
+     * // => ['a', 'b'] (iteration order is not guaranteed)
+     *
+     * _.keys('hi');
+     * // => ['0', '1']
+     */
+    var keys = !nativeKeys ? shimKeys : function(object) {
+      var Ctor = object == null ? undefined : object.constructor;
+      if ((typeof Ctor == 'function' && Ctor.prototype === object) ||
+          (typeof object != 'function' && isArrayLike(object))) {
+        return shimKeys(object);
+      }
+      return isObject(object) ? nativeKeys(object) : [];
+    };
+
+    /**
+     * Creates an array of the own and inherited enumerable property names of `object`.
+     *
+     * **Note:** Non-object values are coerced to objects.
+     *
+     * @static
+     * @memberOf _
+     * @category Object
+     * @param {Object} object The object to query.
+     * @returns {Array} Returns the array of property names.
+     * @example
+     *
+     * function Foo() {
+     *   this.a = 1;
+     *   this.b = 2;
+     * }
+     *
+     * Foo.prototype.c = 3;
+     *
+     * _.keysIn(new Foo);
+     * // => ['a', 'b', 'c'] (iteration order is not guaranteed)
+     */
+    function keysIn(object) {
+      if (object == null) {
+        return [];
+      }
+      if (!isObject(object)) {
+        object = Object(object);
+      }
+      var length = object.length;
+      length = (length && isLength(length) &&
+        (isArray(object) || isArguments(object)) && length) || 0;
+
+      var Ctor = object.constructor,
+          index = -1,
+          isProto = typeof Ctor == 'function' && Ctor.prototype === object,
+          result = Array(length),
+          skipIndexes = length > 0;
+
+      while (++index < length) {
+        result[index] = (index + '');
+      }
+      for (var key in object) {
+        if (!(skipIndexes && isIndex(key, length)) &&
+            !(key == 'constructor' && (isProto || !hasOwnProperty.call(object, key)))) {
+          result.push(key);
+        }
+      }
+      return result;
+    }
+
+    /**
+     * The opposite of `_.mapValues`; this method creates an object with the
+     * same values as `object` and keys generated by running each own enumerable
+     * property of `object` through `iteratee`.
+     *
+     * @static
+     * @memberOf _
+     * @category Object
+     * @param {Object} object The object to iterate over.
+     * @param {Function|Object|string} [iteratee=_.identity] The function invoked
+     *  per iteration.
+     * @param {*} [thisArg] The `this` binding of `iteratee`.
+     * @returns {Object} Returns the new mapped object.
+     * @example
+     *
+     * _.mapKeys({ 'a': 1, 'b': 2 }, function(value, key) {
+     *   return key + value;
+     * });
+     * // => { 'a1': 1, 'b2': 2 }
+     */
+    var mapKeys = createObjectMapper(true);
+
+    /**
+     * Creates an object with the same keys as `object` and values generated by
+     * running each own enumerable property of `object` through `iteratee`. The
+     * iteratee function is bound to `thisArg` and invoked with three arguments:
+     * (value, key, object).
+     *
+     * If a property name is provided for `iteratee` the created `_.property`
+     * style callback returns the property value of the given element.
+     *
+     * If a value is also provided for `thisArg` the created `_.matchesProperty`
+     * style callback returns `true` for elements that have a matching property
+     * value, else `false`.
+     *
+     * If an object is provided for `iteratee` the created `_.matches` style
+     * callback returns `true` for elements that have the properties of the given
+     * object, else `false`.
+     *
+     * @static
+     * @memberOf _
+     * @category Object
+     * @param {Object} object The object to iterate over.
+     * @param {Function|Object|string} [iteratee=_.identity] The function invoked
+     *  per iteration.
+     * @param {*} [thisArg] The `this` binding of `iteratee`.
+     * @returns {Object} Returns the new mapped object.
+     * @example
+     *
+     * _.mapValues({ 'a': 1, 'b': 2 }, function(n) {
+     *   return n * 3;
+     * });
+     * // => { 'a': 3, 'b': 6 }
+     *
+     * var users = {
+     *   'fred':    { 'user': 'fred',    'age': 40 },
+     *   'pebbles': { 'user': 'pebbles', 'age': 1 }
+     * };
+     *
+     * // using the `_.property` callback shorthand
+     * _.mapValues(users, 'age');
+     * // => { 'fred': 40, 'pebbles': 1 } (iteration order is not guaranteed)
+     */
+    var mapValues = createObjectMapper();
+
+    /**
+     * The opposite of `_.pick`; this method creates an object composed of the
+     * own and inherited enumerable properties of `object` that are not omitted.
+     *
+     * @static
+     * @memberOf _
+     * @category Object
+     * @param {Object} object The source object.
+     * @param {Function|...(string|string[])} [predicate] The function invoked per
+     *  iteration or property names to omit, specified as individual property
+     *  names or arrays of property names.
+     * @param {*} [thisArg] The `this` binding of `predicate`.
+     * @returns {Object} Returns the new object.
+     * @example
+     *
+     * var object = { 'user': 'fred', 'age': 40 };
+     *
+     * _.omit(object, 'age');
+     * // => { 'user': 'fred' }
+     *
+     * _.omit(object, _.isNumber);
+     * // => { 'user': 'fred' }
+     */
+    var omit = restParam(function(object, props) {
+      if (object == null) {
+        return {};
+      }
+      if (typeof props[0] != 'function') {
+        var props = arrayMap(baseFlatten(props), String);
+        return pickByArray(object, baseDifference(keysIn(object), props));
+      }
+      var predicate = bindCallback(props[0], props[1], 3);
+      return pickByCallback(object, function(value, key, object) {
+        return !predicate(value, key, object);
+      });
+    });
+
+    /**
+     * Creates a two dimensional array of the key-value pairs for `object`,
+     * e.g. `[[key1, value1], [key2, value2]]`.
+     *
+     * @static
+     * @memberOf _
+     * @category Object
+     * @param {Object} object The object to query.
+     * @returns {Array} Returns the new array of key-value pairs.
+     * @example
+     *
+     * _.pairs({ 'barney': 36, 'fred': 40 });
+     * // => [['barney', 36], ['fred', 40]] (iteration order is not guaranteed)
+     */
+    function pairs(object) {
+      object = toObject(object);
+
+      var index = -1,
+          props = keys(object),
+          length = props.length,
+          result = Array(length);
+
+      while (++index < length) {
+        var key = props[index];
+        result[index] = [key, object[key]];
+      }
+      return result;
+    }
+
+    /**
+     * Creates an object composed of the picked `object` properties. Property
+     * names may be specified as individual arguments or as arrays of property
+     * names. If `predicate` is provided it's invoked for each property of `object`
+     * picking the properties `predicate` returns truthy for. The predicate is
+     * bound to `thisArg` and invoked with three arguments: (value, key, object).
+     *
+     * @static
+     * @memberOf _
+     * @category Object
+     * @param {Object} object The source object.
+     * @param {Function|...(string|string[])} [predicate] The function invoked per
+     *  iteration or property names to pick, specified as individual property
+     *  names or arrays of property names.
+     * @param {*} [thisArg] The `this` binding of `predicate`.
+     * @returns {Object} Returns the new object.
+     * @example
+     *
+     * var object = { 'user': 'fred', 'age': 40 };
+     *
+     * _.pick(object, 'user');
+     * // => { 'user': 'fred' }
+     *
+     * _.pick(object, _.isString);
+     * // => { 'user': 'fred' }
+     */
+    var pick = restParam(function(object, props) {
+      if (object == null) {
+        return {};
+      }
+      return typeof props[0] == 'function'
+        ? pickByCallback(object, bindCallback(props[0], props[1], 3))
+        : pickByArray(object, baseFlatten(props));
+    });
+
+    /**
+     * This method is like `_.get` except that if the resolved value is a function
+     * it's invoked with the `this` binding of its parent object and its result
+     * is returned.
+     *
+     * @static
+     * @memberOf _
+     * @category Object
+     * @param {Object} object The object to query.
+     * @param {Array|string} path The path of the property to resolve.
+     * @param {*} [defaultValue] The value returned if the resolved value is `undefined`.
+     * @returns {*} Returns the resolved value.
+     * @example
+     *
+     * var object = { 'a': [{ 'b': { 'c1': 3, 'c2': _.constant(4) } }] };
+     *
+     * _.result(object, 'a[0].b.c1');
+     * // => 3
+     *
+     * _.result(object, 'a[0].b.c2');
+     * // => 4
+     *
+     * _.result(object, 'a.b.c', 'default');
+     * // => 'default'
+     *
+     * _.result(object, 'a.b.c', _.constant('default'));
+     * // => 'default'
+     */
+    function result(object, path, defaultValue) {
+      var result = object == null ? undefined : object[path];
+      if (result === undefined) {
+        if (object != null && !isKey(path, object)) {
+          path = toPath(path);
+          object = path.length == 1 ? object : baseGet(object, baseSlice(path, 0, -1));
+          result = object == null ? undefined : object[last(path)];
+        }
+        result = result === undefined ? defaultValue : result;
+      }
+      return isFunction(result) ? result.call(object) : result;
+    }
+
+    /**
+     * Sets the property value of `path` on `object`. If a portion of `path`
+     * does not exist it's created.
+     *
+     * @static
+     * @memberOf _
+     * @category Object
+     * @param {Object} object The object to augment.
+     * @param {Array|string} path The path of the property to set.
+     * @param {*} value The value to set.
+     * @returns {Object} Returns `object`.
+     * @example
+     *
+     * var object = { 'a': [{ 'b': { 'c': 3 } }] };
+     *
+     * _.set(object, 'a[0].b.c', 4);
+     * console.log(object.a[0].b.c);
+     * // => 4
+     *
+     * _.set(object, 'x[0].y.z', 5);
+     * console.log(object.x[0].y.z);
+     * // => 5
+     */
+    function set(object, path, value) {
+      if (object == null) {
+        return object;
+      }
+      var pathKey = (path + '');
+      path = (object[pathKey] != null || isKey(path, object)) ? [pathKey] : toPath(path);
+
+      var index = -1,
+          length = path.length,
+          lastIndex = length - 1,
+          nested = object;
+
+      while (nested != null && ++index < length) {
+        var key = path[index];
+        if (isObject(nested)) {
+          if (index == lastIndex) {
+            nested[key] = value;
+          } else if (nested[key] == null) {
+            nested[key] = isIndex(path[index + 1]) ? [] : {};
+          }
+        }
+        nested = nested[key];
+      }
+      return object;
+    }
+
+    /**
+     * An alternative to `_.reduce`; this method transforms `object` to a new
+     * `accumulator` object which is the result of running each of its own enumerable
+     * properties through `iteratee`, with each invocation potentially mutating
+     * the `accumulator` object. The `iteratee` is bound to `thisArg` and invoked
+     * with four arguments: (accumulator, value, key, object). Iteratee functions
+     * may exit iteration early by explicitly returning `false`.
+     *
+     * @static
+     * @memberOf _
+     * @category Object
+     * @param {Array|Object} object The object to iterate over.
+     * @param {Function} [iteratee=_.identity] The function invoked per iteration.
+     * @param {*} [accumulator] The custom accumulator value.
+     * @param {*} [thisArg] The `this` binding of `iteratee`.
+     * @returns {*} Returns the accumulated value.
+     * @example
+     *
+     * _.transform([2, 3, 4], function(result, n) {
+     *   result.push(n *= n);
+     *   return n % 2 == 0;
+     * });
+     * // => [4, 9]
+     *
+     * _.transform({ 'a': 1, 'b': 2 }, function(result, n, key) {
+     *   result[key] = n * 3;
+     * });
+     * // => { 'a': 3, 'b': 6 }
+     */
+    function transform(object, iteratee, accumulator, thisArg) {
+      var isArr = isArray(object) || isTypedArray(object);
+      iteratee = getCallback(iteratee, thisArg, 4);
+
+      if (accumulator == null) {
+        if (isArr || isObject(object)) {
+          var Ctor = object.constructor;
+          if (isArr) {
+            accumulator = isArray(object) ? new Ctor : [];
+          } else {
+            accumulator = baseCreate(isFunction(Ctor) ? Ctor.prototype : undefined);
+          }
+        } else {
+          accumulator = {};
+        }
+      }
+      (isArr ? arrayEach : baseForOwn)(object, function(value, index, object) {
+        return iteratee(accumulator, value, index, object);
+      });
+      return accumulator;
+    }
+
+    /**
+     * Creates an array of the own enumerable property values of `object`.
+     *
+     * **Note:** Non-object values are coerced to objects.
+     *
+     * @static
+     * @memberOf _
+     * @category Object
+     * @param {Object} object The object to query.
+     * @returns {Array} Returns the array of property values.
+     * @example
+     *
+     * function Foo() {
+     *   this.a = 1;
+     *   this.b = 2;
+     * }
+     *
+     * Foo.prototype.c = 3;
+     *
+     * _.values(new Foo);
+     * // => [1, 2] (iteration order is not guaranteed)
+     *
+     * _.values('hi');
+     * // => ['h', 'i']
+     */
+    function values(object) {
+      return baseValues(object, keys(object));
+    }
+
+    /**
+     * Creates an array of the own and inherited enumerable property values
+     * of `object`.
+     *
+     * **Note:** Non-object values are coerced to objects.
+     *
+     * @static
+     * @memberOf _
+     * @category Object
+     * @param {Object} object The object to query.
+     * @returns {Array} Returns the array of property values.
+     * @example
+     *
+     * function Foo() {
+     *   this.a = 1;
+     *   this.b = 2;
+     * }
+     *
+     * Foo.prototype.c = 3;
+     *
+     * _.valuesIn(new Foo);
+     * // => [1, 2, 3] (iteration order is not guaranteed)
+     */
+    function valuesIn(object) {
+      return baseValues(object, keysIn(object));
+    }
+
+    /*------------------------------------------------------------------------*/
+
+    /**
+     * Checks if `n` is between `start` and up to but not including, `end`. If
+     * `end` is not specified it's set to `start` with `start` then set to `0`.
+     *
+     * @static
+     * @memberOf _
+     * @category Number
+     * @param {number} n The number to check.
+     * @param {number} [start=0] The start of the range.
+     * @param {number} end The end of the range.
+     * @returns {boolean} Returns `true` if `n` is in the range, else `false`.
+     * @example
+     *
+     * _.inRange(3, 2, 4);
+     * // => true
+     *
+     * _.inRange(4, 8);
+     * // => true
+     *
+     * _.inRange(4, 2);
+     * // => false
+     *
+     * _.inRange(2, 2);
+     * // => false
+     *
+     * _.inRange(1.2, 2);
+     * // => true
+     *
+     * _.inRange(5.2, 4);
+     * // => false
+     */
+    function inRange(value, start, end) {
+      start = +start || 0;
+      if (end === undefined) {
+        end = start;
+        start = 0;
+      } else {
+        end = +end || 0;
+      }
+      return value >= nativeMin(start, end) && value < nativeMax(start, end);
+    }
+
+    /**
+     * Produces a random number between `min` and `max` (inclusive). If only one
+     * argument is provided a number between `0` and the given number is returned.
+     * If `floating` is `true`, or either `min` or `max` are floats, a floating-point
+     * number is returned instead of an integer.
+     *
+     * @static
+     * @memberOf _
+     * @category Number
+     * @param {number} [min=0] The minimum possible value.
+     * @param {number} [max=1] The maximum possible value.
+     * @param {boolean} [floating] Specify returning a floating-point number.
+     * @returns {number} Returns the random number.
+     * @example
+     *
+     * _.random(0, 5);
+     * // => an integer between 0 and 5
+     *
+     * _.random(5);
+     * // => also an integer between 0 and 5
+     *
+     * _.random(5, true);
+     * // => a floating-point number between 0 and 5
+     *
+     * _.random(1.2, 5.2);
+     * // => a floating-point number between 1.2 and 5.2
+     */
+    function random(min, max, floating) {
+      if (floating && isIterateeCall(min, max, floating)) {
+        max = floating = undefined;
+      }
+      var noMin = min == null,
+          noMax = max == null;
+
+      if (floating == null) {
+        if (noMax && typeof min == 'boolean') {
+          floating = min;
+          min = 1;
+        }
+        else if (typeof max == 'boolean') {
+          floating = max;
+          noMax = true;
+        }
+      }
+      if (noMin && noMax) {
+        max = 1;
+        noMax = false;
+      }
+      min = +min || 0;
+      if (noMax) {
+        max = min;
+        min = 0;
+      } else {
+        max = +max || 0;
+      }
+      if (floating || min % 1 || max % 1) {
+        var rand = nativeRandom();
+        return nativeMin(min + (rand * (max - min + parseFloat('1e-' + ((rand + '').length - 1)))), max);
+      }
+      return baseRandom(min, max);
+    }
+
+    /*------------------------------------------------------------------------*/
+
+    /**
+     * Converts `string` to [camel case](https://en.wikipedia.org/wiki/CamelCase).
+     *
+     * @static
+     * @memberOf _
+     * @category String
+     * @param {string} [string=''] The string to convert.
+     * @returns {string} Returns the camel cased string.
+     * @example
+     *
+     * _.camelCase('Foo Bar');
+     * // => 'fooBar'
+     *
+     * _.camelCase('--foo-bar');
+     * // => 'fooBar'
+     *
+     * _.camelCase('__foo_bar__');
+     * // => 'fooBar'
+     */
+    var camelCase = createCompounder(function(result, word, index) {
+      word = word.toLowerCase();
+      return result + (index ? (word.charAt(0).toUpperCase() + word.slice(1)) : word);
+    });
+
+    /**
+     * Capitalizes the first character of `string`.
+     *
+     * @static
+     * @memberOf _
+     * @category String
+     * @param {string} [string=''] The string to capitalize.
+     * @returns {string} Returns the capitalized string.
+     * @example
+     *
+     * _.capitalize('fred');
+     * // => 'Fred'
+     */
+    function capitalize(string) {
+      string = baseToString(string);
+      return string && (string.charAt(0).toUpperCase() + string.slice(1));
+    }
+
+    /**
+     * Deburrs `string` by converting [latin-1 supplementary letters](https://en.wikipedia.org/wiki/Latin-1_Supplement_(Unicode_block)#Character_table)
+     * to basic latin letters and removing [combining diacritical marks](https://en.wikipedia.org/wiki/Combining_Diacritical_Marks).
+     *
+     * @static
+     * @memberOf _
+     * @category String
+     * @param {string} [string=''] The string to deburr.
+     * @returns {string} Returns the deburred string.
+     * @example
+     *
+     * _.deburr('déjà vu');
+     * // => 'deja vu'
+     */
+    function deburr(string) {
+      string = baseToString(string);
+      return string && string.replace(reLatin1, deburrLetter).replace(reComboMark, '');
+    }
+
+    /**
+     * Checks if `string` ends with the given target string.
+     *
+     * @static
+     * @memberOf _
+     * @category String
+     * @param {string} [string=''] The string to search.
+     * @param {string} [target] The string to search for.
+     * @param {number} [position=string.length] The position to search from.
+     * @returns {boolean} Returns `true` if `string` ends with `target`, else `false`.
+     * @example
+     *
+     * _.endsWith('abc', 'c');
+     * // => true
+     *
+     * _.endsWith('abc', 'b');
+     * // => false
+     *
+     * _.endsWith('abc', 'b', 2);
+     * // => true
+     */
+    function endsWith(string, target, position) {
+      string = baseToString(string);
+      target = (target + '');
+
+      var length = string.length;
+      position = position === undefined
+        ? length
+        : nativeMin(position < 0 ? 0 : (+position || 0), length);
+
+      position -= target.length;
+      return position >= 0 && string.indexOf(target, position) == position;
+    }
+
+    /**
+     * Converts the characters "&", "<", ">", '"', "'", and "\`", in `string` to
+     * their corresponding HTML entities.
+     *
+     * **Note:** No other characters are escaped. To escape additional characters
+     * use a third-party library like [_he_](https://mths.be/he).
+     *
+     * Though the ">" character is escaped for symmetry, characters like
+     * ">" and "/" don't need escaping in HTML and have no special meaning
+     * unless they're part of a tag or unquoted attribute value.
+     * See [Mathias Bynens's article](https://mathiasbynens.be/notes/ambiguous-ampersands)
+     * (under "semi-related fun fact") for more details.
+     *
+     * Backticks are escaped because in Internet Explorer < 9, they can break out
+     * of attribute values or HTML comments. See [#59](https://html5sec.org/#59),
+     * [#102](https://html5sec.org/#102), [#108](https://html5sec.org/#108), and
+     * [#133](https://html5sec.org/#133) of the [HTML5 Security Cheatsheet](https://html5sec.org/)
+     * for more details.
+     *
+     * When working with HTML you should always [quote attribute values](http://wonko.com/post/html-escaping)
+     * to reduce XSS vectors.
+     *
+     * @static
+     * @memberOf _
+     * @category String
+     * @param {string} [string=''] The string to escape.
+     * @returns {string} Returns the escaped string.
+     * @example
+     *
+     * _.escape('fred, barney, & pebbles');
+     * // => 'fred, barney, &amp; pebbles'
+     */
+    function escape(string) {
+      // Reset `lastIndex` because in IE < 9 `String#replace` does not.
+      string = baseToString(string);
+      return (string && reHasUnescapedHtml.test(string))
+        ? string.replace(reUnescapedHtml, escapeHtmlChar)
+        : string;
+    }
+
+    /**
+     * Escapes the `RegExp` special characters "\", "/", "^", "$", ".", "|", "?",
+     * "*", "+", "(", ")", "[", "]", "{" and "}" in `string`.
+     *
+     * @static
+     * @memberOf _
+     * @category String
+     * @param {string} [string=''] The string to escape.
+     * @returns {string} Returns the escaped string.
+     * @example
+     *
+     * _.escapeRegExp('[lodash](https://lodash.com/)');
+     * // => '\[lodash\]\(https:\/\/lodash\.com\/\)'
+     */
+    function escapeRegExp(string) {
+      string = baseToString(string);
+      return (string && reHasRegExpChars.test(string))
+        ? string.replace(reRegExpChars, escapeRegExpChar)
+        : (string || '(?:)');
+    }
+
+    /**
+     * Converts `string` to [kebab case](https://en.wikipedia.org/wiki/Letter_case#Special_case_styles).
+     *
+     * @static
+     * @memberOf _
+     * @category String
+     * @param {string} [string=''] The string to convert.
+     * @returns {string} Returns the kebab cased string.
+     * @example
+     *
+     * _.kebabCase('Foo Bar');
+     * // => 'foo-bar'
+     *
+     * _.kebabCase('fooBar');
+     * // => 'foo-bar'
+     *
+     * _.kebabCase('__foo_bar__');
+     * // => 'foo-bar'
+     */
+    var kebabCase = createCompounder(function(result, word, index) {
+      return result + (index ? '-' : '') + word.toLowerCase();
+    });
+
+    /**
+     * Pads `string` on the left and right sides if it's shorter than `length`.
+     * Padding characters are truncated if they can't be evenly divided by `length`.
+     *
+     * @static
+     * @memberOf _
+     * @category String
+     * @param {string} [string=''] The string to pad.
+     * @param {number} [length=0] The padding length.
+     * @param {string} [chars=' '] The string used as padding.
+     * @returns {string} Returns the padded string.
+     * @example
+     *
+     * _.pad('abc', 8);
+     * // => '  abc   '
+     *
+     * _.pad('abc', 8, '_-');
+     * // => '_-abc_-_'
+     *
+     * _.pad('abc', 3);
+     * // => 'abc'
+     */
+    function pad(string, length, chars) {
+      string = baseToString(string);
+      length = +length;
+
+      var strLength = string.length;
+      if (strLength >= length || !nativeIsFinite(length)) {
+        return string;
+      }
+      var mid = (length - strLength) / 2,
+          leftLength = nativeFloor(mid),
+          rightLength = nativeCeil(mid);
+
+      chars = createPadding('', rightLength, chars);
+      return chars.slice(0, leftLength) + string + chars;
+    }
+
+    /**
+     * Pads `string` on the left side if it's shorter than `length`. Padding
+     * characters are truncated if they exceed `length`.
+     *
+     * @static
+     * @memberOf _
+     * @category String
+     * @param {string} [string=''] The string to pad.
+     * @param {number} [length=0] The padding length.
+     * @param {string} [chars=' '] The string used as padding.
+     * @returns {string} Returns the padded string.
+     * @example
+     *
+     * _.padLeft('abc', 6);
+     * // => '   abc'
+     *
+     * _.padLeft('abc', 6, '_-');
+     * // => '_-_abc'
+     *
+     * _.padLeft('abc', 3);
+     * // => 'abc'
+     */
+    var padLeft = createPadDir();
+
+    /**
+     * Pads `string` on the right side if it's shorter than `length`. Padding
+     * characters are truncated if they exceed `length`.
+     *
+     * @static
+     * @memberOf _
+     * @category String
+     * @param {string} [string=''] The string to pad.
+     * @param {number} [length=0] The padding length.
+     * @param {string} [chars=' '] The string used as padding.
+     * @returns {string} Returns the padded string.
+     * @example
+     *
+     * _.padRight('abc', 6);
+     * // => 'abc   '
+     *
+     * _.padRight('abc', 6, '_-');
+     * // => 'abc_-_'
+     *
+     * _.padRight('abc', 3);
+     * // => 'abc'
+     */
+    var padRight = createPadDir(true);
+
+    /**
+     * Converts `string` to an integer of the specified radix. If `radix` is
+     * `undefined` or `0`, a `radix` of `10` is used unless `value` is a hexadecimal,
+     * in which case a `radix` of `16` is used.
+     *
+     * **Note:** This method aligns with the [ES5 implementation](https://es5.github.io/#E)
+     * of `parseInt`.
+     *
+     * @static
+     * @memberOf _
+     * @category String
+     * @param {string} string The string to convert.
+     * @param {number} [radix] The radix to interpret `value` by.
+     * @param- {Object} [guard] Enables use as a callback for functions like `_.map`.
+     * @returns {number} Returns the converted integer.
+     * @example
+     *
+     * _.parseInt('08');
+     * // => 8
+     *
+     * _.map(['6', '08', '10'], _.parseInt);
+     * // => [6, 8, 10]
+     */
+    function parseInt(string, radix, guard) {
+      // Firefox < 21 and Opera < 15 follow ES3 for `parseInt`.
+      // Chrome fails to trim leading <BOM> whitespace characters.
+      // See https://code.google.com/p/v8/issues/detail?id=3109 for more details.
+      if (guard ? isIterateeCall(string, radix, guard) : radix == null) {
+        radix = 0;
+      } else if (radix) {
+        radix = +radix;
+      }
+      string = trim(string);
+      return nativeParseInt(string, radix || (reHasHexPrefix.test(string) ? 16 : 10));
+    }
+
+    /**
+     * Repeats the given string `n` times.
+     *
+     * @static
+     * @memberOf _
+     * @category String
+     * @param {string} [string=''] The string to repeat.
+     * @param {number} [n=0] The number of times to repeat the string.
+     * @returns {string} Returns the repeated string.
+     * @example
+     *
+     * _.repeat('*', 3);
+     * // => '***'
+     *
+     * _.repeat('abc', 2);
+     * // => 'abcabc'
+     *
+     * _.repeat('abc', 0);
+     * // => ''
+     */
+    function repeat(string, n) {
+      var result = '';
+      string = baseToString(string);
+      n = +n;
+      if (n < 1 || !string || !nativeIsFinite(n)) {
+        return result;
+      }
+      // Leverage the exponentiation by squaring algorithm for a faster repeat.
+      // See https://en.wikipedia.org/wiki/Exponentiation_by_squaring for more details.
+      do {
+        if (n % 2) {
+          result += string;
+        }
+        n = nativeFloor(n / 2);
+        string += string;
+      } while (n);
+
+      return result;
+    }
+
+    /**
+     * Converts `string` to [snake case](https://en.wikipedia.org/wiki/Snake_case).
+     *
+     * @static
+     * @memberOf _
+     * @category String
+     * @param {string} [string=''] The string to convert.
+     * @returns {string} Returns the snake cased string.
+     * @example
+     *
+     * _.snakeCase('Foo Bar');
+     * // => 'foo_bar'
+     *
+     * _.snakeCase('fooBar');
+     * // => 'foo_bar'
+     *
+     * _.snakeCase('--foo-bar');
+     * // => 'foo_bar'
+     */
+    var snakeCase = createCompounder(function(result, word, index) {
+      return result + (index ? '_' : '') + word.toLowerCase();
+    });
+
+    /**
+     * Converts `string` to [start case](https://en.wikipedia.org/wiki/Letter_case#Stylistic_or_specialised_usage).
+     *
+     * @static
+     * @memberOf _
+     * @category String
+     * @param {string} [string=''] The string to convert.
+     * @returns {string} Returns the start cased string.
+     * @example
+     *
+     * _.startCase('--foo-bar');
+     * // => 'Foo Bar'
+     *
+     * _.startCase('fooBar');
+     * // => 'Foo Bar'
+     *
+     * _.startCase('__foo_bar__');
+     * // => 'Foo Bar'
+     */
+    var startCase = createCompounder(function(result, word, index) {
+      return result + (index ? ' ' : '') + (word.charAt(0).toUpperCase() + word.slice(1));
+    });
+
+    /**
+     * Checks if `string` starts with the given target string.
+     *
+     * @static
+     * @memberOf _
+     * @category String
+     * @param {string} [string=''] The string to search.
+     * @param {string} [target] The string to search for.
+     * @param {number} [position=0] The position to search from.
+     * @returns {boolean} Returns `true` if `string` starts with `target`, else `false`.
+     * @example
+     *
+     * _.startsWith('abc', 'a');
+     * // => true
+     *
+     * _.startsWith('abc', 'b');
+     * // => false
+     *
+     * _.startsWith('abc', 'b', 1);
+     * // => true
+     */
+    function startsWith(string, target, position) {
+      string = baseToString(string);
+      position = position == null
+        ? 0
+        : nativeMin(position < 0 ? 0 : (+position || 0), string.length);
+
+      return string.lastIndexOf(target, position) == position;
+    }
+
+    /**
+     * Creates a compiled template function that can interpolate data properties
+     * in "interpolate" delimiters, HTML-escape interpolated data properties in
+     * "escape" delimiters, and execute JavaScript in "evaluate" delimiters. Data
+     * properties may be accessed as free variables in the template. If a setting
+     * object is provided it takes precedence over `_.templateSettings` values.
+     *
+     * **Note:** In the development build `_.template` utilizes
+     * [sourceURLs](http://www.html5rocks.com/en/tutorials/developertools/sourcemaps/#toc-sourceurl)
+     * for easier debugging.
+     *
+     * For more information on precompiling templates see
+     * [lodash's custom builds documentation](https://lodash.com/custom-builds).
+     *
+     * For more information on Chrome extension sandboxes see
+     * [Chrome's extensions documentation](https://developer.chrome.com/extensions/sandboxingEval).
+     *
+     * @static
+     * @memberOf _
+     * @category String
+     * @param {string} [string=''] The template string.
+     * @param {Object} [options] The options object.
+     * @param {RegExp} [options.escape] The HTML "escape" delimiter.
+     * @param {RegExp} [options.evaluate] The "evaluate" delimiter.
+     * @param {Object} [options.imports] An object to import into the template as free variables.
+     * @param {RegExp} [options.interpolate] The "interpolate" delimiter.
+     * @param {string} [options.sourceURL] The sourceURL of the template's compiled source.
+     * @param {string} [options.variable] The data object variable name.
+     * @param- {Object} [otherOptions] Enables the legacy `options` param signature.
+     * @returns {Function} Returns the compiled template function.
+     * @example
+     *
+     * // using the "interpolate" delimiter to create a compiled template
+     * var compiled = _.template('hello <%= user %>!');
+     * compiled({ 'user': 'fred' });
+     * // => 'hello fred!'
+     *
+     * // using the HTML "escape" delimiter to escape data property values
+     * var compiled = _.template('<b><%- value %></b>');
+     * compiled({ 'value': '<script>' });
+     * // => '<b>&lt;script&gt;</b>'
+     *
+     * // using the "evaluate" delimiter to execute JavaScript and generate HTML
+     * var compiled = _.template('<% _.forEach(users, function(user) { %><li><%- user %></li><% }); %>');
+     * compiled({ 'users': ['fred', 'barney'] });
+     * // => '<li>fred</li><li>barney</li>'
+     *
+     * // using the internal `print` function in "evaluate" delimiters
+     * var compiled = _.template('<% print("hello " + user); %>!');
+     * compiled({ 'user': 'barney' });
+     * // => 'hello barney!'
+     *
+     * // using the ES delimiter as an alternative to the default "interpolate" delimiter
+     * var compiled = _.template('hello ${ user }!');
+     * compiled({ 'user': 'pebbles' });
+     * // => 'hello pebbles!'
+     *
+     * // using custom template delimiters
+     * _.templateSettings.interpolate = /{{([\s\S]+?)}}/g;
+     * var compiled = _.template('hello {{ user }}!');
+     * compiled({ 'user': 'mustache' });
+     * // => 'hello mustache!'
+     *
+     * // using backslashes to treat delimiters as plain text
+     * var compiled = _.template('<%= "\\<%- value %\\>" %>');
+     * compiled({ 'value': 'ignored' });
+     * // => '<%- value %>'
+     *
+     * // using the `imports` option to import `jQuery` as `jq`
+     * var text = '<% jq.each(users, function(user) { %><li><%- user %></li><% }); %>';
+     * var compiled = _.template(text, { 'imports': { 'jq': jQuery } });
+     * compiled({ 'users': ['fred', 'barney'] });
+     * // => '<li>fred</li><li>barney</li>'
+     *
+     * // using the `sourceURL` option to specify a custom sourceURL for the template
+     * var compiled = _.template('hello <%= user %>!', { 'sourceURL': '/basic/greeting.jst' });
+     * compiled(data);
+     * // => find the source of "greeting.jst" under the Sources tab or Resources panel of the web inspector
+     *
+     * // using the `variable` option to ensure a with-statement isn't used in the compiled template
+     * var compiled = _.template('hi <%= data.user %>!', { 'variable': 'data' });
+     * compiled.source;
+     * // => function(data) {
+     * //   var __t, __p = '';
+     * //   __p += 'hi ' + ((__t = ( data.user )) == null ? '' : __t) + '!';
+     * //   return __p;
+     * // }
+     *
+     * // using the `source` property to inline compiled templates for meaningful
+     * // line numbers in error messages and a stack trace
+     * fs.writeFileSync(path.join(cwd, 'jst.js'), '\
+     *   var JST = {\
+     *     "main": ' + _.template(mainText).source + '\
+     *   };\
+     * ');
+     */
+    function template(string, options, otherOptions) {
+      // Based on John Resig's `tmpl` implementation (http://ejohn.org/blog/javascript-micro-templating/)
+      // and Laura Doktorova's doT.js (https://github.com/olado/doT).
+      var settings = lodash.templateSettings;
+
+      if (otherOptions && isIterateeCall(string, options, otherOptions)) {
+        options = otherOptions = undefined;
+      }
+      string = baseToString(string);
+      options = assignWith(baseAssign({}, otherOptions || options), settings, assignOwnDefaults);
+
+      var imports = assignWith(baseAssign({}, options.imports), settings.imports, assignOwnDefaults),
+          importsKeys = keys(imports),
+          importsValues = baseValues(imports, importsKeys);
+
+      var isEscaping,
+          isEvaluating,
+          index = 0,
+          interpolate = options.interpolate || reNoMatch,
+          source = "__p += '";
+
+      // Compile the regexp to match each delimiter.
+      var reDelimiters = RegExp(
+        (options.escape || reNoMatch).source + '|' +
+        interpolate.source + '|' +
+        (interpolate === reInterpolate ? reEsTemplate : reNoMatch).source + '|' +
+        (options.evaluate || reNoMatch).source + '|$'
+      , 'g');
+
+      // Use a sourceURL for easier debugging.
+      var sourceURL = '//# sourceURL=' +
+        ('sourceURL' in options
+          ? options.sourceURL
+          : ('lodash.templateSources[' + (++templateCounter) + ']')
+        ) + '\n';
+
+      string.replace(reDelimiters, function(match, escapeValue, interpolateValue, esTemplateValue, evaluateValue, offset) {
+        interpolateValue || (interpolateValue = esTemplateValue);
+
+        // Escape characters that can't be included in string literals.
+        source += string.slice(index, offset).replace(reUnescapedString, escapeStringChar);
+
+        // Replace delimiters with snippets.
+        if (escapeValue) {
+          isEscaping = true;
+          source += "' +\n__e(" + escapeValue + ") +\n'";
+        }
+        if (evaluateValue) {
+          isEvaluating = true;
+          source += "';\n" + evaluateValue + ";\n__p += '";
+        }
+        if (interpolateValue) {
+          source += "' +\n((__t = (" + interpolateValue + ")) == null ? '' : __t) +\n'";
+        }
+        index = offset + match.length;
+
+        // The JS engine embedded in Adobe products requires returning the `match`
+        // string in order to produce the correct `offset` value.
+        return match;
+      });
+
+      source += "';\n";
+
+      // If `variable` is not specified wrap a with-statement around the generated
+      // code to add the data object to the top of the scope chain.
+      var variable = options.variable;
+      if (!variable) {
+        source = 'with (obj) {\n' + source + '\n}\n';
+      }
+      // Cleanup code by stripping empty strings.
+      source = (isEvaluating ? source.replace(reEmptyStringLeading, '') : source)
+        .replace(reEmptyStringMiddle, '$1')
+        .replace(reEmptyStringTrailing, '$1;');
+
+      // Frame code as the function body.
+      source = 'function(' + (variable || 'obj') + ') {\n' +
+        (variable
+          ? ''
+          : 'obj || (obj = {});\n'
+        ) +
+        "var __t, __p = ''" +
+        (isEscaping
+           ? ', __e = _.escape'
+           : ''
+        ) +
+        (isEvaluating
+          ? ', __j = Array.prototype.join;\n' +
+            "function print() { __p += __j.call(arguments, '') }\n"
+          : ';\n'
+        ) +
+        source +
+        'return __p\n}';
+
+      var result = attempt(function() {
+        return Function(importsKeys, sourceURL + 'return ' + source).apply(undefined, importsValues);
+      });
+
+      // Provide the compiled function's source by its `toString` method or
+      // the `source` property as a convenience for inlining compiled templates.
+      result.source = source;
+      if (isError(result)) {
+        throw result;
+      }
+      return result;
+    }
+
+    /**
+     * Removes leading and trailing whitespace or specified characters from `string`.
+     *
+     * @static
+     * @memberOf _
+     * @category String
+     * @param {string} [string=''] The string to trim.
+     * @param {string} [chars=whitespace] The characters to trim.
+     * @param- {Object} [guard] Enables use as a callback for functions like `_.map`.
+     * @returns {string} Returns the trimmed string.
+     * @example
+     *
+     * _.trim('  abc  ');
+     * // => 'abc'
+     *
+     * _.trim('-_-abc-_-', '_-');
+     * // => 'abc'
+     *
+     * _.map(['  foo  ', '  bar  '], _.trim);
+     * // => ['foo', 'bar']
+     */
+    function trim(string, chars, guard) {
+      var value = string;
+      string = baseToString(string);
+      if (!string) {
+        return string;
+      }
+      if (guard ? isIterateeCall(value, chars, guard) : chars == null) {
+        return string.slice(trimmedLeftIndex(string), trimmedRightIndex(string) + 1);
+      }
+      chars = (chars + '');
+      return string.slice(charsLeftIndex(string, chars), charsRightIndex(string, chars) + 1);
+    }
+
+    /**
+     * Removes leading whitespace or specified characters from `string`.
+     *
+     * @static
+     * @memberOf _
+     * @category String
+     * @param {string} [string=''] The string to trim.
+     * @param {string} [chars=whitespace] The characters to trim.
+     * @param- {Object} [guard] Enables use as a callback for functions like `_.map`.
+     * @returns {string} Returns the trimmed string.
+     * @example
+     *
+     * _.trimLeft('  abc  ');
+     * // => 'abc  '
+     *
+     * _.trimLeft('-_-abc-_-', '_-');
+     * // => 'abc-_-'
+     */
+    function trimLeft(string, chars, guard) {
+      var value = string;
+      string = baseToString(string);
+      if (!string) {
+        return string;
+      }
+      if (guard ? isIterateeCall(value, chars, guard) : chars == null) {
+        return string.slice(trimmedLeftIndex(string));
+      }
+      return string.slice(charsLeftIndex(string, (chars + '')));
+    }
+
+    /**
+     * Removes trailing whitespace or specified characters from `string`.
+     *
+     * @static
+     * @memberOf _
+     * @category String
+     * @param {string} [string=''] The string to trim.
+     * @param {string} [chars=whitespace] The characters to trim.
+     * @param- {Object} [guard] Enables use as a callback for functions like `_.map`.
+     * @returns {string} Returns the trimmed string.
+     * @example
+     *
+     * _.trimRight('  abc  ');
+     * // => '  abc'
+     *
+     * _.trimRight('-_-abc-_-', '_-');
+     * // => '-_-abc'
+     */
+    function trimRight(string, chars, guard) {
+      var value = string;
+      string = baseToString(string);
+      if (!string) {
+        return string;
+      }
+      if (guard ? isIterateeCall(value, chars, guard) : chars == null) {
+        return string.slice(0, trimmedRightIndex(string) + 1);
+      }
+      return string.slice(0, charsRightIndex(string, (chars + '')) + 1);
+    }
+
+    /**
+     * Truncates `string` if it's longer than the given maximum string length.
+     * The last characters of the truncated string are replaced with the omission
+     * string which defaults to "...".
+     *
+     * @static
+     * @memberOf _
+     * @category String
+     * @param {string} [string=''] The string to truncate.
+     * @param {Object|number} [options] The options object or maximum string length.
+     * @param {number} [options.length=30] The maximum string length.
+     * @param {string} [options.omission='...'] The string to indicate text is omitted.
+     * @param {RegExp|string} [options.separator] The separator pattern to truncate to.
+     * @param- {Object} [guard] Enables use as a callback for functions like `_.map`.
+     * @returns {string} Returns the truncated string.
+     * @example
+     *
+     * _.trunc('hi-diddly-ho there, neighborino');
+     * // => 'hi-diddly-ho there, neighbo...'
+     *
+     * _.trunc('hi-diddly-ho there, neighborino', 24);
+     * // => 'hi-diddly-ho there, n...'
+     *
+     * _.trunc('hi-diddly-ho there, neighborino', {
+     *   'length': 24,
+     *   'separator': ' '
+     * });
+     * // => 'hi-diddly-ho there,...'
+     *
+     * _.trunc('hi-diddly-ho there, neighborino', {
+     *   'length': 24,
+     *   'separator': /,? +/
+     * });
+     * // => 'hi-diddly-ho there...'
+     *
+     * _.trunc('hi-diddly-ho there, neighborino', {
+     *   'omission': ' [...]'
+     * });
+     * // => 'hi-diddly-ho there, neig [...]'
+     */
+    function trunc(string, options, guard) {
+      if (guard && isIterateeCall(string, options, guard)) {
+        options = undefined;
+      }
+      var length = DEFAULT_TRUNC_LENGTH,
+          omission = DEFAULT_TRUNC_OMISSION;
+
+      if (options != null) {
+        if (isObject(options)) {
+          var separator = 'separator' in options ? options.separator : separator;
+          length = 'length' in options ? (+options.length || 0) : length;
+          omission = 'omission' in options ? baseToString(options.omission) : omission;
+        } else {
+          length = +options || 0;
+        }
+      }
+      string = baseToString(string);
+      if (length >= string.length) {
+        return string;
+      }
+      var end = length - omission.length;
+      if (end < 1) {
+        return omission;
+      }
+      var result = string.slice(0, end);
+      if (separator == null) {
+        return result + omission;
+      }
+      if (isRegExp(separator)) {
+        if (string.slice(end).search(separator)) {
+          var match,
+              newEnd,
+              substring = string.slice(0, end);
+
+          if (!separator.global) {
+            separator = RegExp(separator.source, (reFlags.exec(separator) || '') + 'g');
+          }
+          separator.lastIndex = 0;
+          while ((match = separator.exec(substring))) {
+            newEnd = match.index;
+          }
+          result = result.slice(0, newEnd == null ? end : newEnd);
+        }
+      } else if (string.indexOf(separator, end) != end) {
+        var index = result.lastIndexOf(separator);
+        if (index > -1) {
+          result = result.slice(0, index);
+        }
+      }
+      return result + omission;
+    }
+
+    /**
+     * The inverse of `_.escape`; this method converts the HTML entities
+     * `&amp;`, `&lt;`, `&gt;`, `&quot;`, `&#39;`, and `&#96;` in `string` to their
+     * corresponding characters.
+     *
+     * **Note:** No other HTML entities are unescaped. To unescape additional HTML
+     * entities use a third-party library like [_he_](https://mths.be/he).
+     *
+     * @static
+     * @memberOf _
+     * @category String
+     * @param {string} [string=''] The string to unescape.
+     * @returns {string} Returns the unescaped string.
+     * @example
+     *
+     * _.unescape('fred, barney, &amp; pebbles');
+     * // => 'fred, barney, & pebbles'
+     */
+    function unescape(string) {
+      string = baseToString(string);
+      return (string && reHasEscapedHtml.test(string))
+        ? string.replace(reEscapedHtml, unescapeHtmlChar)
+        : string;
+    }
+
+    /**
+     * Splits `string` into an array of its words.
+     *
+     * @static
+     * @memberOf _
+     * @category String
+     * @param {string} [string=''] The string to inspect.
+     * @param {RegExp|string} [pattern] The pattern to match words.
+     * @param- {Object} [guard] Enables use as a callback for functions like `_.map`.
+     * @returns {Array} Returns the words of `string`.
+     * @example
+     *
+     * _.words('fred, barney, & pebbles');
+     * // => ['fred', 'barney', 'pebbles']
+     *
+     * _.words('fred, barney, & pebbles', /[^, ]+/g);
+     * // => ['fred', 'barney', '&', 'pebbles']
+     */
+    function words(string, pattern, guard) {
+      if (guard && isIterateeCall(string, pattern, guard)) {
+        pattern = undefined;
+      }
+      string = baseToString(string);
+      return string.match(pattern || reWords) || [];
+    }
+
+    /*------------------------------------------------------------------------*/
+
+    /**
+     * Attempts to invoke `func`, returning either the result or the caught error
+     * object. Any additional arguments are provided to `func` when it's invoked.
+     *
+     * @static
+     * @memberOf _
+     * @category Utility
+     * @param {Function} func The function to attempt.
+     * @returns {*} Returns the `func` result or error object.
+     * @example
+     *
+     * // avoid throwing errors for invalid selectors
+     * var elements = _.attempt(function(selector) {
+     *   return document.querySelectorAll(selector);
+     * }, '>_>');
+     *
+     * if (_.isError(elements)) {
+     *   elements = [];
+     * }
+     */
+    var attempt = restParam(function(func, args) {
+      try {
+        return func.apply(undefined, args);
+      } catch(e) {
+        return isError(e) ? e : new Error(e);
+      }
+    });
+
+    /**
+     * Creates a function that invokes `func` with the `this` binding of `thisArg`
+     * and arguments of the created function. If `func` is a property name the
+     * created callback returns the property value for a given element. If `func`
+     * is an object the created callback returns `true` for elements that contain
+     * the equivalent object properties, otherwise it returns `false`.
+     *
+     * @static
+     * @memberOf _
+     * @alias iteratee
+     * @category Utility
+     * @param {*} [func=_.identity] The value to convert to a callback.
+     * @param {*} [thisArg] The `this` binding of `func`.
+     * @param- {Object} [guard] Enables use as a callback for functions like `_.map`.
+     * @returns {Function} Returns the callback.
+     * @example
+     *
+     * var users = [
+     *   { 'user': 'barney', 'age': 36 },
+     *   { 'user': 'fred',   'age': 40 }
+     * ];
+     *
+     * // wrap to create custom callback shorthands
+     * _.callback = _.wrap(_.callback, function(callback, func, thisArg) {
+     *   var match = /^(.+?)__([gl]t)(.+)$/.exec(func);
+     *   if (!match) {
+     *     return callback(func, thisArg);
+     *   }
+     *   return function(object) {
+     *     return match[2] == 'gt'
+     *       ? object[match[1]] > match[3]
+     *       : object[match[1]] < match[3];
+     *   };
+     * });
+     *
+     * _.filter(users, 'age__gt36');
+     * // => [{ 'user': 'fred', 'age': 40 }]
+     */
+    function callback(func, thisArg, guard) {
+      if (guard && isIterateeCall(func, thisArg, guard)) {
+        thisArg = undefined;
+      }
+      return isObjectLike(func)
+        ? matches(func)
+        : baseCallback(func, thisArg);
+    }
+
+    /**
+     * Creates a function that returns `value`.
+     *
+     * @static
+     * @memberOf _
+     * @category Utility
+     * @param {*} value The value to return from the new function.
+     * @returns {Function} Returns the new function.
+     * @example
+     *
+     * var object = { 'user': 'fred' };
+     * var getter = _.constant(object);
+     *
+     * getter() === object;
+     * // => true
+     */
+    function constant(value) {
+      return function() {
+        return value;
+      };
+    }
+
+    /**
+     * This method returns the first argument provided to it.
+     *
+     * @static
+     * @memberOf _
+     * @category Utility
+     * @param {*} value Any value.
+     * @returns {*} Returns `value`.
+     * @example
+     *
+     * var object = { 'user': 'fred' };
+     *
+     * _.identity(object) === object;
+     * // => true
+     */
+    function identity(value) {
+      return value;
+    }
+
+    /**
+     * Creates a function that performs a deep comparison between a given object
+     * and `source`, returning `true` if the given object has equivalent property
+     * values, else `false`.
+     *
+     * **Note:** This method supports comparing arrays, booleans, `Date` objects,
+     * numbers, `Object` objects, regexes, and strings. Objects are compared by
+     * their own, not inherited, enumerable properties. For comparing a single
+     * own or inherited property value see `_.matchesProperty`.
+     *
+     * @static
+     * @memberOf _
+     * @category Utility
+     * @param {Object} source The object of property values to match.
+     * @returns {Function} Returns the new function.
+     * @example
+     *
+     * var users = [
+     *   { 'user': 'barney', 'age': 36, 'active': true },
+     *   { 'user': 'fred',   'age': 40, 'active': false }
+     * ];
+     *
+     * _.filter(users, _.matches({ 'age': 40, 'active': false }));
+     * // => [{ 'user': 'fred', 'age': 40, 'active': false }]
+     */
+    function matches(source) {
+      return baseMatches(baseClone(source, true));
+    }
+
+    /**
+     * Creates a function that compares the property value of `path` on a given
+     * object to `value`.
+     *
+     * **Note:** This method supports comparing arrays, booleans, `Date` objects,
+     * numbers, `Object` objects, regexes, and strings. Objects are compared by
+     * their own, not inherited, enumerable properties.
+     *
+     * @static
+     * @memberOf _
+     * @category Utility
+     * @param {Array|string} path The path of the property to get.
+     * @param {*} srcValue The value to match.
+     * @returns {Function} Returns the new function.
+     * @example
+     *
+     * var users = [
+     *   { 'user': 'barney' },
+     *   { 'user': 'fred' }
+     * ];
+     *
+     * _.find(users, _.matchesProperty('user', 'fred'));
+     * // => { 'user': 'fred' }
+     */
+    function matchesProperty(path, srcValue) {
+      return baseMatchesProperty(path, baseClone(srcValue, true));
+    }
+
+    /**
+     * Creates a function that invokes the method at `path` on a given object.
+     * Any additional arguments are provided to the invoked method.
+     *
+     * @static
+     * @memberOf _
+     * @category Utility
+     * @param {Array|string} path The path of the method to invoke.
+     * @param {...*} [args] The arguments to invoke the method with.
+     * @returns {Function} Returns the new function.
+     * @example
+     *
+     * var objects = [
+     *   { 'a': { 'b': { 'c': _.constant(2) } } },
+     *   { 'a': { 'b': { 'c': _.constant(1) } } }
+     * ];
+     *
+     * _.map(objects, _.method('a.b.c'));
+     * // => [2, 1]
+     *
+     * _.invoke(_.sortBy(objects, _.method(['a', 'b', 'c'])), 'a.b.c');
+     * // => [1, 2]
+     */
+    var method = restParam(function(path, args) {
+      return function(object) {
+        return invokePath(object, path, args);
+      };
+    });
+
+    /**
+     * The opposite of `_.method`; this method creates a function that invokes
+     * the method at a given path on `object`. Any additional arguments are
+     * provided to the invoked method.
+     *
+     * @static
+     * @memberOf _
+     * @category Utility
+     * @param {Object} object The object to query.
+     * @param {...*} [args] The arguments to invoke the method with.
+     * @returns {Function} Returns the new function.
+     * @example
+     *
+     * var array = _.times(3, _.constant),
+     *     object = { 'a': array, 'b': array, 'c': array };
+     *
+     * _.map(['a[2]', 'c[0]'], _.methodOf(object));
+     * // => [2, 0]
+     *
+     * _.map([['a', '2'], ['c', '0']], _.methodOf(object));
+     * // => [2, 0]
+     */
+    var methodOf = restParam(function(object, args) {
+      return function(path) {
+        return invokePath(object, path, args);
+      };
+    });
+
+    /**
+     * Adds all own enumerable function properties of a source object to the
+     * destination object. If `object` is a function then methods are added to
+     * its prototype as well.
+     *
+     * **Note:** Use `_.runInContext` to create a pristine `lodash` function to
+     * avoid conflicts caused by modifying the original.
+     *
+     * @static
+     * @memberOf _
+     * @category Utility
+     * @param {Function|Object} [object=lodash] The destination object.
+     * @param {Object} source The object of functions to add.
+     * @param {Object} [options] The options object.
+     * @param {boolean} [options.chain=true] Specify whether the functions added
+     *  are chainable.
+     * @returns {Function|Object} Returns `object`.
+     * @example
+     *
+     * function vowels(string) {
+     *   return _.filter(string, function(v) {
+     *     return /[aeiou]/i.test(v);
+     *   });
+     * }
+     *
+     * _.mixin({ 'vowels': vowels });
+     * _.vowels('fred');
+     * // => ['e']
+     *
+     * _('fred').vowels().value();
+     * // => ['e']
+     *
+     * _.mixin({ 'vowels': vowels }, { 'chain': false });
+     * _('fred').vowels();
+     * // => ['e']
+     */
+    function mixin(object, source, options) {
+      if (options == null) {
+        var isObj = isObject(source),
+            props = isObj ? keys(source) : undefined,
+            methodNames = (props && props.length) ? baseFunctions(source, props) : undefined;
+
+        if (!(methodNames ? methodNames.length : isObj)) {
+          methodNames = false;
+          options = source;
+          source = object;
+          object = this;
+        }
+      }
+      if (!methodNames) {
+        methodNames = baseFunctions(source, keys(source));
+      }
+      var chain = true,
+          index = -1,
+          isFunc = isFunction(object),
+          length = methodNames.length;
+
+      if (options === false) {
+        chain = false;
+      } else if (isObject(options) && 'chain' in options) {
+        chain = options.chain;
+      }
+      while (++index < length) {
+        var methodName = methodNames[index],
+            func = source[methodName];
+
+        object[methodName] = func;
+        if (isFunc) {
+          object.prototype[methodName] = (function(func) {
+            return function() {
+              var chainAll = this.__chain__;
+              if (chain || chainAll) {
+                var result = object(this.__wrapped__),
+                    actions = result.__actions__ = arrayCopy(this.__actions__);
+
+                actions.push({ 'func': func, 'args': arguments, 'thisArg': object });
+                result.__chain__ = chainAll;
+                return result;
+              }
+              return func.apply(object, arrayPush([this.value()], arguments));
+            };
+          }(func));
+        }
+      }
+      return object;
+    }
+
+    /**
+     * Reverts the `_` variable to its previous value and returns a reference to
+     * the `lodash` function.
+     *
+     * @static
+     * @memberOf _
+     * @category Utility
+     * @returns {Function} Returns the `lodash` function.
+     * @example
+     *
+     * var lodash = _.noConflict();
+     */
+    function noConflict() {
+      root._ = oldDash;
+      return this;
+    }
+
+    /**
+     * A no-operation function that returns `undefined` regardless of the
+     * arguments it receives.
+     *
+     * @static
+     * @memberOf _
+     * @category Utility
+     * @example
+     *
+     * var object = { 'user': 'fred' };
+     *
+     * _.noop(object) === undefined;
+     * // => true
+     */
+    function noop() {
+      // No operation performed.
+    }
+
+    /**
+     * Creates a function that returns the property value at `path` on a
+     * given object.
+     *
+     * @static
+     * @memberOf _
+     * @category Utility
+     * @param {Array|string} path The path of the property to get.
+     * @returns {Function} Returns the new function.
+     * @example
+     *
+     * var objects = [
+     *   { 'a': { 'b': { 'c': 2 } } },
+     *   { 'a': { 'b': { 'c': 1 } } }
+     * ];
+     *
+     * _.map(objects, _.property('a.b.c'));
+     * // => [2, 1]
+     *
+     * _.pluck(_.sortBy(objects, _.property(['a', 'b', 'c'])), 'a.b.c');
+     * // => [1, 2]
+     */
+    function property(path) {
+      return isKey(path) ? baseProperty(path) : basePropertyDeep(path);
+    }
+
+    /**
+     * The opposite of `_.property`; this method creates a function that returns
+     * the property value at a given path on `object`.
+     *
+     * @static
+     * @memberOf _
+     * @category Utility
+     * @param {Object} object The object to query.
+     * @returns {Function} Returns the new function.
+     * @example
+     *
+     * var array = [0, 1, 2],
+     *     object = { 'a': array, 'b': array, 'c': array };
+     *
+     * _.map(['a[2]', 'c[0]'], _.propertyOf(object));
+     * // => [2, 0]
+     *
+     * _.map([['a', '2'], ['c', '0']], _.propertyOf(object));
+     * // => [2, 0]
+     */
+    function propertyOf(object) {
+      return function(path) {
+        return baseGet(object, toPath(path), (path + ''));
+      };
+    }
+
+    /**
+     * Creates an array of numbers (positive and/or negative) progressing from
+     * `start` up to, but not including, `end`. If `end` is not specified it's
+     * set to `start` with `start` then set to `0`. If `end` is less than `start`
+     * a zero-length range is created unless a negative `step` is specified.
+     *
+     * @static
+     * @memberOf _
+     * @category Utility
+     * @param {number} [start=0] The start of the range.
+     * @param {number} end The end of the range.
+     * @param {number} [step=1] The value to increment or decrement by.
+     * @returns {Array} Returns the new array of numbers.
+     * @example
+     *
+     * _.range(4);
+     * // => [0, 1, 2, 3]
+     *
+     * _.range(1, 5);
+     * // => [1, 2, 3, 4]
+     *
+     * _.range(0, 20, 5);
+     * // => [0, 5, 10, 15]
+     *
+     * _.range(0, -4, -1);
+     * // => [0, -1, -2, -3]
+     *
+     * _.range(1, 4, 0);
+     * // => [1, 1, 1]
+     *
+     * _.range(0);
+     * // => []
+     */
+    function range(start, end, step) {
+      if (step && isIterateeCall(start, end, step)) {
+        end = step = undefined;
+      }
+      start = +start || 0;
+      step = step == null ? 1 : (+step || 0);
+
+      if (end == null) {
+        end = start;
+        start = 0;
+      } else {
+        end = +end || 0;
+      }
+      // Use `Array(length)` so engines like Chakra and V8 avoid slower modes.
+      // See https://youtu.be/XAqIpGU8ZZk#t=17m25s for more details.
+      var index = -1,
+          length = nativeMax(nativeCeil((end - start) / (step || 1)), 0),
+          result = Array(length);
+
+      while (++index < length) {
+        result[index] = start;
+        start += step;
+      }
+      return result;
+    }
+
+    /**
+     * Invokes the iteratee function `n` times, returning an array of the results
+     * of each invocation. The `iteratee` is bound to `thisArg` and invoked with
+     * one argument; (index).
+     *
+     * @static
+     * @memberOf _
+     * @category Utility
+     * @param {number} n The number of times to invoke `iteratee`.
+     * @param {Function} [iteratee=_.identity] The function invoked per iteration.
+     * @param {*} [thisArg] The `this` binding of `iteratee`.
+     * @returns {Array} Returns the array of results.
+     * @example
+     *
+     * var diceRolls = _.times(3, _.partial(_.random, 1, 6, false));
+     * // => [3, 6, 4]
+     *
+     * _.times(3, function(n) {
+     *   mage.castSpell(n);
+     * });
+     * // => invokes `mage.castSpell(n)` three times with `n` of `0`, `1`, and `2`
+     *
+     * _.times(3, function(n) {
+     *   this.cast(n);
+     * }, mage);
+     * // => also invokes `mage.castSpell(n)` three times
+     */
+    function times(n, iteratee, thisArg) {
+      n = nativeFloor(n);
+
+      // Exit early to avoid a JSC JIT bug in Safari 8
+      // where `Array(0)` is treated as `Array(1)`.
+      if (n < 1 || !nativeIsFinite(n)) {
+        return [];
+      }
+      var index = -1,
+          result = Array(nativeMin(n, MAX_ARRAY_LENGTH));
+
+      iteratee = bindCallback(iteratee, thisArg, 1);
+      while (++index < n) {
+        if (index < MAX_ARRAY_LENGTH) {
+          result[index] = iteratee(index);
+        } else {
+          iteratee(index);
+        }
+      }
+      return result;
+    }
+
+    /**
+     * Generates a unique ID. If `prefix` is provided the ID is appended to it.
+     *
+     * @static
+     * @memberOf _
+     * @category Utility
+     * @param {string} [prefix] The value to prefix the ID with.
+     * @returns {string} Returns the unique ID.
+     * @example
+     *
+     * _.uniqueId('contact_');
+     * // => 'contact_104'
+     *
+     * _.uniqueId();
+     * // => '105'
+     */
+    function uniqueId(prefix) {
+      var id = ++idCounter;
+      return baseToString(prefix) + id;
+    }
+
+    /*------------------------------------------------------------------------*/
+
+    /**
+     * Adds two numbers.
+     *
+     * @static
+     * @memberOf _
+     * @category Math
+     * @param {number} augend The first number to add.
+     * @param {number} addend The second number to add.
+     * @returns {number} Returns the sum.
+     * @example
+     *
+     * _.add(6, 4);
+     * // => 10
+     */
+    function add(augend, addend) {
+      return (+augend || 0) + (+addend || 0);
+    }
+
+    /**
+     * Calculates `n` rounded up to `precision`.
+     *
+     * @static
+     * @memberOf _
+     * @category Math
+     * @param {number} n The number to round up.
+     * @param {number} [precision=0] The precision to round up to.
+     * @returns {number} Returns the rounded up number.
+     * @example
+     *
+     * _.ceil(4.006);
+     * // => 5
+     *
+     * _.ceil(6.004, 2);
+     * // => 6.01
+     *
+     * _.ceil(6040, -2);
+     * // => 6100
+     */
+    var ceil = createRound('ceil');
+
+    /**
+     * Calculates `n` rounded down to `precision`.
+     *
+     * @static
+     * @memberOf _
+     * @category Math
+     * @param {number} n The number to round down.
+     * @param {number} [precision=0] The precision to round down to.
+     * @returns {number} Returns the rounded down number.
+     * @example
+     *
+     * _.floor(4.006);
+     * // => 4
+     *
+     * _.floor(0.046, 2);
+     * // => 0.04
+     *
+     * _.floor(4060, -2);
+     * // => 4000
+     */
+    var floor = createRound('floor');
+
+    /**
+     * Gets the maximum value of `collection`. If `collection` is empty or falsey
+     * `-Infinity` is returned. If an iteratee function is provided it's invoked
+     * for each value in `collection` to generate the criterion by which the value
+     * is ranked. The `iteratee` is bound to `thisArg` and invoked with three
+     * arguments: (value, index, collection).
+     *
+     * If a property name is provided for `iteratee` the created `_.property`
+     * style callback returns the property value of the given element.
+     *
+     * If a value is also provided for `thisArg` the created `_.matchesProperty`
+     * style callback returns `true` for elements that have a matching property
+     * value, else `false`.
+     *
+     * If an object is provided for `iteratee` the created `_.matches` style
+     * callback returns `true` for elements that have the properties of the given
+     * object, else `false`.
+     *
+     * @static
+     * @memberOf _
+     * @category Math
+     * @param {Array|Object|string} collection The collection to iterate over.
+     * @param {Function|Object|string} [iteratee] The function invoked per iteration.
+     * @param {*} [thisArg] The `this` binding of `iteratee`.
+     * @returns {*} Returns the maximum value.
+     * @example
+     *
+     * _.max([4, 2, 8, 6]);
+     * // => 8
+     *
+     * _.max([]);
+     * // => -Infinity
+     *
+     * var users = [
+     *   { 'user': 'barney', 'age': 36 },
+     *   { 'user': 'fred',   'age': 40 }
+     * ];
+     *
+     * _.max(users, function(chr) {
+     *   return chr.age;
+     * });
+     * // => { 'user': 'fred', 'age': 40 }
+     *
+     * // using the `_.property` callback shorthand
+     * _.max(users, 'age');
+     * // => { 'user': 'fred', 'age': 40 }
+     */
+    var max = createExtremum(gt, NEGATIVE_INFINITY);
+
+    /**
+     * Gets the minimum value of `collection`. If `collection` is empty or falsey
+     * `Infinity` is returned. If an iteratee function is provided it's invoked
+     * for each value in `collection` to generate the criterion by which the value
+     * is ranked. The `iteratee` is bound to `thisArg` and invoked with three
+     * arguments: (value, index, collection).
+     *
+     * If a property name is provided for `iteratee` the created `_.property`
+     * style callback returns the property value of the given element.
+     *
+     * If a value is also provided for `thisArg` the created `_.matchesProperty`
+     * style callback returns `true` for elements that have a matching property
+     * value, else `false`.
+     *
+     * If an object is provided for `iteratee` the created `_.matches` style
+     * callback returns `true` for elements that have the properties of the given
+     * object, else `false`.
+     *
+     * @static
+     * @memberOf _
+     * @category Math
+     * @param {Array|Object|string} collection The collection to iterate over.
+     * @param {Function|Object|string} [iteratee] The function invoked per iteration.
+     * @param {*} [thisArg] The `this` binding of `iteratee`.
+     * @returns {*} Returns the minimum value.
+     * @example
+     *
+     * _.min([4, 2, 8, 6]);
+     * // => 2
+     *
+     * _.min([]);
+     * // => Infinity
+     *
+     * var users = [
+     *   { 'user': 'barney', 'age': 36 },
+     *   { 'user': 'fred',   'age': 40 }
+     * ];
+     *
+     * _.min(users, function(chr) {
+     *   return chr.age;
+     * });
+     * // => { 'user': 'barney', 'age': 36 }
+     *
+     * // using the `_.property` callback shorthand
+     * _.min(users, 'age');
+     * // => { 'user': 'barney', 'age': 36 }
+     */
+    var min = createExtremum(lt, POSITIVE_INFINITY);
+
+    /**
+     * Calculates `n` rounded to `precision`.
+     *
+     * @static
+     * @memberOf _
+     * @category Math
+     * @param {number} n The number to round.
+     * @param {number} [precision=0] The precision to round to.
+     * @returns {number} Returns the rounded number.
+     * @example
+     *
+     * _.round(4.006);
+     * // => 4
+     *
+     * _.round(4.006, 2);
+     * // => 4.01
+     *
+     * _.round(4060, -2);
+     * // => 4100
+     */
+    var round = createRound('round');
+
+    /**
+     * Gets the sum of the values in `collection`.
+     *
+     * @static
+     * @memberOf _
+     * @category Math
+     * @param {Array|Object|string} collection The collection to iterate over.
+     * @param {Function|Object|string} [iteratee] The function invoked per iteration.
+     * @param {*} [thisArg] The `this` binding of `iteratee`.
+     * @returns {number} Returns the sum.
+     * @example
+     *
+     * _.sum([4, 6]);
+     * // => 10
+     *
+     * _.sum({ 'a': 4, 'b': 6 });
+     * // => 10
+     *
+     * var objects = [
+     *   { 'n': 4 },
+     *   { 'n': 6 }
+     * ];
+     *
+     * _.sum(objects, function(object) {
+     *   return object.n;
+     * });
+     * // => 10
+     *
+     * // using the `_.property` callback shorthand
+     * _.sum(objects, 'n');
+     * // => 10
+     */
+    function sum(collection, iteratee, thisArg) {
+      if (thisArg && isIterateeCall(collection, iteratee, thisArg)) {
+        iteratee = undefined;
+      }
+      iteratee = getCallback(iteratee, thisArg, 3);
+      return iteratee.length == 1
+        ? arraySum(isArray(collection) ? collection : toIterable(collection), iteratee)
+        : baseSum(collection, iteratee);
+    }
+
+    /*------------------------------------------------------------------------*/
+
+    // Ensure wrappers are instances of `baseLodash`.
+    lodash.prototype = baseLodash.prototype;
+
+    LodashWrapper.prototype = baseCreate(baseLodash.prototype);
+    LodashWrapper.prototype.constructor = LodashWrapper;
+
+    LazyWrapper.prototype = baseCreate(baseLodash.prototype);
+    LazyWrapper.prototype.constructor = LazyWrapper;
+
+    // Add functions to the `Map` cache.
+    MapCache.prototype['delete'] = mapDelete;
+    MapCache.prototype.get = mapGet;
+    MapCache.prototype.has = mapHas;
+    MapCache.prototype.set = mapSet;
+
+    // Add functions to the `Set` cache.
+    SetCache.prototype.push = cachePush;
+
+    // Assign cache to `_.memoize`.
+    memoize.Cache = MapCache;
+
+    // Add functions that return wrapped values when chaining.
+    lodash.after = after;
+    lodash.ary = ary;
+    lodash.assign = assign;
+    lodash.at = at;
+    lodash.before = before;
+    lodash.bind = bind;
+    lodash.bindAll = bindAll;
+    lodash.bindKey = bindKey;
+    lodash.callback = callback;
+    lodash.chain = chain;
+    lodash.chunk = chunk;
+    lodash.compact = compact;
+    lodash.constant = constant;
+    lodash.countBy = countBy;
+    lodash.create = create;
+    lodash.curry = curry;
+    lodash.curryRight = curryRight;
+    lodash.debounce = debounce;
+    lodash.defaults = defaults;
+    lodash.defaultsDeep = defaultsDeep;
+    lodash.defer = defer;
+    lodash.delay = delay;
+    lodash.difference = difference;
+    lodash.drop = drop;
+    lodash.dropRight = dropRight;
+    lodash.dropRightWhile = dropRightWhile;
+    lodash.dropWhile = dropWhile;
+    lodash.fill = fill;
+    lodash.filter = filter;
+    lodash.flatten = flatten;
+    lodash.flattenDeep = flattenDeep;
+    lodash.flow = flow;
+    lodash.flowRight = flowRight;
+    lodash.forEach = forEach;
+    lodash.forEachRight = forEachRight;
+    lodash.forIn = forIn;
+    lodash.forInRight = forInRight;
+    lodash.forOwn = forOwn;
+    lodash.forOwnRight = forOwnRight;
+    lodash.functions = functions;
+    lodash.groupBy = groupBy;
+    lodash.indexBy = indexBy;
+    lodash.initial = initial;
+    lodash.intersection = intersection;
+    lodash.invert = invert;
+    lodash.invoke = invoke;
+    lodash.keys = keys;
+    lodash.keysIn = keysIn;
+    lodash.map = map;
+    lodash.mapKeys = mapKeys;
+    lodash.mapValues = mapValues;
+    lodash.matches = matches;
+    lodash.matchesProperty = matchesProperty;
+    lodash.memoize = memoize;
+    lodash.merge = merge;
+    lodash.method = method;
+    lodash.methodOf = methodOf;
+    lodash.mixin = mixin;
+    lodash.modArgs = modArgs;
+    lodash.negate = negate;
+    lodash.omit = omit;
+    lodash.once = once;
+    lodash.pairs = pairs;
+    lodash.partial = partial;
+    lodash.partialRight = partialRight;
+    lodash.partition = partition;
+    lodash.pick = pick;
+    lodash.pluck = pluck;
+    lodash.property = property;
+    lodash.propertyOf = propertyOf;
+    lodash.pull = pull;
+    lodash.pullAt = pullAt;
+    lodash.range = range;
+    lodash.rearg = rearg;
+    lodash.reject = reject;
+    lodash.remove = remove;
+    lodash.rest = rest;
+    lodash.restParam = restParam;
+    lodash.set = set;
+    lodash.shuffle = shuffle;
+    lodash.slice = slice;
+    lodash.sortBy = sortBy;
+    lodash.sortByAll = sortByAll;
+    lodash.sortByOrder = sortByOrder;
+    lodash.spread = spread;
+    lodash.take = take;
+    lodash.takeRight = takeRight;
+    lodash.takeRightWhile = takeRightWhile;
+    lodash.takeWhile = takeWhile;
+    lodash.tap = tap;
+    lodash.throttle = throttle;
+    lodash.thru = thru;
+    lodash.times = times;
+    lodash.toArray = toArray;
+    lodash.toPlainObject = toPlainObject;
+    lodash.transform = transform;
+    lodash.union = union;
+    lodash.uniq = uniq;
+    lodash.unzip = unzip;
+    lodash.unzipWith = unzipWith;
+    lodash.values = values;
+    lodash.valuesIn = valuesIn;
+    lodash.where = where;
+    lodash.without = without;
+    lodash.wrap = wrap;
+    lodash.xor = xor;
+    lodash.zip = zip;
+    lodash.zipObject = zipObject;
+    lodash.zipWith = zipWith;
+
+    // Add aliases.
+    lodash.backflow = flowRight;
+    lodash.collect = map;
+    lodash.compose = flowRight;
+    lodash.each = forEach;
+    lodash.eachRight = forEachRight;
+    lodash.extend = assign;
+    lodash.iteratee = callback;
+    lodash.methods = functions;
+    lodash.object = zipObject;
+    lodash.select = filter;
+    lodash.tail = rest;
+    lodash.unique = uniq;
+
+    // Add functions to `lodash.prototype`.
+    mixin(lodash, lodash);
+
+    /*------------------------------------------------------------------------*/
+
+    // Add functions that return unwrapped values when chaining.
+    lodash.add = add;
+    lodash.attempt = attempt;
+    lodash.camelCase = camelCase;
+    lodash.capitalize = capitalize;
+    lodash.ceil = ceil;
+    lodash.clone = clone;
+    lodash.cloneDeep = cloneDeep;
+    lodash.deburr = deburr;
+    lodash.endsWith = endsWith;
+    lodash.escape = escape;
+    lodash.escapeRegExp = escapeRegExp;
+    lodash.every = every;
+    lodash.find = find;
+    lodash.findIndex = findIndex;
+    lodash.findKey = findKey;
+    lodash.findLast = findLast;
+    lodash.findLastIndex = findLastIndex;
+    lodash.findLastKey = findLastKey;
+    lodash.findWhere = findWhere;
+    lodash.first = first;
+    lodash.floor = floor;
+    lodash.get = get;
+    lodash.gt = gt;
+    lodash.gte = gte;
+    lodash.has = has;
+    lodash.identity = identity;
+    lodash.includes = includes;
+    lodash.indexOf = indexOf;
+    lodash.inRange = inRange;
+    lodash.isArguments = isArguments;
+    lodash.isArray = isArray;
+    lodash.isBoolean = isBoolean;
+    lodash.isDate = isDate;
+    lodash.isElement = isElement;
+    lodash.isEmpty = isEmpty;
+    lodash.isEqual = isEqual;
+    lodash.isError = isError;
+    lodash.isFinite = isFinite;
+    lodash.isFunction = isFunction;
+    lodash.isMatch = isMatch;
+    lodash.isNaN = isNaN;
+    lodash.isNative = isNative;
+    lodash.isNull = isNull;
+    lodash.isNumber = isNumber;
+    lodash.isObject = isObject;
+    lodash.isPlainObject = isPlainObject;
+    lodash.isRegExp = isRegExp;
+    lodash.isString = isString;
+    lodash.isTypedArray = isTypedArray;
+    lodash.isUndefined = isUndefined;
+    lodash.kebabCase = kebabCase;
+    lodash.last = last;
+    lodash.lastIndexOf = lastIndexOf;
+    lodash.lt = lt;
+    lodash.lte = lte;
+    lodash.max = max;
+    lodash.min = min;
+    lodash.noConflict = noConflict;
+    lodash.noop = noop;
+    lodash.now = now;
+    lodash.pad = pad;
+    lodash.padLeft = padLeft;
+    lodash.padRight = padRight;
+    lodash.parseInt = parseInt;
+    lodash.random = random;
+    lodash.reduce = reduce;
+    lodash.reduceRight = reduceRight;
+    lodash.repeat = repeat;
+    lodash.result = result;
+    lodash.round = round;
+    lodash.runInContext = runInContext;
+    lodash.size = size;
+    lodash.snakeCase = snakeCase;
+    lodash.some = some;
+    lodash.sortedIndex = sortedIndex;
+    lodash.sortedLastIndex = sortedLastIndex;
+    lodash.startCase = startCase;
+    lodash.startsWith = startsWith;
+    lodash.sum = sum;
+    lodash.template = template;
+    lodash.trim = trim;
+    lodash.trimLeft = trimLeft;
+    lodash.trimRight = trimRight;
+    lodash.trunc = trunc;
+    lodash.unescape = unescape;
+    lodash.uniqueId = uniqueId;
+    lodash.words = words;
+
+    // Add aliases.
+    lodash.all = every;
+    lodash.any = some;
+    lodash.contains = includes;
+    lodash.eq = isEqual;
+    lodash.detect = find;
+    lodash.foldl = reduce;
+    lodash.foldr = reduceRight;
+    lodash.head = first;
+    lodash.include = includes;
+    lodash.inject = reduce;
+
+    mixin(lodash, (function() {
+      var source = {};
+      baseForOwn(lodash, function(func, methodName) {
+        if (!lodash.prototype[methodName]) {
+          source[methodName] = func;
+        }
+      });
+      return source;
+    }()), false);
+
+    /*------------------------------------------------------------------------*/
+
+    // Add functions capable of returning wrapped and unwrapped values when chaining.
+    lodash.sample = sample;
+
+    lodash.prototype.sample = function(n) {
+      if (!this.__chain__ && n == null) {
+        return sample(this.value());
+      }
+      return this.thru(function(value) {
+        return sample(value, n);
+      });
+    };
+
+    /*------------------------------------------------------------------------*/
+
+    /**
+     * The semantic version number.
+     *
+     * @static
+     * @memberOf _
+     * @type string
+     */
+    lodash.VERSION = VERSION;
+
+    // Assign default placeholders.
+    arrayEach(['bind', 'bindKey', 'curry', 'curryRight', 'partial', 'partialRight'], function(methodName) {
+      lodash[methodName].placeholder = lodash;
+    });
+
+    // Add `LazyWrapper` methods for `_.drop` and `_.take` variants.
+    arrayEach(['drop', 'take'], function(methodName, index) {
+      LazyWrapper.prototype[methodName] = function(n) {
+        var filtered = this.__filtered__;
+        if (filtered && !index) {
+          return new LazyWrapper(this);
+        }
+        n = n == null ? 1 : nativeMax(nativeFloor(n) || 0, 0);
+
+        var result = this.clone();
+        if (filtered) {
+          result.__takeCount__ = nativeMin(result.__takeCount__, n);
+        } else {
+          result.__views__.push({ 'size': n, 'type': methodName + (result.__dir__ < 0 ? 'Right' : '') });
+        }
+        return result;
+      };
+
+      LazyWrapper.prototype[methodName + 'Right'] = function(n) {
+        return this.reverse()[methodName](n).reverse();
+      };
+    });
+
+    // Add `LazyWrapper` methods that accept an `iteratee` value.
+    arrayEach(['filter', 'map', 'takeWhile'], function(methodName, index) {
+      var type = index + 1,
+          isFilter = type != LAZY_MAP_FLAG;
+
+      LazyWrapper.prototype[methodName] = function(iteratee, thisArg) {
+        var result = this.clone();
+        result.__iteratees__.push({ 'iteratee': getCallback(iteratee, thisArg, 1), 'type': type });
+        result.__filtered__ = result.__filtered__ || isFilter;
+        return result;
+      };
+    });
+
+    // Add `LazyWrapper` methods for `_.first` and `_.last`.
+    arrayEach(['first', 'last'], function(methodName, index) {
+      var takeName = 'take' + (index ? 'Right' : '');
+
+      LazyWrapper.prototype[methodName] = function() {
+        return this[takeName](1).value()[0];
+      };
+    });
+
+    // Add `LazyWrapper` methods for `_.initial` and `_.rest`.
+    arrayEach(['initial', 'rest'], function(methodName, index) {
+      var dropName = 'drop' + (index ? '' : 'Right');
+
+      LazyWrapper.prototype[methodName] = function() {
+        return this.__filtered__ ? new LazyWrapper(this) : this[dropName](1);
+      };
+    });
+
+    // Add `LazyWrapper` methods for `_.pluck` and `_.where`.
+    arrayEach(['pluck', 'where'], function(methodName, index) {
+      var operationName = index ? 'filter' : 'map',
+          createCallback = index ? baseMatches : property;
+
+      LazyWrapper.prototype[methodName] = function(value) {
+        return this[operationName](createCallback(value));
+      };
+    });
+
+    LazyWrapper.prototype.compact = function() {
+      return this.filter(identity);
+    };
+
+    LazyWrapper.prototype.reject = function(predicate, thisArg) {
+      predicate = getCallback(predicate, thisArg, 1);
+      return this.filter(function(value) {
+        return !predicate(value);
+      });
+    };
+
+    LazyWrapper.prototype.slice = function(start, end) {
+      start = start == null ? 0 : (+start || 0);
+
+      var result = this;
+      if (result.__filtered__ && (start > 0 || end < 0)) {
+        return new LazyWrapper(result);
+      }
+      if (start < 0) {
+        result = result.takeRight(-start);
+      } else if (start) {
+        result = result.drop(start);
+      }
+      if (end !== undefined) {
+        end = (+end || 0);
+        result = end < 0 ? result.dropRight(-end) : result.take(end - start);
+      }
+      return result;
+    };
+
+    LazyWrapper.prototype.takeRightWhile = function(predicate, thisArg) {
+      return this.reverse().takeWhile(predicate, thisArg).reverse();
+    };
+
+    LazyWrapper.prototype.toArray = function() {
+      return this.take(POSITIVE_INFINITY);
+    };
+
+    // Add `LazyWrapper` methods to `lodash.prototype`.
+    baseForOwn(LazyWrapper.prototype, function(func, methodName) {
+      var checkIteratee = /^(?:filter|map|reject)|While$/.test(methodName),
+          retUnwrapped = /^(?:first|last)$/.test(methodName),
+          lodashFunc = lodash[retUnwrapped ? ('take' + (methodName == 'last' ? 'Right' : '')) : methodName];
+
+      if (!lodashFunc) {
+        return;
+      }
+      lodash.prototype[methodName] = function() {
+        var args = retUnwrapped ? [1] : arguments,
+            chainAll = this.__chain__,
+            value = this.__wrapped__,
+            isHybrid = !!this.__actions__.length,
+            isLazy = value instanceof LazyWrapper,
+            iteratee = args[0],
+            useLazy = isLazy || isArray(value);
+
+        if (useLazy && checkIteratee && typeof iteratee == 'function' && iteratee.length != 1) {
+          // Avoid lazy use if the iteratee has a "length" value other than `1`.
+          isLazy = useLazy = false;
+        }
+        var interceptor = function(value) {
+          return (retUnwrapped && chainAll)
+            ? lodashFunc(value, 1)[0]
+            : lodashFunc.apply(undefined, arrayPush([value], args));
+        };
+
+        var action = { 'func': thru, 'args': [interceptor], 'thisArg': undefined },
+            onlyLazy = isLazy && !isHybrid;
+
+        if (retUnwrapped && !chainAll) {
+          if (onlyLazy) {
+            value = value.clone();
+            value.__actions__.push(action);
+            return func.call(value);
+          }
+          return lodashFunc.call(undefined, this.value())[0];
+        }
+        if (!retUnwrapped && useLazy) {
+          value = onlyLazy ? value : new LazyWrapper(this);
+          var result = func.apply(value, args);
+          result.__actions__.push(action);
+          return new LodashWrapper(result, chainAll);
+        }
+        return this.thru(interceptor);
+      };
+    });
+
+    // Add `Array` and `String` methods to `lodash.prototype`.
+    arrayEach(['join', 'pop', 'push', 'replace', 'shift', 'sort', 'splice', 'split', 'unshift'], function(methodName) {
+      var func = (/^(?:replace|split)$/.test(methodName) ? stringProto : arrayProto)[methodName],
+          chainName = /^(?:push|sort|unshift)$/.test(methodName) ? 'tap' : 'thru',
+          retUnwrapped = /^(?:join|pop|replace|shift)$/.test(methodName);
+
+      lodash.prototype[methodName] = function() {
+        var args = arguments;
+        if (retUnwrapped && !this.__chain__) {
+          return func.apply(this.value(), args);
+        }
+        return this[chainName](function(value) {
+          return func.apply(value, args);
+        });
+      };
+    });
+
+    // Map minified function names to their real names.
+    baseForOwn(LazyWrapper.prototype, function(func, methodName) {
+      var lodashFunc = lodash[methodName];
+      if (lodashFunc) {
+        var key = (lodashFunc.name + ''),
+            names = realNames[key] || (realNames[key] = []);
+
+        names.push({ 'name': methodName, 'func': lodashFunc });
+      }
+    });
+
+    realNames[createHybridWrapper(undefined, BIND_KEY_FLAG).name] = [{ 'name': 'wrapper', 'func': undefined }];
+
+    // Add functions to the lazy wrapper.
+    LazyWrapper.prototype.clone = lazyClone;
+    LazyWrapper.prototype.reverse = lazyReverse;
+    LazyWrapper.prototype.value = lazyValue;
+
+    // Add chaining functions to the `lodash` wrapper.
+    lodash.prototype.chain = wrapperChain;
+    lodash.prototype.commit = wrapperCommit;
+    lodash.prototype.concat = wrapperConcat;
+    lodash.prototype.plant = wrapperPlant;
+    lodash.prototype.reverse = wrapperReverse;
+    lodash.prototype.toString = wrapperToString;
+    lodash.prototype.run = lodash.prototype.toJSON = lodash.prototype.valueOf = lodash.prototype.value = wrapperValue;
+
+    // Add function aliases to the `lodash` wrapper.
+    lodash.prototype.collect = lodash.prototype.map;
+    lodash.prototype.head = lodash.prototype.first;
+    lodash.prototype.select = lodash.prototype.filter;
+    lodash.prototype.tail = lodash.prototype.rest;
+
+    return lodash;
+  }
+
+  /*--------------------------------------------------------------------------*/
+
+  // Export lodash.
+  var _ = runInContext();
+
+  // Some AMD build optimizers like r.js check for condition patterns like the following:
+  if (typeof define == 'function' && typeof define.amd == 'object' && define.amd) {
+    // Expose lodash to the global object when an AMD loader is present to avoid
+    // errors in cases where lodash is loaded by a script tag and not intended
+    // as an AMD module. See http://requirejs.org/docs/errors.html#mismatch for
+    // more details.
+    root._ = _;
+
+    // Define as an anonymous module so, through path mapping, it can be
+    // referenced as the "underscore" module.
+    define(function() {
+      return _;
+    });
+  }
+  // Check for `exports` after `define` in case a build optimizer adds an `exports` object.
+  else if (freeExports && freeModule) {
+    // Export for Node.js or RingoJS.
+    if (moduleExports) {
+      (freeModule.exports = _)._ = _;
+    }
+    // Export for Rhino with CommonJS support.
+    else {
+      freeExports._ = _;
+    }
+  }
+  else {
+    // Export for a browser or Rhino.
+    root._ = _;
+  }
+}.call(this));
