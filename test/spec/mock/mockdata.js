@@ -276,14 +276,14 @@
                       required:'true',
                       questionOptions:{
                         concept: 'a89ff9a6-1350-11df-a1f1-0026b9348838',
-                        rendering:'select'
+                        rendering:'select',
+                        answers:[
+                          {value: 'a89b6440-1350-11df-a1f1-0026b9348838', label: 'Scheduled visit'},
+                          {value: 'a89ff816-1350-11df-a1f1-0026b9348838', label: 'Unscheduled Visit Early'},
+                          {value: 'a89ff8de-1350-11df-a1f1-0026b9348838', label: 'Unscheduled Visit Late'}
+                        ]
                       },
-                      validators: [],
-                      answers:[
-                        {value: 'a89b6440-1350-11df-a1f1-0026b9348838', label: 'Scheduled visit'},
-                        {value: 'a89ff816-1350-11df-a1f1-0026b9348838', label: 'Unscheduled Visit Early'},
-                        {value: 'a89ff8de-1350-11df-a1f1-0026b9348838', label: 'Unscheduled Visit Late'}
-                      ]
+                      validators: []
                     },
                     {
                       type: 'obs',
@@ -341,7 +341,52 @@
               ]
                 }
             ]
-            }
+            },
+           {
+            label:'Lab Results',
+            sections:[
+              {
+                label: 'Tests Results and Test Date',
+                questions: [
+                  {
+                    type: 'group',
+                    questions: [
+                      {
+                        label: 'WBC/mm3',
+                        type: 'obs',
+                        questionOptions:{
+                          concept: 'a896dea2-1350-11df-a1f1-0026b9348838',
+                          rendering:'number',
+                          showDate: 'true',
+                          max: 500,
+                          min: 0
+                        },
+                        validators: [
+                          {
+                            type: 'date'
+                          }
+                        ]
+                      },
+                      {
+                        label: 'Hgb g/dL',
+                        type: 'obs',
+                        questionOptions:{
+                          concept: 'a8908a16-1350-11df-a1f1-0026b9348838',
+                          rendering:'number',
+                          showDate: 'true',
+                          max: 50,
+                          min: 0
+                        },
+                        validators: [
+                          {
+                            type: 'date'
+                          }
+                        ]
+                      }
+                    ]
+                  }]},
+            ]
+          }
           ]
         };
     }
