@@ -42,6 +42,7 @@
             <ul class="nav navbar-nav">
               <li class="active"><a href="#/">Home</a></li>
               <li><a ng-href="#/about">About</a></li>
+              <li><a ng-href="#/recursive-test">Recursive Test</a></li>
               <li><a ng-href="#/">Contact</a></li>
             </ul>
           </div>
@@ -89,17 +90,22 @@
     <script src="bower_components/angular-bootstrap/ui-bootstrap-tpls.js"></script>
     <script src="bower_components/bootstrap-ui-datetime-picker/dist/datetime-picker.min.js"></script>
     <script src="bower_components/lodash/lodash.js"></script>
+    <script src="bower_components/angular-ui-ace/ui-ace.js"></script>
     <!-- endbower -->
     <!-- endbuild -->
+
+    <script type="text/javascript" src="bower_components/ace-builds/src-min-noconflict/ace.js"></script>
 
 
     <script src="scripts/app.module.js"></script>
     <script src="scripts/controllers/main.js"></script>
-    <script src="scripts/controllers/about.js"></script>
+    <!--script src="scripts/controllers/about.js"></script-->
+    <script src="scripts/controllers/recursive-test.js"></script>
     <!-- Formentry Module files -->
     <!-- build:js({.tmp,app}) scripts/angularFormentry.js -->
     <script src="scripts/formentry/formentry.module.js"></script>
     <!-- services -->
+    <script src="scripts/formentry/services/formentry.testservice.js"></script>
     <script src="scripts/formentry/services/formentry.service.js"></script>
     <script src="scripts/formentry/services/createform.service.js"></script>
     <script src="scripts/formentry/services/fieldHandler.service.js"></script>

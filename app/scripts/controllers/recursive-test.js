@@ -13,16 +13,68 @@ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106
    */
   angular
         .module('angularFormentry')
-        .controller('AboutCtrl', AboutCtrl);
+        .controller('RecursiveTestCtrl', RecursiveTestCtrl);
 
-  AboutCtrl.$inject = ['$location',  '$scope',
-            'FormEntry', '$timeout', '$filter'
-        ];
+  RecursiveTestCtrl.$inject = ['$location',  '$scope',
+    'FormEntry', '$timeout', '$filter',
+    'TestService'
+  ];
 
-  function AboutCtrl($location, $scope, FormEntry,
-        $timeout, $filter) {
+  function RecursiveTestCtrl($location, $scope, FormEntry,
+        $timeout, $filter,TestService) {
     $scope.vm = {};
+    //$scope.vm.model = {};
+    var form = TestService.getCompiledForm();
+
     $scope.vm.model = {};
+    $scope.schema = angular.toJson(TestService.schema,true);
+    console.log(TestService);
+    $scope.payload = angular.toJson(TestService.payload,true);
+
+    $scope.renderForm = function() {
+      var schema = angular.fromJson($scope.schema);
+      var payload = angular.fromJson($scope.payload);
+      console.log(payload);
+      $scope.vm.tabs = [];
+      $scope.vm.model = {};
+
+      form = TestService.getCompiledForm(schema,payload);
+
+      _.each(form.compiledSchema,function(page){
+        $scope.vm.tabs.push(
+          {
+            "title": page.page.label,
+            form: {
+              options: {},
+              model: $scope.vm.model,
+              fields: TestService.toFormlySections(page.compiledPage)
+            }
+          }
+        );
+        _.each(page.compiledPage,function(section) {
+          $scope.vm.model[section.section.label] = section.sectionModel
+        });
+
+      })
+
+
+    }
+
+    $scope.updatePayload = function() {
+
+
+    }
+
+
+    //adding in the mdoels to the "central" model. Not necessary for formly to work, but convenient for viewing
+    //model on html page
+    _.each(form.compiledSchema,function(page){
+      _.each(page.compiledPage,function(section) {
+        $scope.vm.model[section.section.label] = section.sectionModel
+      });
+    });
+
+
     $scope.vm.submitLabel = 'Save';
 
     _activate();
@@ -156,6 +208,14 @@ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106
                 }
               }
             ]
+          }
+        },
+        {
+          "title": "Example From JJ",
+          form: {
+            options: {},
+            model: $scope.vm.model,
+            fields: TestService.toFormlySections(form.compiledSchema[0].compiledPage)
           }
         }
       ];
