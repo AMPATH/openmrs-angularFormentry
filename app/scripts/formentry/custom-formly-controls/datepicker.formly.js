@@ -62,11 +62,11 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
       wrapper: ['bootstrapLabel', 'bootstrapHasError'],
 
-      controller: ['$scope', function($scope, $log) {
+      controller: ['$scope','$log', function($scope, $log) {
         $scope.open = function($event) {
           $event.preventDefault();
           $event.stopPropagation();
-          $log.log('controller does a good job!');
+          $log.info('controller does a good job!');
           $scope.opened = true;
         };
 

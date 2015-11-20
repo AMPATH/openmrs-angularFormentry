@@ -15,23 +15,18 @@
               "label": "Visit Date",
               "type": "encounterDate",
               "required": "true",
-              "default": "now",
+              "default": "",
               "id":"encDate",
               "questionOptions":{
                 "rendering":"date"
-              },
-              "validators": [
-                {
-                  "type": "date"
-                }
-              ]
+              }
             },
             {
               "type": "encounterProvider",
               "label": "Provider",
               "id":"provider",
               "required": "true",
-              "default":"currentUser",
+              "default":"",
               "questionOptions":{
                 "rendering":"ui-select-extended"
               }
@@ -58,14 +53,8 @@
               "default":"",
               "questionOptions":{
                 "rendering":"text",
-                "concept":1232
-              },
-              "hide": [
-                {
-                  "field":"id of question",
-                  "value": ["array of answers"]
-                }
-              ]
+                "concept":"1232"
+              }
             },
             {
               "type":"obs",
@@ -75,14 +64,8 @@
               "default":"",
               "questionOptions":{
                 "rendering":"date",
-                "concept":1234
-              },
-              "hide": [
-                {
-                  "field":"id of question",
-                  "value": ["array of answers"]
-                }
-              ]
+                "concept":"1234"
+              }
             },
             {
               "type":"obs",
@@ -92,14 +75,8 @@
               "default":"",
               "questionOptions":{
                 "rendering":"number",
-                "concept":1233
-              },
-              "hide": [
-                {
-                  "field":"id of question",
-                  "value": ["array of answers"]
-                }
-              ]
+                "concept":"1233"
+              }
             }
           ]
         }
@@ -107,11 +84,135 @@
     },
     {
       "label":"Page Name 2",
-      "sections":[]
+      "sections":[
+        {
+          "label":"test Groups",
+          "questions":[
+            {
+                  "type": "obsGroup",
+                  "label": "Was patient hospitalized?",
+                  "questionOptions": {
+                    "rendering":"group",
+                    "concept": "a8a003a6-1350-11df-a1f1-0026b9348838"
+                  },
+                  "questions": [
+                    {
+                      "label": "Reason for hospitalization",
+                      "type": "obs",
+                      "questionOptions": {
+                        "rendering":"text",
+                        "concept": "a8a07a48-1350-11df-a1f1-0026b9348838"
+                      },
+                      "id":"hospitalizationReason",
+                      "validators": [
+                        {
+                          "type": "conditionalAnswered",
+                          "message": "Providing diagnosis but didn't answer that patient was hospitalized in question 11a",
+                          "referenceQuestionId": "wasHospitalized",
+                          "referenceQuestionAnswers": [
+                            "a899b35c-1350-11df-a1f1-0026b9348838"
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "label": "Date of hospitalization",
+                      "type":"obsGroup",
+                      "questionOptions": {
+                        "rendering":"group",
+                        "concept": "made-up-concept"
+                      },
+                      "questions": [
+                        {
+                          "type":"obs",
+                          "label": "Start Date",
+                          "questionOptions": {
+                            "rendering":"date",
+                            "concept": "made-up-concept-2"
+                          }
+                        },
+                        {
+                          "type":"obs",
+                          "label": "End Date",
+                          "questionOptions": {
+                            "rendering":"date",
+                            "concept": "made-up-concept-3"
+                          }
+                        }
+
+                      ]
+                    }
+                  ]
+                }
+          ]
+        }
+      ]
     },
     {
       "label":"Page Name 3",
-      "sections":[]
+      "sections":[
+        {
+          "label":"test Group Repeating",
+          "questions":[
+            {
+                  "type": "obsGroup",
+                  "label": "Was patient hospitalized?",
+                  "questionOptions": {
+                    "rendering":"repeating",
+                    "concept": "a8a003a6y1350y11dfya1f1y0026b9348838"
+                  },
+                  "questions": [
+                    {
+                      "label": "Reason for hospitalization",
+                      "type": "obs",
+                      "questionOptions": {
+                        "rendering":"text",
+                        "concept": "a8a07a48x1350x11dfxa1f1-0026b9348838"
+                      },
+                      "id":"hospitalizationReason",
+                      "validators": [
+                        {
+                          "type": "conditionalAnswered",
+                          "message": "Providing diagnosis but didn't answer that patient was hospitalized in question 11a",
+                          "referenceQuestionId": "wasHospitalized",
+                          "referenceQuestionAnswers": [
+                            "a899b35c-1350-11df-a1f1-0026b9348838"
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "label": "Date of hospitalization",
+                      "type":"obsGroup",
+                      "questionOptions": {
+                        "rendering":"group",
+                        "concept": "made-up-concept-4"
+                      },
+                      "questions": [
+                        {
+                          "type":"obs",
+                          "label": "Start Date",
+                          "questionOptions": {
+                            "rendering":"date",
+                            "concept": "made-up-concept-5"
+                          }
+                        },
+                        {
+                          "type":"obs",
+                          "label": "End Date",
+                          "questionOptions": {
+                            "rendering":"date",
+                            "concept": "made-up-concept-6"
+                          }
+                        }
+
+                      ]
+                    }
+                  ]
+                }
+          ]
+        }
+      ]
     }
   ]
 }
