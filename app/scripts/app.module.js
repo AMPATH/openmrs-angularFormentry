@@ -30,7 +30,7 @@ angular
           })
         .state('about', {
           url: '/about',
-          templateUrl: 'views/about.html',
+          templateUrl: 'views/recursive-test.html',
           controller: 'AboutCtrl'
         })
         .state('recursive-test', {

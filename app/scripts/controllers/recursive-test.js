@@ -14,7 +14,6 @@ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106
   angular
         .module('angularFormentry')
         .controller('RecursiveTestCtrl', RecursiveTestCtrl);
-
   RecursiveTestCtrl.$inject = ['$location',  '$scope',
     'FormEntry', '$timeout', '$filter',
     'TestService'
@@ -219,7 +218,6 @@ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106
           }
         }
       ];
-
       $scope.awesomeThings = [
         'HTML5 Boilerplate',
         'AngularJS',

@@ -116,6 +116,8 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       if (_field.type === 'obs') {
         fKey = _field.questionOptions.concept;
         key = 'obs' + id + '_' + fKey.replace(/-/gi, 'n'); // $$ Inserts a "$".
+      } else{
+        key=_field.type;
       }
 
       return key;
@@ -152,7 +154,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
         message: ''
       };
-      var compiledValidators = _validators || defaultValidator;
+      var compiledValidators = defaultValidator;
       field['validators'] = compiledValidators;
     }
 
