@@ -23,8 +23,8 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
     fieldHandlers['encounterDatetimeFieldHandler'] = encounterDatetimeFieldHandler;
     fieldHandlers['encounterProviderFieldHandler'] = encounterProviderFieldHandler;
     fieldHandlers['encounterLocationFieldHandler'] = encounterLocationFieldHandler;
-    fieldHandlers['obsDrugFieldHandler'] = obsDrugFieldHandler;
-    fieldHandlers['obsProblemFieldHandler'] = obsProblemFieldHandler;
+    fieldHandlers['obsGroupFieldHandler'] = obsGroupFieldHandler;
+    fieldHandlers['obsGroupRepeatingFieldHandler'] = obsGroupRepeatingFieldHandler;
     fieldHandlers['conceptSearchFieldHandler'] = conceptSearchFieldHandler;
     fieldHandlers['locationAttributeFieldHandler'] = locationAttributeFieldHandler;
     fieldHandlers['defaultFieldHandler'] = defaultFieldHandler;
@@ -64,11 +64,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       $log.info('loading fieldHandler');
     }
 
-    function obsDrugFieldHandler(_field) {
-      $log.info('loading fieldHandler');
-    }
-
-    function obsProblemFieldHandler(_field) {
+    function obsGroupRepeatingFieldHandler(_field) {
       $log.info('loading fieldHandler');
     }
 
@@ -84,13 +80,22 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       $log.info('loading fieldHandler');
     }
 
-    function defaultFieldHandler(_field) {
+    function obsGroupFieldHandler(_field) {
+      $log.info('loading obs Group FieldHandler');
+      var field = {};
+      gpSectionRnd = 0;
+      field = createGroupFormlyField(_obsField, gpSectionRnd);
+      return field;
+    }
+
+    function defaultFieldHandler(_question, model, questionMap) {
       $log.info('loading default fieldHandler');
       var field = {};
-      field = _createFormlyFieldHelper(_field, obsId);
+      field = _createFormlyFieldHelper(_question, model, questionMap);
+      _addToQuestionMap(_question, field, questionMap);
       var fieldArray = [];
       var obsDateField;
-      if (_field.questionOptions.showDate === 'true') {
+      if (_question.questionOptions.showDate === 'true') {
         obsDateField = angular.copy(field);
         _handleShowDate(obsDateField);
         fieldArray.push(field);
@@ -101,21 +106,23 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       }
     }
 
-    function obsFieldHandler(_field) {
+    function obsFieldHandler(_question, model, questionMap) {
       $log.info('loading obs fieldHandler');
       var obsField = {};
-      obsField = _createObsFormlyField(_field);
+      obsField = _createObsFormlyField(_question, model, questionMap);
       return obsField;
     }
 
-    function createFieldKey(_field, _id)
+    function createFieldKey(_question, _id)
     {
       var key;
       var fKey;
       var id = _id + 1;
-      if (_field.type === 'obs') {
-        fKey = _field.questionOptions.concept;
+      if (_question.type === 'obs') {
+        fKey = _question.questionOptions.concept;
         key = 'obs' + id + '_' + fKey.replace(/-/gi, 'n'); // $$ Inserts a "$".
+      } else {
+        key = _question.type;
       }
 
       return key;
@@ -152,7 +159,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
         message: ''
       };
-      var compiledValidators = _validators || defaultValidator;
+      var compiledValidators = defaultValidator || _validators;
       field['validators'] = compiledValidators;
     }
 
@@ -222,48 +229,85 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       };
     }
 
-    function _createFormlyFieldHelper(_field, _obsId) {
-      var obsField = {};
-      obsField = {
-        key: createFieldKey(_field, _obsId),
-        data: {concept:_field.questionOptions.concept,
-          id:_field.id},
+    function _createFormlyFieldHelper(_question, model, _id) {
+      var field = {};
+      var modelKey = createFieldKey(_question, _id);
+      var key = 'value';
+      field = {
+        key:key,
+        data: {concept:_question.questionOptions.concept,
+          id:_question.id},
         type: 'input',
         templateOptions: {
           type: 'text',
-          label: _field.label
+          label: _question.label
         }
       };
 
-      _handleExpressionProperties(obsField, _field.required, _field.disable);
-      _handleDefaultValue(obsField, _field.default);
-      _handleHide(obsField, _field.hide);
-      _handleValidators(obsField, _field.validators);
-      return obsField;
+      _handleExpressionProperties(field, _question.required, _question.disable);
+      _handleDefaultValue(field, _question.default);
+      _handleHide(field, _question.hide);
+      // _handleValidators(field, _question.validators);
+
+      var m = {
+        concept:_question.questionOptions.concept,
+        schemaQuestion: _question, value:''
+      };
+
+      // if ('questions' in question) {
+      //   m.obsGroup = {};
+      //   field.type = 'section';
+      //   field.data = {recursiveModel:m.obsGroup};
+      // } else {
+      //   field.type = 'input'; //TEMPORARY: This needs to reflect the actual type
+      // }
+
+      if (_question.questionOptions.concept in model) { //add m to the array
+      // if (modelKey in model) { //add m to the array
+        model[_question.questionOptions.concept].push(m);
+      } else { //create array with just m
+        model[_question.questionOptions.concept] = [m];
+      }
+
+      field.model = m;
+      $log.debug('loosing value property', model);
+      return field;
     }
 
-    function _createObsFormlyField(_obsField) {
+    function _addToQuestionMap(_question, _field, questionMap) {
+      if ('id' in _question) {
+        if (_question.id in questionMap) {
+          questionMap[_question.id].push(_field);
+        } else {
+          questionMap[_question.id] = [_field];
+        }
+      }
+    }
+
+    function _createObsFormlyField(_question, _model, questionMap) {
       var obsField = {};
-      obsField = _createFormlyFieldHelper(_obsField, obsId);
-      if (_obsField.questionOptions.rendering === 'date') {
+      obsField = _createFormlyFieldHelper(_question, _model, obsId);
+      if (_question.questionOptions.rendering === 'date') {
         obsField['type'] = 'datepicker';
         obsField['templateOptions']['datepickerPopup'] = 'dd-MMMM-yyyy';
 
-      } else if (_obsField.questionOptions.rendering === 'number') {
-        obsField['templateOptions']['type'] = _obsField.questionOptions.rendering;
-        obsField['templateOptions']['min'] = _obsField.questionOptions.min;
-        obsField['templateOptions']['max'] = _obsField.questionOptions.max;
+      } else if (_question.questionOptions.rendering === 'number') {
+        obsField['templateOptions']['type'] = _question.questionOptions.rendering;
+        obsField['templateOptions']['min'] = _question.questionOptions.min;
+        obsField['templateOptions']['max'] = _question.questionOptions.max;
 
-      } else if ((_obsField.questionOptions.rendering === 'radio') ||
-      (_obsField.questionOptions.rendering === 'select') ||
-      (_obsField.questionOptions.rendering === 'multiCheckbox')) {
-        _handleFieldAnswers(obsField, _obsField.questionOptions.answers);
-        obsField['type'] = _obsField.questionOptions.rendering;
+      } else if ((_question.questionOptions.rendering === 'radio') ||
+      (_question.questionOptions.rendering === 'select') ||
+      (_question.questionOptions.rendering === 'multiCheckbox')) {
+        _handleFieldAnswers(obsField, _question.questionOptions.answers);
+        obsField['type'] = _question.questionOptions.rendering;
       }
+
+      _addToQuestionMap(_question, obsField, questionMap);
 
       var fieldArray = [];
       var obsDateField;
-      if (_obsField.questionOptions.showDate === 'true') {
+      if (_question.questionOptions.showDate === 'true') {
         obsDateField = angular.copy(obsField);
         _handleShowDate(obsDateField);
         fieldArray.push(obsField);

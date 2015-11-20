@@ -33,6 +33,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       var url = 'scripts/formentry/schema/' + formName;
       $http.get(url, {cache: true})
             .success(function(response) {
+              $log.info('getting schema', response);
               callback(response);
             })
               .error(function(data, status, headers, config) {

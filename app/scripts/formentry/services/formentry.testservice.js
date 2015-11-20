@@ -538,8 +538,8 @@
       if(schema) this.schema = schema;
       if(payload) this.payload = payload;
       var form = schemaToFormlyForm(this.schema);
-      console.log(payload);
-      addExistingObsSetToForm(form,this.payload);
+      // console.log(payload);
+      // addExistingObsSetToForm(form,this.payload);
 
       console.log(form);
       window.form = form;

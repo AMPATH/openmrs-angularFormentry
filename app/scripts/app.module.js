@@ -22,7 +22,7 @@ angular
     'ui.ace'
   ])
   .config(function($stateProvider) {
-      $stateProvider
+    $stateProvider
           .state('home', {
             url: '/',
             templateUrl: 'views/main.html',
