@@ -106,7 +106,7 @@
       function() {
         var mockQuestion = mockSchema.pages[1].sections[0].questions[0];
         var field = handlerMethod(mockQuestion, model, questionMap);
-        expect(field.key).to.match(/^value/);
+        expect(field.key).to.match(/(value)/);
         // expect(field.key).to.have.string('a89ff9a6');
         expect(field.data.id).to.eql('q7a');
         expect(field.templateOptions).to.have.property('options');
@@ -154,7 +154,7 @@
         expect(field[0]).not.to.have.ownProperty('templateOptions.datepickerPopup');
         expect(field[1]).to.have.deep.property('type', 'datepicker');
         expect(field[0]).to.have.deep.property('type', 'input');
-        expect(field[0].key).to.match(/^value/);
+        expect(field[0].key).to.match(/(value)/);
         // expect(field[1].key).to.match(/^obsDate/);
         // expect(field[0].key).to.have.string('a896dea2');
         // expect(field[1].key).to.have.string('a896dea2');
