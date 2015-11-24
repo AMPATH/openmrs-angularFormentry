@@ -1,20 +1,19 @@
 /*
-jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106, -W026
-*/
+ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106, -W026
+ */
 /*
-jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLinesBeforeLineComments, requireTrailingComma
-*/
-(function() {
-  'use strict';
+ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLinesBeforeLineComments, requireTrailingComma
+ */
+(function () {
+    'use strict';
 
-  angular
-        .module('openmrs.angularFormentry')
-        .factory('fieldHandlerService', fieldHandlerService);
+    angular.module('openmrs.angularFormentry')
+            .factory('fieldHandlerService', fieldHandlerService);
 
-  fieldHandlerService.$inject = ['$log'];
-  var obsId = 0;
-  function fieldHandlerService($log) {
-    var fieldHandlers = {};
+    fieldHandlerService.$inject = ['$log'];
+    var obsId = 0;
+    function fieldHandlerService($log) {
+        var fieldHandlers = {};
 
     //registerCoreFieldHandler
     fieldHandlers['obsFieldHandler'] = obsFieldHandler;
@@ -194,8 +193,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
         typeof _answers);
       }
 
-      field['templateOptions']['options'] = answerList;
-    }
+        return service;
 
     function _handleFieldUiSelect(_field, _answers) {
       var field = _field || {};
@@ -256,7 +254,6 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
           type: 'text',
           label: _question.label
         }
-      };
 
       $log.debug('debug key field ...', field);
       _handleExpressionProperties(field, _question.required, _question.disable);
