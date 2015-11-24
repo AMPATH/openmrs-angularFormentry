@@ -1,11 +1,11 @@
 /*
-jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106, -W026
-*/
+ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106, -W026
+ */
 /*
-jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLinesBeforeLineComments, requireTrailingComma
-*/
-(function() {
-  'use strict';
+ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLinesBeforeLineComments, requireTrailingComma
+ */
+(function () {
+    'use strict';
 
   angular
       .module('openmrs.angularFormentry')
@@ -17,7 +17,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       createForm: createForm
     };
 
-    return service;
+        return service;
 
     function createForm(schema, model, callback) {
       var form;
@@ -172,6 +172,4 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
       return fields;
     }
-
-  }
 })();
