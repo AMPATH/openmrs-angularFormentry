@@ -4,6 +4,7 @@
 /app/obs.json
 /bower_components
 dist.tar.gz
+.idea
 # Logs
 logs
 *.log

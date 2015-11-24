@@ -23,7 +23,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
     function createForm(schema, model, callback) {
       var form;
       form =  _createFormlyForm(schema);
-      $log.info('inspect compiled', form);
+      $log.debug('inspect compiled', form);
       var formlyForm = _createModel(form, model);
       callback(formlyForm);
     }
@@ -145,7 +145,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
         } else {
           handlerMethod = fieldHandlerService.getFieldHandler('defaultFieldHandler');
-          $log.debug('about to create: ', question);
+          $log.debug('About to create field: ', question);
           var field = handlerMethod(question, model, questionMap);
           $log.debug('Field Created', field);
           if (angular.isArray(field)) {

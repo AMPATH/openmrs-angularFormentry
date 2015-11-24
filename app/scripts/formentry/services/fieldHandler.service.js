@@ -154,12 +154,18 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       //set the validator to default validator
       var defaultValidator = {
         expression: function(viewValue, modelValue, scope) {
+          // modelValue = viewValue;
+          $log.debug('view value here +++', viewValue);
+          $log.debug('Model value here +++', modelValue);
+          $log.debug('scope value here +++', scope);
           return true;
         },
 
         message: ''
       };
-      var compiledValidators = defaultValidator || _validators;
+      var compiledValidators = {};
+      //this should change once we plugin the validators
+      compiledValidators['defaultValidator'] = defaultValidator || _validators;
       field['validators'] = compiledValidators;
     }
 
@@ -231,10 +237,18 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
     function _createFormlyFieldHelper(_question, model, _id) {
       var field = {};
-      var modelKey = createFieldKey(_question, _id);
-      var key = 'value';
+      var m = {
+        concept:_question.questionOptions.concept,
+        schemaQuestion: _question, value:''
+      };
+      var fieldKey = createFieldKey(_question, _id);
+      var _model = {};
+      _model[fieldKey] = m;
+      var key = _model[fieldKey]; //'value';
+      var keyNames = Object.keys(_model);
+      $log.debug('debug key ...', key);
       field = {
-        key:key,
+        key:keyNames[0] + '.value',
         data: {concept:_question.questionOptions.concept,
           id:_question.id},
         type: 'input',
@@ -244,32 +258,22 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
         }
       };
 
+      $log.debug('debug key field ...', field);
       _handleExpressionProperties(field, _question.required, _question.disable);
       _handleDefaultValue(field, _question.default);
       _handleHide(field, _question.hide);
-      // _handleValidators(field, _question.validators);
+      _handleValidators(field, _question.validators);
 
-      var m = {
-        concept:_question.questionOptions.concept,
-        schemaQuestion: _question, value:''
-      };
-
-      // if ('questions' in question) {
-      //   m.obsGroup = {};
-      //   field.type = 'section';
-      //   field.data = {recursiveModel:m.obsGroup};
-      // } else {
-      //   field.type = 'input'; //TEMPORARY: This needs to reflect the actual type
-      // }
-
-      if (_question.questionOptions.concept in model) { //add m to the array
-      // if (modelKey in model) { //add m to the array
-        model[_question.questionOptions.concept].push(m);
+      // if (_question.questionOptions.concept in model) { //add m to the array
+      if (fieldKey in model) { //add m to the array
+        // model[_question.questionOptions.concept].push(m);
+        model[fieldKey] = key;
       } else { //create array with just m
-        model[_question.questionOptions.concept] = [m];
+        // model[_question.questionOptions.concept] = [m];
+        model[fieldKey] = m;
       }
 
-      field.model = m;
+      // field.model = _model;
       $log.debug('loosing value property', model);
       return field;
     }
