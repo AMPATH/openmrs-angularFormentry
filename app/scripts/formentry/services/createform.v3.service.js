@@ -113,18 +113,27 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
           }
         } else if (question.type === 'obsGroup') {
           var fieldsArray = [];
-          model.obsGroup = {};
+          // model.obsGroup;
+          // model['obsGroup' + '_' + question.label] = {};
+          var groupModel;
           var obsField = {};
           if (question.questionOptions.rendering === 'group') {
+            model['obsGroup' + '_' + question.label] = {};
+            groupModel =  model['obsGroup' + '_' + question.label];
             obsField = {
               className: 'row',
-              // key:'obsGroup' + '_' + question.label,
+              key:'obsGroup' + '_' + question.label,
               fieldGroup:fieldsArray
             };
+            _createFieldsFactory(question.questions, fieldsArray,
+              groupModel, questionMap);
+            fields.push(obsField);
           } else if (question.questionOptions.rendering === 'repeating') {
-            model.obsGroup = {repeating:[]};
+            model['obsRepeating' + '_' + question.label] = [];
+            groupModel =  {};
             obsField = {
               type: 'repeatSection',
+              key:'obsRepeating' + '_' + question.label,
               templateOptions: {
                 label:question.label,
                 btnText:'Add',
@@ -136,12 +145,16 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
                 ]
               }
             };
-          }
+            _createFieldsFactory(question.questions, fieldsArray,
+              groupModel, questionMap);
+            //convert to array
+            var updateRepeatModel = [];
+            $log.debug('Model Just before update', Object.keys(groupModel));
+            updateRepeatModel.push(groupModel);
 
-          // model['obsGroup' + '_' + createFieldKey(sectionKey)] = obsGroupModel;
-          _createFieldsFactory(question.questions, fieldsArray,
-            model.obsGroup, questionMap);
-          fields.push(obsField);
+            model['obsRepeating' + '_' + question.label] = updateRepeatModel;
+            fields.push(obsField);
+          }
 
         } else {
           handlerMethod = fieldHandlerService.getFieldHandler('defaultFieldHandler');
