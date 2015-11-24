@@ -35,38 +35,38 @@
           return this.slice(0, str.length) === str;
         };
 
-        if (typeof String.prototype.endsWith !== 'function') {
-          String.prototype.endsWith = function(str) {
-            return this.slice(-str.length) === str;
-          };
-        }
-      }
-    }));
+                if (typeof String.prototype.endsWith !== 'function') {
+                    String.prototype.endsWith = function (str) {
+                        return this.slice(-str.length) === str;
+                    };
+                }
+            }
+        }));
 
-    // afterEach(function() {
-    //     httpBackend.verifyNoOutstandingExpectation();
-    //     //httpBackend.verifyNoOutstandingRequest();
-    //   });
-    describe('getFieldHandler Method Unit Tests', function() {
-      beforeEach(function() {
-        functionStub = sinon.spy(fhService, 'getFieldHandler');
-      });
+        // afterEach(function() {
+        //     httpBackend.verifyNoOutstandingExpectation();
+        //     //httpBackend.verifyNoOutstandingRequest();
+        //   });
+        describe('getFieldHandler Method Unit Tests', function () {
+            beforeEach(function () {
+                functionStub = sinon.spy(fhService, 'getFieldHandler');
+            });
 
-      it('should return the fieldHandler Method when getFieldHandler is called',
-      function() {
-        var handlerName = 'obsDrugFieldHandler';
-        var handlerMethod = fhService.getFieldHandler(handlerName);
+            it('should return the fieldHandler Method when getFieldHandler is called',
+                    function () {
+                        var handlerName = 'obsDrugFieldHandler';
+                        var handlerMethod = fhService.getFieldHandler(handlerName);
 
-        expect(functionStub).to.have.been.calledOnce;
-        expect(functionStub.calledWith(handlerName)).to.be.true;
-        expect(functionStub.returned(handlerMethod)).to.be.true;
-        expect(handlerMethod).to.be.a('function');
-      });
+                        expect(functionStub).to.have.been.calledOnce;
+                        expect(functionStub.calledWith(handlerName)).to.be.true;
+                        expect(functionStub.returned(handlerMethod)).to.be.true;
+                        expect(handlerMethod).to.be.a('function');
+                    });
 
-      it('should return defaultfieldHandler Method when wrong handler is passed',
-      function() {
-        var handlerName = 'obsxFieldHandler';
-        var handlerMethod = fhService.getFieldHandler(handlerName);
+            it('should return defaultfieldHandler Method when wrong handler is passed',
+                    function () {
+                        var handlerName = 'obsxFieldHandler';
+                        var handlerMethod = fhService.getFieldHandler(handlerName);
 
         expect(functionStub).to.have.been.calledOnce;
         expect(functionStub.alwaysCalledWith(handlerName)).to.be.true;
