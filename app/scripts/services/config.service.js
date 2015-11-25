@@ -8,16 +8,18 @@
 
 (function () {
     'use strict';
-    angular.module('angularFormentry')
+    angular.module('openmrs.angularFormentry')
             .factory('configService', configService);
-    configService.$inject = ['$http', '$log', 'fieldHandlerService', 'formlyConfigProvider', '$rootScope'];
+    configService.$inject = ['$http', '$log', 'fieldHandlerService', 'formlyConfig', '$rootScope', '$q'];
 
-    function  configService($http, $log, fieldHandlerService, formlyConfigProvider, $rootScope) {
+    function  configService($http, $log, fieldHandlerService, formlyConfig, $rootScope, $q) {
+        $rootScope.jsonSchema = [];
         var service = {
             addFieldHandler: addFieldHandler,
             addJsonSchema: addJsonSchema,
             addJsonSchemaSource: addJsonSchemaSource,
-            getformlyConfig: getformlyConfig
+            getformlyConfig: getformlyConfig,
+            getSchema: getSchema
         };
 
         return service;
@@ -41,6 +43,7 @@
          */
         function addJsonSchema(schemaKey, jsonObject) {
             $rootScope.jsonSchema[schemaKey] = jsonObject;
+            $rootScope.$broadcast('schemaAdded', {schemaKey: schemaKey, status: true});
         }
         /**
          *
@@ -53,21 +56,25 @@
          */
         function addJsonSchemaSource(schemaKey, SourceUrl, requestMethod)
         {
+            var longRequest = $q.defer();
             $http({
                 method: requestMethod,
-                url: SourceUrl
+                url: SourceUrl,
+                cache: true
             }).then(function successCallback(response) {
-                $rootScope.jsonSchema[schemaKey] = response;
+                addJsonSchema(schemaKey, response);
+                longRequest.resolve(response);
             }, function errorCallback(response) {
-                $log.error({message: 'Error fetching schemaSource',
-                    response: response});
+                $rootScope.$broadcast('schemaAdded', {schemaKey: schemaKey, status: false});
+                longRequest.reject(response);
             });
+            return longRequest.promise;
         }
         function getSchema(schemaKey) {
-            if (_.has($rootScope.jsonSchema, schemaKey)) {
+            if (angular.isDefined($rootScope.jsonSchema[schemaKey])) {
                 return{schema: $rootScope.jsonSchema[schemaKey]};
             } else {
-                return {message: 'No schema key' + schemaKey + 'Found', schema: undefined};
+                return {message: 'missing schema', schema: undefined};
             }
 
         }
@@ -79,7 +86,7 @@
          *  object
          */
         function getformlyConfig() {
-            return formlyConfigProvider;
+            return formlyConfig;
         }
 
     }

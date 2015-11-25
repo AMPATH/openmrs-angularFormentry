@@ -17,15 +17,16 @@
 
     AboutCtrl.$inject = ['$log', '$location', '$scope',
         'FormEntry', '$timeout', '$filter',
-        'TestService', 'UtilService'
+        'TestService', 'UtilService', 'configService'
     ];
 
     function AboutCtrl($log, $location, $scope, FormEntry,
-            $timeout, $filter, TestService, UtilService) {
+            $timeout, $filter, TestService, UtilService, configService) {
         $scope.vm = {};
         $scope.vm.model = {};
         var schema;
         var newForm;
+
         UtilService.getFormSchema('schema_encounter', function (data) {
             schema = data;
             $log.info('Schema Controller', schema);
@@ -323,5 +324,6 @@
                 ];
             }
         }
+
     }}
 )();
