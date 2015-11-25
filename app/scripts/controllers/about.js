@@ -37,6 +37,13 @@ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106
 
     });
 
+    $scope.vm.onSubmit = function() {
+      FormEntry.getFormPayload($scope.vm.model, function(payload) {
+        var obsPayload = payload;
+        $log.debug('test payload', JSON.stringify(obsPayload));
+      });
+    };
+
     // var form = TestService.getCompiledForm();
     // $scope.vm.model = form.compiledSchema[0].compiledPage[0].sectionModel;
 
