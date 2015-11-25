@@ -9,11 +9,11 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
   angular
       .module('openmrs.angularFormentry')
-      .factory('CreateFormService', CreateFormService);
+      .factory('createFormService', createFormService);
 
-  CreateFormService.$inject = ['$log', 'FieldHandlerService'];
+  createFormService.$inject = ['$log', 'fieldHandlerService'];
 
-  function CreateFormService($log, fieldHandlerService) {
+  function createFormService($log, fieldHandlerService) {
     var service = {
       createForm: createForm
     };
@@ -41,7 +41,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
           _createFieldsFactory(section.questions, fields, sectionModel, questionMap);
           var sectionField =
           {
-            key:'section_' + section.label,
+            key:section.label,
             type: 'section',
             templateOptions: {
               label:section.label
@@ -75,7 +75,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
           }
         );
         _.each(page.compiledPage, function(section) {
-          model['section_' + section.section.label] = section.sectionModel;
+          model[section.section.label] = section.sectionModel;
         });
       });
 
@@ -120,7 +120,6 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
           if (question.questionOptions.rendering === 'group') {
             model['obsGroup' + '_' + question.label] = {};
             groupModel =  model['obsGroup' + '_' + question.label];
-            groupModel.groupConcept = question.questionOptions.concept;
             obsField = {
               className: 'row',
               key:'obsGroup' + '_' + question.label,
@@ -132,7 +131,6 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
           } else if (question.questionOptions.rendering === 'repeating') {
             model['obsRepeating' + '_' + question.label] = [];
             groupModel =  {};
-            groupModel.groupConcept = question.questionOptions.concept;
             obsField = {
               type: 'repeatSection',
               key:'obsRepeating' + '_' + question.label,
@@ -151,7 +149,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
               groupModel, questionMap);
             //convert to array
             var updateRepeatModel = [];
-            // $log.debug('Model Just before update', Object.keys(groupModel));
+            $log.debug('Model Just before update', Object.keys(groupModel));
             updateRepeatModel.push(groupModel);
 
             model['obsRepeating' + '_' + question.label] = updateRepeatModel;
@@ -160,9 +158,9 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
         } else {
           handlerMethod = fieldHandlerService.getFieldHandler('defaultFieldHandler');
-          // $log.debug('About to create field: ', question);
+          $log.debug('About to create field: ', question);
           var field = handlerMethod(question, model, questionMap);
-          // $log.debug('Field Created', field);
+          $log.debug('Field Created', field);
           if (angular.isArray(field)) {
             _.each(field, function(f) {
               fields.push(f);
