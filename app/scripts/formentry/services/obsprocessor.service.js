@@ -40,9 +40,12 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
       function _getSections(model) {
         var obsRestPayload = [];
+        // $log.debug('Model', model);
         var sectionKeys = Object.keys(model);
+        // $log.debug('Section Keys', sectionKeys);
         _.each(sectionKeys, function(section) {
           var sectionModel = model[section];
+          // $log.debug('Section Models', sectionModel);
           _generateSectionPayLoad(sectionModel, obsRestPayload);
         });
 
@@ -51,17 +54,23 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
       function _generateSectionPayLoad(sectionModel, obsRestPayload) {
         var fieldKeys = Object.keys(sectionModel);
+        // $log.debug('fieldKeys', fieldKeys);
         _.each(fieldKeys, function(fieldKey) {
           if (fieldKey.startsWith('obsGroup')) {
             var sectionFields = sectionModel[fieldKey];
             var sectionKeys = Object.keys(sectionFields);
+            var concept = sectionFields[sectionKeys[0]];
             var sectionObs = [];
             var obs = {
-                concept:sectionKeys[0],
+                concept:concept,
                 groupMembers:sectionObs
               };
+
             _generateSectionPayLoad(sectionFields, sectionObs);
-            obsRestPayload.push(obs);
+            if (sectionObs.length > 0) {
+              obsRestPayload.push(obs);
+            }
+
           } else if (fieldKey.startsWith('obsRepeating')) {
             var sectionFields = sectionModel[fieldKey];
             var sectionKeys = Object.keys(sectionFields[0]);
@@ -70,12 +79,15 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             // it on for processing
             _.each(sectionFields, function(_sectionFields) {
               var sectionObs = [];
+              var concept = sectionFields[0][sectionKeys[0]];
               var obs = {
-                  concept:sectionKeys[0],
+                  concept:concept,
                   groupMembers:sectionObs
                 };
               _generateSectionPayLoad(_sectionFields, sectionObs);
-              obsRestPayload.push(obs);
+              if (sectionObs.length > 0) {
+                obsRestPayload.push(obs);
+              }
             });
 
           } else if (fieldKey.startsWith('obs')) {
@@ -86,50 +98,65 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
         });
       }
 
-      function _setValue(obs, field) {
+      function _setValue(field) {
+        // $log.debug('Field b4 payload', field);
+        // $log.debug('Field b4 payload  value', field.value);
+        var obs = {};
         var initialValue = field.initialValue;
         var value = field.value;
         if (field.schemaQuestion.questionOptions.rendering === 'date') {
-          value = _parseDate(field.value);
+          if (_.isDate(value)) {
+            value = _parseDate(field.value);
+          }
         }
 
-        if (initialValue === undefined) {
+        if (_.isUndefined(initialValue) && (!_.isNull(value) &&
+        value !== '' && !_.isUndefined(value))) {
+
           obs = {
             concept: field.concept,
-            value:field.value
+            value:value
           };
 
-        } else if (initialValue !== value && (value !== '' || value !== null ||
-        value !== undefined)) {
+        } else if (initialValue !== value && (!_.isNull(value) &&
+        value !== '' && !_.isUndefined(value))) {
           obs = {
             uuid:field.initialUuid,
             concept: field.concept,
             value:value
           };
         }
+
+        return obs;
       }
 
       function _generateFieldPayload(field, obsRestPayload) {
-        var obs;
+        var obs = {};
         var qRender = field.schemaQuestion.questionOptions.rendering;
         if (qRender === 'number' || qRender === 'text' || qRender === 'select' ||
         qRender === 'radio') {
-          _setValue(obs, field);
-          if (obs) {obsRestPayload.push(obs);}
+          obs = _setValue(field);
+          if (Object.keys(obs).length > 0) {obsRestPayload.push(obs);}
         } else if (qRender === 'multiCheckbox') {
           initialValue = field.initialValue;
           value = field.value;
-          if (initialValue === undefined) {
+          if (initialValue === undefined && (!_.isNull(value) &&
+          value !== '' && !_.isUndefined(value))) {
             _.each(value, function(val) {
               obs = {
                 concept: field.concept,
                 value:val
               };
-              if (obs) {obsRestPayload.push(obs);}
+              if (obs) {
+                $log.debug('obs payload', obs);
+                obsRestPayload.push(obs);
+              }
+
+              $log.debug('obs REST payload', obsRestPayload);
             });
 
-          } else if (initialValue !== value && (value !== '' ||
-          value !== null || value !== undefined)) {
+          } else if (initialValue !== value && (!_.isNull(value) &&
+          value !== '' && !_.isUndefined(value))) {
             var existingObs = _.intersection(initialValue, value);
             var newObs = [];
             var obsToFilter = [];
@@ -160,7 +187,8 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             });
           }
         } else if (qRender === 'date') {
-          _setValue(obs, field);
+          obs = _setValue(field);
+          if (Object.keys(obs).length > 0) {obsRestPayload.push(obs);}
         }
 
       }

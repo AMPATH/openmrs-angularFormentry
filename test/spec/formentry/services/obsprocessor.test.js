@@ -50,7 +50,6 @@
         opService.generateObsPayload(model, function(payload) {
           // debugger;
           obsPayload = payload;
-          // console.log('mock Form', JSON.stringify(mockForm));
         });
       });
 
@@ -63,18 +62,38 @@
         // expect(functionStub.firstCall.returned(sinon.match.object)).to.be.true;
       });
 
-      it('should create obs payload', function() {
+      it('should create obs payload which should be an array', function() {
+        // console.log('mock Model', JSON.stringify(model));
+        // console.log('mock payload', JSON.stringify(obsPayload));
         expect(obsPayload).to.be.an('array');
         expect(obsPayload[0]).to.have.property('concept');
         expect(obsPayload[0]).to.have.property('value');
       });
 
-      // it('should create formly form with equal number of pages/sections as schema',
-      // function() {
-      //   expect(mockSchema.pages.length).to.equal(mockForm.length);
-      //   expect(mockSchema.pages[0].sections.length).to.equal(mockForm[0].form.fields.length);
-      //   expect(mockSchema.pages[0].label).to.equal(mockForm[0].title);
-      // });
+      it('should create obs payload for simple questions', function() {
+        expect(obsPayload[0].concept).to.equal('1232');
+        expect(obsPayload[0].value).to.equal('Test question 1');
+        expect(obsPayload[1].concept).to.equal('1234');
+        expect(obsPayload[1].value).to.equal('2015-11-24T21:00:00.000Z');
+      });
+
+      it('should create obs payload for obsGroup questions', function() {
+        expect(obsPayload[3].concept).to.equal('a8a003a6-1350-11df-a1f1-0026b9348838');
+        expect(obsPayload[3].groupMembers[0].concept).to.equal('a8a07a48-1350-11df-a1f1-0026b9348838');
+        expect(obsPayload[3].groupMembers[0].value).to.equal('Group Malaria');
+      });
+
+      it('should create obs payload with the right data type as schemaQuestion',
+      function() {
+        var sampleSection = model['section_Section Name'];
+        var sampleField1 = sampleSection['obs1_1232'];
+        var sampleField2 = sampleSection['obs1_1234'];
+        var sampleField3 = sampleSection['obs1_1233'];
+        expect(obsPayload[0].value).to.equal(sampleField1.value).that.is.a('string');
+        expect(new Date(obsPayload[1].value)).to.eql(new Date(sampleField2.value)).that.is.a('Date');
+        expect(obsPayload[1].value).to.equal(sampleField2.value).that.is.a('string');
+        expect(obsPayload[2].value).to.equal(sampleField3.value).that.is.a('number');
+      });
 
     });
 

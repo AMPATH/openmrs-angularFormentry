@@ -2,7 +2,7 @@
 /*jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLinesBeforeLineComments, requireTrailingComma*/
 (function() {
   'use strict';
-  describe('createFormService Service unit tests', function() {
+  describe('CreateFormService Service unit tests', function() {
     beforeEach(function() {
         module('openmrs.angularFormentry');
         module('mock.data');
@@ -17,9 +17,9 @@
 
     beforeEach(inject(function($injector) {
       log = $injector.get('$log');
-      fhService = $injector.get('fieldHandlerService');
+      fhService = $injector.get('FieldHandlerService');
       mockData = $injector.get('mockData');
-      cfService = $injector.get('createFormService');
+      cfService = $injector.get('CreateFormService');
       /*
       Apperently underscore.string is not loading in thr headless browser during the tests
       this library has specific classes for handling string comparison.

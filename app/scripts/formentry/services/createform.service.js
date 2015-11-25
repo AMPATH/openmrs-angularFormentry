@@ -9,11 +9,11 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
   angular
       .module('openmrs.angularFormentry')
-      .factory('createFormService', createFormService);
+      .factory('CreateFormService', CreateFormService);
 
-  createFormService.$inject = ['$log', 'fieldHandlerService'];
+  CreateFormService.$inject = ['$log', 'FieldHandlerService'];
 
-  function createFormService($log, fieldHandlerService) {
+  function CreateFormService($log, fieldHandlerService) {
     var service = {
       createForm: createForm
     };

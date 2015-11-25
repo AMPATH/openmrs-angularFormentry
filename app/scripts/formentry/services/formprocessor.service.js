@@ -9,11 +9,11 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
   angular
         .module('openmrs.angularFormentry')
-        .factory('formProcessorService', formProcessorService);
+        .factory('FormProcessorService', FormProcessorService);
 
-  formProcessorService.$inject = ['ObsProcessorService'];
+  FormProcessorService.$inject = ['ObsProcessorService'];
 
-  function formProcessorService(ObsProcessorService) {
+  function FormProcessorService(ObsProcessorService) {
       var service = {
         obsFormProccesor: obsFormProccesor,
         encounterFormProcessor: encounterFormProcessor,

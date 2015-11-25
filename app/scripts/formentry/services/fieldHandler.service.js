@@ -9,11 +9,11 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
   angular
         .module('openmrs.angularFormentry')
-        .factory('fieldHandlerService', fieldHandlerService);
+        .factory('FieldHandlerService', FieldHandlerService);
 
-  fieldHandlerService.$inject = ['$log'];
+  FieldHandlerService.$inject = ['$log'];
   var obsId = 0;
-  function fieldHandlerService($log) {
+  function FieldHandlerService($log) {
     var fieldHandlers = {};
 
     //registerCoreFieldHandler
@@ -154,10 +154,6 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       //set the validator to default validator
       var defaultValidator = {
         expression: function(viewValue, modelValue, scope) {
-          // modelValue = viewValue;
-          $log.debug('view value here +++', viewValue);
-          $log.debug('Model value here +++', modelValue);
-          $log.debug('scope value here +++', scope);
           return true;
         },
 
