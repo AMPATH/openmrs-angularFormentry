@@ -313,6 +313,12 @@
                           ]
                         }
                       ]
+                    },
+                    {
+                      attributeType: '7ef225db-94db-4e40-9dd8-fb121d9dc370',
+                      label: '6 Transfer in from other AMPATH clinic (specify):',
+                      type: 'location-attribute',
+                      validators: []
                     }
                   ]
                 },
@@ -320,20 +326,14 @@
                   label:'Problem List',
                   questions:[
                     {
-                      type: 'obsGroup',
+                      concept: 'a89c2d8a-1350-11df-a1f1-0026b9348838',
+                      type: 'group_repeating',
                       label: '23a. Problem Added',
-                      questionOptions: {
-                        rendering:'repeating',
-                        concept: 'a89c2d8a-1350-11df-a1f1-0026b9348838'
-                      },
                       questions:[
                         {
+                          concept: 'a8ae835e-1350-11df-a1f1-0026b9348838',
                           label: 'Problem Added',
                           type: 'problem',
-                          questionOptions: {
-                            rendering:'text',
-                            concept: 'a8ae835e-1350-11df-a1f1-0026b9348838'
-                          },
                           validators: []
                         }
                       ]
@@ -349,12 +349,7 @@
                 label: 'Tests Results and Test Date',
                 questions: [
                   {
-                    type: 'obsGroup',
-                    label: 'Lab Results',
-                    questionOptions: {
-                      rendering:'group',
-                      concept: 'a8a003a6-1350-11df-a1f1-0026b9348838'
-                    },
+                    type: 'group',
                     questions: [
                       {
                         label: 'WBC/mm3',
@@ -398,217 +393,21 @@
 
     function getMockModel() {
     return {
-      "section_Encounter Details": {
-        "encounterDate": {
-          "schemaQuestion": {
-            "label": "Visit Date",
-            "type": "encounterDate",
-            "required": "true",
-            "default": "",
-            "id": "encDate",
-            "questionOptions": {
-              "rendering": "date"
-            }
-          },
-          value: ''
-        },
-        "encounterProvider": {
-          "schemaQuestion": {
-            "type": "encounterProvider",
-            "label": "Provider",
-            "id": "provider",
-            "required": "true",
-            "default": "",
-            "questionOptions": {
-              "rendering": "ui-select-extended"
-            }
-          },
-          value:''
-        },
-        "encounterLocation": {
-          "schemaQuestion": {
-            "type": "encounterLocation",
-            "label": "Facility name (site/satellite clinic required):",
-            "id": "location",
-            "required": "true",
-            "questionOptions": {
-              "rendering": "ui-select-extended"
-            }
-          },
-          value: ''
-        }
+      section_1: {
+        encounterDate: '2015-08-18T00:00:00.000+0300',
+        encounterProvider: '5d13dddc-1359-11df-a1f1-0026b9348838',
+        encounterLocation: '00b47ef5-a29b-40a2-a7f4-6851df8d6532',
+        personAttribute2_7ef225dbn94dbn4e40n9dd8nfb121d9dc370: 'c093879e-1691-11df-97a5-7038c432aabf'
       },
-      "section_Section Name": {
-        "obs1_1232": {
-          "concept": "1232",
-          "schemaQuestion": {
-            "type": "obs",
-            "label": "question1",
-            "id": "q1",
-            "required": "true",
-            "default": "",
-            "questionOptions": {
-              "rendering": "text",
-              "concept": "1232"
-            }
-          },
-          "value": "Test question 1"
-        },
-        "obs1_1234": {
-          "concept": "1234",
-          "schemaQuestion": {
-            "type": "obs",
-            "label": "question2",
-            "id": "q2",
-            "required": "true",
-            "default": "",
-            "questionOptions": {
-              "rendering": "date",
-              "concept": "1234"
-            }
-          },
-          "value": "2015-11-24T21:00:00.000Z"
-        },
-        "obs1_1233": {
-          "concept": "1233",
-          "schemaQuestion": {
-            "type": "obs",
-            "label": "question3",
-            "id": "q3",
-            "required": "true",
-            "default": "",
-            "questionOptions": {
-              "rendering": "number",
-              "concept": "1233"
-            }
-          },
-          "value": 2678
-        }
+      section_2: {
+        obs1_a89ff9a6n1350n11dfna1f1n0026b9348838: 'a89b6440-1350-11df-a1f1-0026b9348838',
+        obs2_dc1942b2n5e50n4adcn949dnad6c905f054e: '2015-08-04T00:00:00.000+0300'
       },
-      "section_test Groups": {
-        "obsGroup_Was patient hospitalized?": {
-          "groupConcept": "a8a003a6-1350-11df-a1f1-0026b9348838",
-          "obs1_a8a07a48n1350n11dfna1f1n0026b9348838": {
-            "concept": "a8a07a48-1350-11df-a1f1-0026b9348838",
-            "schemaQuestion": {
-              "label": "Reason for hospitalization",
-              "type": "obs",
-              "questionOptions": {
-                "rendering": "text",
-                "concept": "a8a07a48-1350-11df-a1f1-0026b9348838"
-              },
-              "id": "hospitalizationReason",
-              "validators": [
-                {
-                  "type": "conditionalAnswered",
-                  "message": "Providing diagnosis but didn't answer that patient was hospitalized in question 11a",
-                  "referenceQuestionId": "wasHospitalized",
-                  "referenceQuestionAnswers": [
-                    "a899b35c-1350-11df-a1f1-0026b9348838"
-                  ]
-                }
-              ]
-            },
-            "value": "Group Malaria"
-          },
-          "obsGroup_Date of hospitalization": {
-            "groupConcept": "made-up-concept",
-            "obs1_madenupnconceptn2": {
-              "concept": "made-up-concept-2",
-              "schemaQuestion": {
-                "type": "obs",
-                "label": "Start Date",
-                "questionOptions": {
-                  "rendering": "date",
-                  "concept": "made-up-concept-2"
-                }
-              },
-              "value": "2015-09-30T21:00:00.000Z"
-            },
-            "obs1_madenupnconceptn3": {
-              "concept": "made-up-concept-3",
-              "schemaQuestion": {
-                "type": "obs",
-                "label": "End Date",
-                "questionOptions": {
-                  "rendering": "date",
-                  "concept": "made-up-concept-3"
-                }
-              },
-              "value": "2015-11-29T21:00:00.000Z"
-            }
-          }
-        }
-      },
-      "section_test Group Repeating": {
-        "obsRepeating_Was patient hospitalized?": [
+      section_3: {
+        obs4_a89c2d8an1350n11dfna1f1n0026b9348838: [
           {
-            "groupConcept": "a8a003a6y1350y11dfya1f1y0026b9348838",
-            "obs1_a8a07a48x1350x11dfxa1f1n0026b9348838": {
-              "concept": "a8a07a48x1350x11dfxa1f1-0026b9348838",
-              "schemaQuestion": {
-                "label": "Reason for hospitalization",
-                "type": "obs",
-                "questionOptions": {
-                  "rendering": "text",
-                  "concept": "a8a07a48x1350x11dfxa1f1-0026b9348838"
-                },
-                "id": "hospitalizationReason",
-                "validators": [
-                  {
-                    "type": "conditionalAnswered",
-                    "message": "Providing diagnosis but didn't answer that patient was hospitalized in question 11a",
-                    "referenceQuestionId": "wasHospitalized",
-                    "referenceQuestionAnswers": [
-                      "a899b35c-1350-11df-a1f1-0026b9348838"
-                    ]
-                  }
-                ]
-              },
-              "value": "Malaria"
-            },
-            "obsGroup_Date of hospitalization": {
-              "groupConcept": "made-up-concept-4",
-              "obs1_madenupnconceptn5": {
-                "concept": "made-up-concept-5",
-                "schemaQuestion": {
-                  "type": "obs",
-                  "label": "Start Date",
-                  "questionOptions": {
-                    "rendering": "date",
-                    "concept": "made-up-concept-5"
-                  }
-                },
-                "value": "2015-10-31T21:00:00.000Z"
-              },
-              "obs1_madenupnconceptn6": {
-                "concept": "made-up-concept-6",
-                "schemaQuestion": {
-                  "type": "obs",
-                  "label": "End Date",
-                  "questionOptions": {
-                    "rendering": "date",
-                    "concept": "made-up-concept-6"
-                  }
-                },
-                "value": "2015-12-08T21:00:00.000Z"
-              }
-            }
+            obs3_a8ae835en1350n11dfna1f1n0026b9348838: 'a890e4b6-1350-11df-a1f1-0026b9348838'
           }
-          // ,
-          // {
-          //   "obs1_a8a07a48x1350x11dfxa1f1n0026b9348838": {
-          //     "value": "Stomach complications"
-          //   },
-          //   "obsGroup_Date of hospitalization": {
-          //     "obs1_madenupnconceptn5": {
-          //       "value": "2015-10-31T21:00:00.000Z"
-          //     },
-          //     "obs1_madenupnconceptn6": {
-          //       "value": "2015-11-24T21:00:00.000Z"
-          //     }
-          //   }
-          // }
         ]
       }
     };
