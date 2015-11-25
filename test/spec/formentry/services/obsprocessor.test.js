@@ -71,10 +71,13 @@
       });
 
       it('should create obs payload for simple questions', function() {
-        expect(obsPayload[0].concept).to.equal('1232');
-        expect(obsPayload[0].value).to.equal('Test question 1');
-        expect(obsPayload[1].concept).to.equal('1234');
-        expect(obsPayload[1].value).to.equal('2015-11-24T21:00:00.000Z');
+        var sampleSection = model['section_Section Name'];
+        var sampleField1 = sampleSection['obs1_1232'];
+        var sampleField2 = sampleSection['obs1_1234'];
+        expect(obsPayload[0].concept).to.equal(sampleField1.concept);
+        expect(obsPayload[0].value).to.equal(sampleField1.value);
+        expect(obsPayload[1].concept).to.equal(sampleField2.concept);
+        expect(obsPayload[1].value).to.equal(sampleField2.value);
       });
 
       it('should create obs payload for obsGroup questions', function() {
