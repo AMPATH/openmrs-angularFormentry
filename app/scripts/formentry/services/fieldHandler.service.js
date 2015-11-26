@@ -2,37 +2,40 @@
  jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106, -W026
  */
 /*
- jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLinesBeforeLineComments, requireTrailingComma
- */
-(function () {
-    'use strict';
 
-    angular.module('openmrs.angularFormentry')
-            .factory('fieldHandlerService', fieldHandlerService);
+jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLinesBeforeLineComments, requireTrailingComma
+*/
+(function() {
+  'use strict';
 
-    fieldHandlerService.$inject = ['$log'];
-    var obsId = 0;
-    function fieldHandlerService($log) {
-        var fieldHandlers = {};
+  angular
+        .module('openmrs.angularFormentry')
+        .factory('FieldHandlerService', FieldHandlerService);
 
-        //registerCoreFieldHandler
-        fieldHandlers['obsFieldHandler'] = obsFieldHandler;
-        fieldHandlers['encounterTypeFieldHandler'] = encounterTypeFieldHandler;
-        fieldHandlers['personAttributeFieldHandler'] = personAttributeFieldHandler;
-        fieldHandlers['encounterDatetimeFieldHandler'] = encounterDatetimeFieldHandler;
-        fieldHandlers['encounterProviderFieldHandler'] = encounterProviderFieldHandler;
-        fieldHandlers['encounterLocationFieldHandler'] = encounterLocationFieldHandler;
-        fieldHandlers['obsGroupFieldHandler'] = obsGroupFieldHandler;
-        fieldHandlers['obsGroupRepeatingFieldHandler'] = obsGroupRepeatingFieldHandler;
-        fieldHandlers['conceptSearchFieldHandler'] = conceptSearchFieldHandler;
-        fieldHandlers['locationAttributeFieldHandler'] = locationAttributeFieldHandler;
-        fieldHandlers['defaultFieldHandler'] = defaultFieldHandler;
-        var service = {
-            getFieldHandler: getFieldHandler,
-            registerCustomFieldHandler: registerCustomFieldHandler
-        };
+  FieldHandlerService.$inject = ['$log'];
+  var obsId = 0;
+  function FieldHandlerService($log) {
+    var fieldHandlers = {};
+    //registerCoreFieldHandler
+    fieldHandlers['obsFieldHandler'] = obsFieldHandler;
+    fieldHandlers['encounterTypeFieldHandler'] = encounterTypeFieldHandler;
+    fieldHandlers['personAttributeFieldHandler'] = personAttributeFieldHandler;
+    fieldHandlers['encounterDatetimeFieldHandler'] = encounterDatetimeFieldHandler;
+    fieldHandlers['encounterProviderFieldHandler'] = encounterProviderFieldHandler;
+    fieldHandlers['encounterLocationFieldHandler'] = encounterLocationFieldHandler;
+    fieldHandlers['obsGroupFieldHandler'] = obsGroupFieldHandler;
+    fieldHandlers['obsGroupRepeatingFieldHandler'] = obsGroupRepeatingFieldHandler;
+    fieldHandlers['conceptSearchFieldHandler'] = conceptSearchFieldHandler;
+    fieldHandlers['locationAttributeFieldHandler'] = locationAttributeFieldHandler;
+    fieldHandlers['defaultFieldHandler'] = defaultFieldHandler;
+    var service = {
+      getFieldHandler: getFieldHandler,
+      registerCustomFieldHandler: registerCustomFieldHandler
+    };
 
-        return service;
+    return service;
+
+   
 
         function getFieldHandler(handlerName) {
             if (handlerName in fieldHandlers) {
@@ -127,18 +130,24 @@
             return key;
         }
 
-        function _handleExpressionProperties(_field, _required, _disabled, _listener)
-        {
-            var field = _field || {};
-            var required = _required || 'false';
-            var disabled = _disabled || '';
-            var listener = _listener || '';
-            field['expressionProperties'] = {
-                'templateOptions.required': required,
-                'templateOptions.disabled': disabled,
-                'templateOptions.hasListeners': listener
-            };
-        }
+
+    function _handleValidators(_field, _validators)
+    {
+      var field = _field || {};
+      //set the validator to default validator
+      var defaultValidator = {
+        expression: function(viewValue, modelValue, scope) {
+          return true;
+        },
+
+        message: ''
+      };
+      var compiledValidators = {};
+      //this should change once we plugin the validators
+      compiledValidators['defaultValidator'] = defaultValidator || _validators;
+      field['validators'] = compiledValidators;
+    }
+
 
         function _handleDefaultValue(_field, _defaultValue)
         {

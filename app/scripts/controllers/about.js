@@ -36,7 +36,19 @@
                 $scope.vm.tabs = newForm;
             });
 
+
         });
+
+    $scope.vm.onSubmit = function() {
+      FormEntry.getFormPayload($scope.vm.model, function(payload) {
+        var obsPayload = payload;
+        $log.debug('test payload', JSON.stringify(obsPayload));
+      });
+    };
+
+    // var form = TestService.getCompiledForm();
+    // $scope.vm.model = form.compiledSchema[0].compiledPage[0].sectionModel;
+
 
         // var form = TestService.getCompiledForm();
         // $scope.vm.model = form.compiledSchema[0].compiledPage[0].sectionModel;
