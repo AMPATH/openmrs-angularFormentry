@@ -34,6 +34,7 @@
     "karma-mocha-reporter": "^1.1.1",
     "karma-phantomjs-launcher": "*",
     "karma-sinon": "^1.0.4",
+    "karma-sinon-chai": "^1.1.0",
     "mocha": "^2.3.3",
     "phantomjs": "^1.9.18",
     "sinon": "^1.17.2",
@@ -45,5 +46,11 @@
   },
   "scripts": {
     "test": "grunt test"
+  },
+  "dependencies": {
+    "grunt": "^0.4.5",
+    "jit-grunt": "^0.9.1",
+    "jshint-stylish": "^2.1.0",
+    "time-grunt": "^1.2.2"
   }
 }
