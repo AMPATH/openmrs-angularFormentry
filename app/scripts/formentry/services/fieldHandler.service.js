@@ -231,7 +231,7 @@
       }
 
         return service;
-
+        }
     function _handleFieldUiSelect(_field) {
       var field = _field || {};
       field['templateOptions']['valueProp'] = 'uuId';
@@ -279,7 +279,7 @@
         templateOptions: {
           type: 'text',
           label: _question.label
-        }
+        }}}
 
         function registerCustomFieldHandler(handlerName, handlerMethod) {
             fieldHandlers[handlerName] = handlerMethod;
@@ -293,29 +293,7 @@
             $log.info('loading fieldHandler');
         }
 
-      }else if (_question.questionOptions.rendering === 'problem') {
-        obsField = _handleFieldUiSelect(obsField);
-        obsField['templateOptions']['type'] = _question.questionOptions.rendering;
-        obsField['templateOptions']['deferredFilterFunction'] = SearchDataService.findProblem;
-        obsField['templateOptions']['getSelectedObjectFunction'] = SearchDataService.getProblemByUuid;
-      } else if (_question.questionOptions.rendering === 'drug') {
-        obsField = _handleFieldUiSelect(obsField);
-        obsField['templateOptions']['type'] = _question.questionOptions.rendering;
-        obsField['templateOptions']['deferredFilterFunction'] = SearchDataService.findDrugConcepts;
-        obsField['templateOptions']['getSelectedObjectFunction'] = SearchDataService.getDrugConceptByUuid;
-      } else if (_question.questionOptions.rendering === 'select-concept-answers') {
-        obsField['type'] = 'concept-search-select';
-        obsField['displayMember'] = 'label';
-        obsField['valueMember'] = 'concept';
-        obsField['questionConceptUuid'] = _question.questionOptions.concept;
-        obsField['templateOptions']['type'] = _question.questionOptions.rendering;
-        obsField['templateOptions']['fetchOptionsFunction'] = SearchDataService.getDrugConceptByUuid;
-      }else if ((_question.questionOptions.rendering === 'radio') ||
-      (_question.questionOptions.rendering === 'select') ||
-      (_question.questionOptions.rendering === 'multiCheckbox')) {
-        _handleFieldAnswers(obsField, _question.questionOptions.answers);
-        obsField['type'] = _question.questionOptions.rendering;
-      }
+     
 
         function encounterProviderFieldHandler(_field) {
             $log.info('loading fieldHandler');

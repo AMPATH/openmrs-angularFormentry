@@ -167,7 +167,7 @@
           } else {
             fields.push(field);
           }
-        }
+        }}}
 
         function _createFormlyForm(schema) {
             var compiledSchema = [];
