@@ -43,7 +43,6 @@ module.exports = function(config) {
       'bower_components/bootstrap-ui-datetime-picker/dist/datetime-picker.min.js',
       'bower_components/lodash/lodash.js',
       'bower_components/angular-ui-ace/ui-ace.js',
-      'bower_components/angular-environment/dist/angular-environment.js',
       'bower_components/restangular/dist/restangular.js',
       'bower_components/angular-base64/angular-base64.js',
       'bower_components/angular-cookies/angular-cookies.js',

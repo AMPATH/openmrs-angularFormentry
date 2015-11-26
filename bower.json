@@ -20,7 +20,6 @@
     "angular-bootstrap": "~0.13.0",
     "lodash": "~3.10.1",
     "angular-ui-ace": "bower",
-    "angular-environment": "~1.0.3",
     "restangular": "~1.5.1",
     "angular-base64": "~2.0.5",
     "angular-cookies": "~1.4.8"
