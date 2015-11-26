@@ -17,7 +17,7 @@
 
     AboutCtrl.$inject = ['$log', '$location', '$scope',
         'FormEntry', '$timeout', '$filter',
-        'TestService', 'UtilService', 'configService'
+        'TestService', 'UtilService'
     ];
 
     function AboutCtrl($log, $location, $scope, FormEntry,
