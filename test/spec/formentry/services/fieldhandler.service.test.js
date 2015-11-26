@@ -18,7 +18,7 @@
 
     beforeEach(inject(function($injector) {
       log = $injector.get('$log');
-      fhService = $injector.get('fieldHandlerService');
+      fhService = $injector.get('FieldHandlerService');
       mockData = $injector.get('mockData');
       searchDataService = $injector.get('SearchDataService');
       /*

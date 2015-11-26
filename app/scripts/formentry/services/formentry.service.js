@@ -11,13 +11,16 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
         .module('openmrs.angularFormentry')
         .factory('FormEntry', FormEntry);
 
-  FormEntry.$inject = ['createFormService', '$log', 'fieldHandlerService'];
+  FormEntry.$inject = ['CreateFormService', '$log', 'FieldHandlerService',
+  'FormProcessorService'];
 
-  function FormEntry(createFormService, $log, fieldHandlerService) {
+  function FormEntry(createFormService, $log, fieldHandlerService,
+  formProcessorService) {
 
     var service = {
           createForm: createForm,
-          registerCustomFieldHandler: registerCustomFieldHandler
+          registerCustomFieldHandler: registerCustomFieldHandler,
+          getFormPayload:getFormPayload
         };
 
     return service;
@@ -34,6 +37,14 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
     function createForm(schema, model, callback) {
       createFormService.createForm(schema, model, function(tabs) {
         callback(tabs);
+      });
+    }
+
+    function getFormPayload(model, callback) {
+      var obsPayload;
+      formProcessorService.obsFormProccesor(model, function(payload) {
+        obsPayload = payload;
+        callback(obsPayload);
       });
     }
 

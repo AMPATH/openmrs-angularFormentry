@@ -9,11 +9,11 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
   angular
         .module('openmrs.angularFormentry')
-        .factory('fieldHandlerService', fieldHandlerService);
+        .factory('FieldHandlerService', FieldHandlerService);
 
-  fieldHandlerService.$inject = ['$log', 'SearchDataService'];
+  FieldHandlerService.$inject = ['$log', 'SearchDataService'];
   var obsId = 0;
-  function fieldHandlerService($log, SearchDataService) {
+  function FieldHandlerService($log, SearchDataService) {
     var fieldHandlers = {};
 
     //registerCoreFieldHandler

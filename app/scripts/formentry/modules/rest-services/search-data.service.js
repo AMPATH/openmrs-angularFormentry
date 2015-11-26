@@ -12,11 +12,11 @@ jscs:disable disallowQuotedKeysInObjects, safeContextKeyword, requireDotNotation
     .module('openmrs.RestServices')
     .factory('SearchDataService', SearchDataService);
 
-  SearchDataService.$inject = ['ProviderResService', 'CachedDataService',
+  SearchDataService.$inject = ['ProviderResService', 'LocationResService',
     'LocationModel', 'ProviderModel', 'ConceptResService', 'ConceptModel',
     'DrugResService', 'DrugModel', '$rootScope'];
 
-  function SearchDataService(ProviderResService, CachedDataService,
+  function SearchDataService(ProviderResService, LocationResService,
     LocationModelFactory, ProviderModelFactory, ConceptResService,
     ConceptModelFactory, DrugResService, DrugModelFactory, $rootScope, FormRestService) {
 
@@ -41,14 +41,14 @@ jscs:disable disallowQuotedKeysInObjects, safeContextKeyword, requireDotNotation
     return service;
 
     function findLocation(searchText, onSuccess, onError) {
-      CachedDataService.getCachedLocations(searchText, function(results) {
+      LocationResService.getLocations(searchText, function(results) {
         var wrapped = wrapLocations(results);
         onSuccess(wrapped);
       });
     }
 
     function getLocationByUuid(uuid, onSuccess, onError) {
-      CachedDataService.getCachedLocationByUuid(uuid, function(results) {
+      LocationResService.getLocationByUuid(uuid, function(results) {
         var wrapped = wrapLocation(results);
         onSuccess(wrapped);
       });

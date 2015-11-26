@@ -6,7 +6,7 @@ jshint -W098, -W003, -W068, -W004, -W033, -W026, -W030, -W117
   'use strict';
 
   angular
-        .module('angularFormentry')
+        .module('openmrs.RestServices')
         .factory('CachedDataService', CachedDataService);
 
   CachedDataService.$inject = ['$rootScope'];
