@@ -1,9 +1,11 @@
 /*
-jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106, -W026
-*/
+ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106, -W026
+ */
 /*
-jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLinesBeforeLineComments, requireTrailingComma
-*/
+
+ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLinesBeforeLineComments, requireTrailingComma
+ */
+
 (function() {
   'use strict';
 
@@ -166,15 +168,93 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
           if (angular.isArray(field)) {
             _.each(field, function(f) {
               fields.push(f);
+
             });
-          } else {
-            fields.push(field);
-          }
+
+            return fields;
+        }}}}
+
+        function _createFieldsFactory(questions, fields, model, questionMap) {
+            for (var i in questions) {
+                var question = questions[i];
+                var handlerName;
+                var handlerMethod;
+                var modelType = question.type;
+
+                if (question.type === 'obs') {
+                    handlerMethod = fieldHandlerService.getFieldHandler('obsFieldHandler');
+                    $log.debug('about to create: ', question);
+                    var field = handlerMethod(question, model, questionMap);
+                    $log.debug('Field Created', field);
+                    if (angular.isArray(field)) {
+                        _.each(field, function (f) {
+                            fields.push(f);
+                        });
+                    } else {
+                        fields.push(field);
+                    }
+                } else if (question.type === 'obsGroup') {
+                    var fieldsArray = [];
+                    // model.obsGroup;
+                    // model['obsGroup' + '_' + question.label] = {};
+                    var groupModel;
+                    var obsField = {};
+                    if (question.questionOptions.rendering === 'group') {
+                        model['obsGroup' + '_' + question.label] = {};
+                        groupModel = model['obsGroup' + '_' + question.label];
+                        obsField = {
+                            className: 'row',
+                            key: 'obsGroup' + '_' + question.label,
+                            fieldGroup: fieldsArray
+                        };
+                        _createFieldsFactory(question.questions, fieldsArray,
+                                groupModel, questionMap);
+                        fields.push(obsField);
+                    } else if (question.questionOptions.rendering === 'repeating') {
+                        model['obsRepeating' + '_' + question.label] = [];
+                        groupModel = {};
+                        obsField = {
+                            type: 'repeatSection',
+                            key: 'obsRepeating' + '_' + question.label,
+                            templateOptions: {
+                                label: question.label,
+                                btnText: 'Add',
+                                fields: [
+                                    {
+                                        className: 'row',
+                                        fieldGroup: fieldsArray
+                                    }
+                                ]
+                            }
+                        };
+                        _createFieldsFactory(question.questions, fieldsArray,
+                                groupModel, questionMap);
+                        //convert to array
+                        var updateRepeatModel = [];
+                        $log.debug('Model Just before update', Object.keys(groupModel));
+                        updateRepeatModel.push(groupModel);
+
+                        model['obsRepeating' + '_' + question.label] = updateRepeatModel;
+                        fields.push(obsField);
+                    }
+
+                } else {
+                    handlerMethod = fieldHandlerService.getFieldHandler('defaultFieldHandler');
+                    $log.debug('About to create field: ', question);
+                    var field = handlerMethod(question, model, questionMap);
+                    $log.debug('Field Created', field);
+                    if (angular.isArray(field)) {
+                        _.each(field, function (f) {
+                            fields.push(f);
+                        });
+                    } else {
+                        fields.push(field);
+                    }
+                }
+            }
+
+            return fields;
         }
-      }
-
-      return fields;
-    }
-
-  }
-})();
+    }}
+        
+)();

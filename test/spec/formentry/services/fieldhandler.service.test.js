@@ -1,5 +1,6 @@
 /*jshint -W026, -W030, -W106 */
 /*jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLinesBeforeLineComments, requireTrailingComma*/
+
 (function() {
   'use strict';
   describe('fieldHandler Service unit tests', function() {
@@ -65,7 +66,6 @@
       function() {
         var handlerName = 'obsxFieldHandler';
         var handlerMethod = fhService.getFieldHandler(handlerName);
-
         expect(functionStub).to.have.been.calledOnce;
         expect(functionStub.alwaysCalledWith(handlerName)).to.be.true;
         expect(functionStub.returned(handlerMethod)).to.be.true;
