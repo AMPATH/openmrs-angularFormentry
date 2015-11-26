@@ -5,6 +5,7 @@
   describe('CreateFormService Service unit tests', function() {
     beforeEach(function() {
         module('openmrs.angularFormentry');
+        module('openmrs.RestServices');
         module('mock.data');
       });
 

@@ -4,6 +4,7 @@
   'use strict';
   describe('fieldHandler Service unit tests', function() {
     beforeEach(function() {
+      module('angularFormentry');
         module('openmrs.angularFormentry');
         module('mock.data');
       });
@@ -13,12 +14,13 @@
     var functionStub;
     var spy;
     var log;
+    var searchDataService;
 
     beforeEach(inject(function($injector) {
       log = $injector.get('$log');
       fhService = $injector.get('FieldHandlerService');
       mockData = $injector.get('mockData');
-
+      searchDataService = $injector.get('SearchDataService');
       /*
       Apperently underscore.string is not loading in thr headless browser during the tests
       this library has specific classes for handling string comparison.
