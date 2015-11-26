@@ -17,11 +17,11 @@ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106
 
   AboutCtrl.$inject = ['$log', '$location',  '$scope',
     'FormEntry', '$timeout', '$filter',
-    'TestService', 'createForm', 'UtilService'
+    'TestService', 'UtilService'
   ];
 
   function AboutCtrl($log, $location, $scope, FormEntry,
-        $timeout, $filter,TestService, createForm, UtilService) {
+        $timeout, $filter,TestService, UtilService) {
     $scope.vm = {};
     $scope.vm.model = {};
     var schema;
@@ -29,7 +29,7 @@ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106
     UtilService.getFormSchema('schema_encounter', function(data) {
       schema = data;
       $log.info('Schema Controller', schema);
-      createForm.createForm(schema, $scope.vm.model, function(_form) {
+      FormEntry.createForm(schema, $scope.vm.model, function(_form) {
         newForm = _form;
         $log.debug('schema xxx', newForm);
         $scope.vm.tabs = newForm;

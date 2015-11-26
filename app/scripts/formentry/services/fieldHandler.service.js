@@ -11,9 +11,9 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
         .module('openmrs.angularFormentry')
         .factory('fieldHandlerService', fieldHandlerService);
 
-  fieldHandlerService.$inject = ['$log'];
+  fieldHandlerService.$inject = ['$log', 'SearchDataService'];
   var obsId = 0;
-  function fieldHandlerService($log) {
+  function fieldHandlerService($log, SearchDataService) {
     var fieldHandlers = {};
 
     //registerCoreFieldHandler
@@ -23,8 +23,6 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
     fieldHandlers['encounterDatetimeFieldHandler'] = encounterDatetimeFieldHandler;
     fieldHandlers['encounterProviderFieldHandler'] = encounterProviderFieldHandler;
     fieldHandlers['encounterLocationFieldHandler'] = encounterLocationFieldHandler;
-    fieldHandlers['obsGroupFieldHandler'] = obsGroupFieldHandler;
-    fieldHandlers['obsGroupRepeatingFieldHandler'] = obsGroupRepeatingFieldHandler;
     fieldHandlers['conceptSearchFieldHandler'] = conceptSearchFieldHandler;
     fieldHandlers['locationAttributeFieldHandler'] = locationAttributeFieldHandler;
     fieldHandlers['defaultFieldHandler'] = defaultFieldHandler;
@@ -52,39 +50,77 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       $log.info('loading fieldHandler');
     }
 
-    function encounterDatetimeFieldHandler(_field) {
-      $log.info('loading fieldHandler');
-    }
-
-    function encounterLocationFieldHandler(_field) {
-      $log.info('loading fieldHandler');
-    }
-
-    function encounterProviderFieldHandler(_field) {
-      $log.info('loading fieldHandler');
-    }
-
-    function obsGroupRepeatingFieldHandler(_field) {
-      $log.info('loading fieldHandler');
-    }
-
-    function conceptSearchFieldHandler(_field) {
-      $log.info('loading fieldHandler');
-    }
-
-    function locationAttributeFieldHandler(_field) {
-      $log.info('loading fieldHandler');
-    }
-
-    function personAttributeFieldHandler(_field) {
-      $log.info('loading fieldHandler');
-    }
-
-    function obsGroupFieldHandler(_field) {
-      $log.info('loading obs Group FieldHandler');
+    function encounterDatetimeFieldHandler(_question, model, questionMap) {
+      $log.info('loading datetime fieldHandler');
       var field = {};
-      gpSectionRnd = 0;
-      field = createGroupFormlyField(_obsField, gpSectionRnd);
+      field = _createFormlyFieldHelper(_question, model, questionMap);
+      field.key = 'value';
+      field.type = 'datepicker';
+      field.templateOptions['datepickerPopup'] = 'dd-MMMM-yyyy';
+      field.templateOptions['label'] = _question.label;
+      field.expressionProperties = {
+        'templateOptions.required': function($viewValue, $modelValue, scope, element) {
+          var value = $viewValue || $modelValue;
+          var fkey = 'value';
+          return scope.model[fkey] !== undefined && scope.model[fkey] !== null && scope.model[fkey] !== '';
+        }
+      };
+      field.validators = {
+        dateValidator: '' //FormValidator.getDateValidatorObject(curField.validators[0]) //this  will require refactoring as we move forward
+      };
+      _addToQuestionMap(_question, field, questionMap);
+      return field;
+    }
+
+    function encounterLocationFieldHandler(_question, model, questionMap) {
+      $log.info('loading location fieldHandler');
+      var field = {};
+      field = _createFormlyFieldHelper(_question, model, questionMap);
+      field = _handleFieldUiSelect(field);
+      field['templateOptions']['type'] = _question.questionOptions.rendering;
+      field['templateOptions']['deferredFilterFunction'] = SearchDataService.findLocation;
+      field['templateOptions']['getSelectedObjectFunction'] = SearchDataService.getLocationByUuid;
+      _addToQuestionMap(_question, field, questionMap);
+    }
+
+    function encounterProviderFieldHandler(_question, model, questionMap) {
+      $log.info('loading provider fieldHandler');
+      var field = {};
+      field = _createFormlyFieldHelper(_question, model, questionMap);
+      field = _handleFieldUiSelect(field);
+      field['templateOptions']['type'] = _question.questionOptions.rendering;
+      field['templateOptions']['deferredFilterFunction'] = SearchDataService.findProvider;
+      field['templateOptions']['getSelectedObjectFunction'] = SearchDataService.getProviderByUuid;
+      _addToQuestionMap(_question, field, questionMap);
+      return field;
+    }
+
+    function conceptSearchFieldHandler(_question, model, questionMap) {
+      $log.info('loading fieldHandler');
+      var field = {};
+      field = _createFormlyFieldHelper(_question, model, questionMap);
+      field['templateOptions']['type'] = 'concept-search-select';
+      _addToQuestionMap(_question, field, questionMap);
+      return field;
+    }
+
+    function locationAttributeFieldHandler(_question, model, questionMap) {
+      $log.info('loading fieldHandler');
+      var field = {};
+      field = _createFormlyFieldHelper(_question, model, questionMap);
+      field = _handleFieldUiSelect(obsField);;
+      field['templateOptions']['type'] = _question.questionOptions.rendering;
+      field['templateOptions']['deferredFilterFunction'] = SearchDataService.findLocation;
+      field['templateOptions']['getSelectedObjectFunction'] = SearchDataService.getLocationByUuid;
+      _addToQuestionMap(_question, field, questionMap);
+      return field;
+    }
+
+    function personAttributeFieldHandler(_question, model, questionMap) {
+      $log.info('loading fieldHandler');
+      var field = {};
+      field = _createFormlyFieldHelper(_question, model, questionMap);
+      _addToQuestionMap(_question, field, questionMap);
       return field;
     }
 
@@ -154,12 +190,18 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       //set the validator to default validator
       var defaultValidator = {
         expression: function(viewValue, modelValue, scope) {
+          // modelValue = viewValue;
+          $log.debug('view value here +++', viewValue);
+          $log.debug('Model value here +++', modelValue);
+          $log.debug('scope value here +++', scope);
           return true;
         },
 
         message: ''
       };
-      var compiledValidators = defaultValidator || _validators;
+      var compiledValidators = {};
+      //this should change once we plugin the validators
+      compiledValidators['defaultValidator'] = defaultValidator || _validators;
       field['validators'] = compiledValidators;
     }
 
@@ -191,23 +233,12 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       field['templateOptions']['options'] = answerList;
     }
 
-    function _handleFieldUiSelect(_field, _answers) {
+    function _handleFieldUiSelect(_field) {
       var field = _field || {};
-      var answerList = [];
-      answerList.push({name:'', value:undefined});
-      //get the anserq options for radio/select options/multicheckbox
-      _.each(_answers, function(answer) {
-        var item = {
-          name:answer.label,
-          value:answer.concept
-        };
-        answerList.push(item);
-      });
-
-      field['templateOptions'] = {
-        type: 'text',
-        options:answerList
-      };
+      field['templateOptions']['valueProp'] = 'uuId';
+      field['templateOptions']['labelProp'] = 'display';
+      field['templateOptions']['options'] = [];
+      return field;
     }
 
     function _handleShowDate(_field) {
@@ -231,10 +262,18 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
     function _createFormlyFieldHelper(_question, model, _id) {
       var field = {};
-      var modelKey = createFieldKey(_question, _id);
-      var key = 'value';
+      var m = {
+        concept:_question.questionOptions.concept,
+        schemaQuestion: _question, value:''
+      };
+      var fieldKey = createFieldKey(_question, _id);
+      var _model = {};
+      _model[fieldKey] = m;
+      var key = _model[fieldKey]; //'value';
+      var keyNames = Object.keys(_model);
+      $log.debug('debug key ...', key);
       field = {
-        key:key,
+        key:keyNames[0] + '.value',
         data: {concept:_question.questionOptions.concept,
           id:_question.id},
         type: 'input',
@@ -244,32 +283,22 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
         }
       };
 
+      $log.debug('debug key field ...', field);
       _handleExpressionProperties(field, _question.required, _question.disable);
       _handleDefaultValue(field, _question.default);
       _handleHide(field, _question.hide);
-      // _handleValidators(field, _question.validators);
+      _handleValidators(field, _question.validators);
 
-      var m = {
-        concept:_question.questionOptions.concept,
-        schemaQuestion: _question, value:''
-      };
-
-      // if ('questions' in question) {
-      //   m.obsGroup = {};
-      //   field.type = 'section';
-      //   field.data = {recursiveModel:m.obsGroup};
-      // } else {
-      //   field.type = 'input'; //TEMPORARY: This needs to reflect the actual type
-      // }
-
-      if (_question.questionOptions.concept in model) { //add m to the array
-      // if (modelKey in model) { //add m to the array
-        model[_question.questionOptions.concept].push(m);
+      // if (_question.questionOptions.concept in model) { //add m to the array
+      if (fieldKey in model) { //add m to the array
+        // model[_question.questionOptions.concept].push(m);
+        model[fieldKey] = key;
       } else { //create array with just m
-        model[_question.questionOptions.concept] = [m];
+        // model[_question.questionOptions.concept] = [m];
+        model[fieldKey] = m;
       }
 
-      field.model = m;
+      // field.model = _model;
       $log.debug('loosing value property', model);
       return field;
     }
@@ -296,7 +325,24 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
         obsField['templateOptions']['min'] = _question.questionOptions.min;
         obsField['templateOptions']['max'] = _question.questionOptions.max;
 
-      } else if ((_question.questionOptions.rendering === 'radio') ||
+      }else if (_question.questionOptions.rendering === 'problem') {
+        obsField = _handleFieldUiSelect(obsField);
+        obsField['templateOptions']['type'] = _question.questionOptions.rendering;
+        obsField['templateOptions']['deferredFilterFunction'] = SearchDataService.findProblem;
+        obsField['templateOptions']['getSelectedObjectFunction'] = SearchDataService.getProblemByUuid;
+      } else if (_question.questionOptions.rendering === 'drug') {
+        obsField = _handleFieldUiSelect(obsField);
+        obsField['templateOptions']['type'] = _question.questionOptions.rendering;
+        obsField['templateOptions']['deferredFilterFunction'] = SearchDataService.findDrugConcepts;
+        obsField['templateOptions']['getSelectedObjectFunction'] = SearchDataService.getDrugConceptByUuid;
+      } else if (_question.questionOptions.rendering === 'select-concept-answers') {
+        obsField['type'] = 'concept-search-select';
+        obsField['displayMember'] = 'label';
+        obsField['valueMember'] = 'concept';
+        obsField['questionConceptUuid'] = _question.questionOptions.concept;
+        obsField['templateOptions']['type'] = _question.questionOptions.rendering;
+        obsField['templateOptions']['fetchOptionsFunction'] = SearchDataService.getDrugConceptByUuid;
+      }else if ((_question.questionOptions.rendering === 'radio') ||
       (_question.questionOptions.rendering === 'select') ||
       (_question.questionOptions.rendering === 'multiCheckbox')) {
         _handleFieldAnswers(obsField, _question.questionOptions.answers);
