@@ -14,6 +14,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
           'formly',
           'formlyBootstrap',
           'ui.bootstrap',
+          'openmrs.RestServices',
           'ui.bootstrap.datetimepicker',
 	        'ui.select'
         ]);

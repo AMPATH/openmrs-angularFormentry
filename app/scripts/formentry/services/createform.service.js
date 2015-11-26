@@ -12,7 +12,6 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       .factory('CreateFormService', CreateFormService);
 
   CreateFormService.$inject = ['$log', 'FieldHandlerService'];
-
   function CreateFormService($log, fieldHandlerService) {
     var service = {
       createForm: createForm
@@ -151,7 +150,6 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
               groupModel, questionMap);
             //convert to array
             var updateRepeatModel = [];
-            // $log.debug('Model Just before update', Object.keys(groupModel));
             updateRepeatModel.push(groupModel);
 
             model['obsRepeating' + '_' + question.label] = updateRepeatModel;
@@ -160,9 +158,8 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
         } else {
           handlerMethod = fieldHandlerService.getFieldHandler('defaultFieldHandler');
-          // $log.debug('About to create field: ', question);
           var field = handlerMethod(question, model, questionMap);
-          // $log.debug('Field Created', field);
+
           if (angular.isArray(field)) {
             _.each(field, function(f) {
               fields.push(f);

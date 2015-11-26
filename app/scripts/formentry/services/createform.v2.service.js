@@ -143,7 +143,17 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             model.obsGroup, questionMap);
           fields.push(obsField);
 
-        } else {
+        }else if (question.type === 'encounterProvider') {
+          handlerMethod = fieldHandlerService.getFieldHandler('encounterProviderFieldHandler');
+          var field = handlerMethod(question, model, questionMap);
+          $log.debug('Field Created', field);
+          fields.push(field);
+        }else if (question.type === 'encounterDate') {
+          handlerMethod = fieldHandlerService.getFieldHandler('encounterDatetimeFieldHandler');
+          var field = handlerMethod(question, model, questionMap);
+          $log.debug('Field Created', field);
+          fields.push(field);
+        }else {
           handlerMethod = fieldHandlerService.getFieldHandler('defaultFieldHandler');
           $log.debug('About to create field: ', question);
           var field = handlerMethod(question, model, questionMap);
