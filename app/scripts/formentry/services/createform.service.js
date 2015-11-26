@@ -106,11 +106,12 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
           $log.debug('Field Created', field);
           if (angular.isArray(field)) {
             _.each(field, function(f) {
-              fields.push(f);
-            });
+                fields.push(f);
+              });
           } else {
             fields.push(field);
           }
+
         } else if (question.type === 'obsGroup') {
           var fieldsArray = [];
           // model.obsGroup;

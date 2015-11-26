@@ -15,7 +15,8 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
   function ObsProcessService($filter, $log) {
       var service = {
-        generateObsPayload: generateObsPayload
+        generateObsPayload: generateObsPayload,
+        addExistingObsSetToForm: addExistingObsSetToForm
       };
 
       return service;
@@ -36,6 +37,43 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
         }
 
         return $filter('date')(value, format, offset);
+      }
+
+      function _addExistingObsToSections(model, restObs) {
+        var obsRestPayload = [];
+        // $log.debug('Model', model);
+        var sectionKeys = Object.keys(model);
+        // $log.debug('Section Keys', sectionKeys);
+        _.each(sectionKeys, function(section) {
+          var sectionModel = model[section];
+          // $log.debug('Section Models', sectionModel);
+          _addObsToSection(sectionModel, restObs);
+        });
+      }
+
+      function _addObsToSection(section, restObs) {
+        var fieldKeys = Object.keys(sectionModel);
+
+        var field;
+        var questionModel = sectionModel[o.concept];
+        var schemaQuestion = questionModel[0].schemaQuestion;
+
+        if (questionModel[0].obsId === undefined) {
+          field = getFormlyFieldByModelKey('concept', o.concept, formlyFields, true).field;
+        } else if (allowsRepeating(schemaQuestion)) {
+          var index = 1 + getFormlyFieldByModelKey('concept', o.concept, formlyFields, true).index;
+          insertIntoFormlyFields(index, schemaQuestion, formlyFields, sectionModel, questionMap);
+          field = formlyFields[index];
+        }
+
+        //console.log("found field:",field);
+        if (field) {
+          addObsToFormlyField(o, field, questionMap);
+          return true;
+        } else {
+          $log.debug('NO FIELD FOUND FOR OBS: ', o);
+          return false;
+        }
       }
 
       function _getSections(model) {
@@ -86,7 +124,14 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
                 };
               _generateSectionPayLoad(_sectionFields, sectionObs);
               if (sectionObs.length > 0) {
-                obsRestPayload.push(obs);
+                if (!_.isUndefined(obs.concept)) {
+                  obsRestPayload.push(obs);
+                } else {
+                  _.each(sectionObs, function(o) {
+                    obsRestPayload.push(o);
+                  });
+                }
+
               }
             });
 
@@ -138,8 +183,8 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
           obs = _setValue(field);
           if (Object.keys(obs).length > 0) {obsRestPayload.push(obs);}
         } else if (qRender === 'multiCheckbox') {
-          initialValue = field.initialValue;
-          value = field.value;
+          var initialValue = field.initialValue;
+          var value = field.value;
           if (initialValue === undefined && (!_.isNull(value) &&
           value !== '' && !_.isUndefined(value))) {
             _.each(value, function(val) {

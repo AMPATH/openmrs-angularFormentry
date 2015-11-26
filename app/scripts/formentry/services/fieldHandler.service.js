@@ -175,7 +175,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
     function _handleFieldAnswers(_field, _answers) {
       var field = _field || {};
       var answerList = [];
-      answerList.push({name:'', value:undefined});
+      answerList.push({name:'unselect', value:undefined});
       //get the anserq options for radio/select options/multicheckbox
       if (angular.isArray(_answers)) {
         _.each(_answers, function(answer) {
@@ -242,7 +242,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       _model[fieldKey] = m;
       var key = _model[fieldKey]; //'value';
       var keyNames = Object.keys(_model);
-      $log.debug('debug key ...', key);
+      // $log.debug('debug key ...', key);
       field = {
         key:keyNames[0] + '.value',
         data: {concept:_question.questionOptions.concept,
@@ -301,6 +301,15 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       (_question.questionOptions.rendering === 'multiCheckbox')) {
         _handleFieldAnswers(obsField, _question.questionOptions.answers);
         obsField['type'] = _question.questionOptions.rendering;
+
+        // if (_question.questionOptions.rendering === 'multiCheckbox') {
+        //   $log.debug('MULTICHECKBOX KEY', obsField.key);
+        //   var objKey = obsField.key;
+        //   var obj = _model[objKey.split('.')[0]];
+        //   obj.value = [];
+        //   obsField.key = objKey + '[0]';
+        //   $log.debug('MULTICHECKBOX KEY', obj);
+        // }
       }
 
       _addToQuestionMap(_question, obsField, questionMap);

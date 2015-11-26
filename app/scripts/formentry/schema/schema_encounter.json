@@ -77,6 +77,140 @@
                 "rendering":"number",
                 "concept":"1233"
               }
+            },
+            {
+              "label": "Family Planning:",
+              "id": "onFamilyPlanning",
+              "type":"obs",
+              "questionOptions":{
+                "rendering":"select",
+                "concept": "774961c6-232f-4332-8a9f-f5c55ebe86d0",
+                "answers": [
+                  {
+                    "concept": "a899b35c-1350-11df-a1f1-0026b9348838",
+                    "label": "Yes"
+                  },
+                  {
+                    "concept": "a899b42e-1350-11df-a1f1-0026b9348838",
+                    "label": "No"
+                  }
+                ]
+              },
+              "validators": []
+            },
+            {
+              "label": "Family Planning Method:",
+              "id": "q12e",
+              "type":"obsGroup",
+              "questionOptions":{
+                "rendering":"repeating"
+              },
+              "questions":[
+                {
+                  "label": "Family Planning Method:",
+                  "id": "q12e",
+                  "type":"obs",
+                  "questionOptions":{
+                    "rendering":"select",
+                    "concept": "a894b1cc-1350-11df-a1f1-0026b9348838",
+                    "answers": [
+                      {
+                        "concept": "a893516a-1350-11df-a1f1-0026b9348838",
+                        "label": "Condoms"
+                      },
+                      {
+                        "concept": "b75702a6-908d-491b-9399-6495712c81cc",
+                        "label": "Emergency OCP"
+                      },
+                      {
+                        "concept": "a8aff356-1350-11df-a1f1-0026b9348838",
+                        "label": "Implant"
+                      },
+                      {
+                        "concept": "a8a71330-1350-11df-a1f1-0026b9348838",
+                        "label": "Injectable Hormones"
+                      },
+                      {
+                        "concept": "a8a71650-1350-11df-a1f1-0026b9348838",
+                        "label": "IUD"
+                      },
+                      {
+                        "concept": "4a740e33-fee5-4a2b-b679-1904722e3d9e",
+                        "label": "Lactation Method"
+                      },
+                      {
+                        "concept": "a897dbd6-1350-11df-a1f1-0026b9348838",
+                        "label": "OCP"
+                      },
+                      {
+                        "concept": "a8a714c0-1350-11df-a1f1-0026b9348838",
+                        "label": "Rhythm Method"
+                      },
+                      {
+                        "concept": "a8a713f8-1350-11df-a1f1-0026b9348838",
+                        "label": "Sterilization"
+                      },
+                      {
+                        "concept": "a8aaf3e2-1350-11df-a1f1-0026b9348838",
+                        "label": "Other"
+                      }
+                    ]
+                  }
+                }
+              ],
+              "validators": []
+            },
+            {
+              "label": "Family Planning Method:",
+              "id": "q12e",
+              "type":"obs",
+              "questionOptions":{
+                "rendering":"multiCheckbox",
+                "concept": "a894b1cc-1350-11df-a1f1-0026b9348838",
+                "answers": [
+                  {
+                    "concept": "a893516a-1350-11df-a1f1-0026b9348838",
+                    "label": "Condoms"
+                  },
+                  {
+                    "concept": "b75702a6-908d-491b-9399-6495712c81cc",
+                    "label": "Emergency OCP"
+                  },
+                  {
+                    "concept": "a8aff356-1350-11df-a1f1-0026b9348838",
+                    "label": "Implant"
+                  },
+                  {
+                    "concept": "a8a71330-1350-11df-a1f1-0026b9348838",
+                    "label": "Injectable Hormones"
+                  },
+                  {
+                    "concept": "a8a71650-1350-11df-a1f1-0026b9348838",
+                    "label": "IUD"
+                  },
+                  {
+                    "concept": "4a740e33-fee5-4a2b-b679-1904722e3d9e",
+                    "label": "Lactation Method"
+                  },
+                  {
+                    "concept": "a897dbd6-1350-11df-a1f1-0026b9348838",
+                    "label": "OCP"
+                  },
+                  {
+                    "concept": "a8a714c0-1350-11df-a1f1-0026b9348838",
+                    "label": "Rhythm Method"
+                  },
+                  {
+                    "concept": "a8a713f8-1350-11df-a1f1-0026b9348838",
+                    "label": "Sterilization"
+                  },
+                  {
+                    "concept": "a8aaf3e2-1350-11df-a1f1-0026b9348838",
+                    "label": "Other"
+                  }
+                ]
+              },
+              "validators": []
             }
           ]
         }

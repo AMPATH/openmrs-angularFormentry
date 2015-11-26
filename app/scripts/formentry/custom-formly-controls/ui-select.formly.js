@@ -16,7 +16,18 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       formlyConfig.setType({
         name: 'ui-select-extended',
         wrapper: ['bootstrapLabel', 'bootstrapHasError', 'validation'],
-        template: '<ui-select ng-model="model[options.key]" theme="bootstrap" ng-required="{{to.required}}" ng-disabled="{{to.disabled}}" reset-search-input="false"> <ui-select-match placeholder="{{to.placeholder}}"> {{evaluateFunction($select.selected[to.labelProp || \'name\'])}} </ui-select-match> <ui-select-choices refresh="refreshItemSource($select.search)" group-by="to.groupBy" repeat="(evaluateFunction(option[to.valueProp || \'value\'])) as option in itemSource" > <div ng-bind-html="evaluateFunction(option[to.labelProp || \'name\']) | highlight: $select.search"></div> </ui-select-choices> </ui-select>',
+        template: '<ui-select ng-model="model[options.key]" theme="bootstrap" ' +
+                  'ng-required="{{to.required}}" ng-disabled="{{to.disabled}}" ' +
+                  'reset-search-input="false"> ' +
+                  '<ui-select-match placeholder="{{to.placeholder}}"> ' +
+                  '{{evaluateFunction($select.selected[to.labelProp || \'name\'])}} ' +
+                  '</ui-select-match> ' +
+                  '<ui-select-choices refresh="refreshItemSource($select.search)" ' +
+                  'group-by="to.groupBy" ' +
+                  'repeat="(evaluateFunction(option[to.valueProp || \'value\'])) ' +
+                  'as option in itemSource" > ' +
+                  '<div ng-bind-html="evaluateFunction(option[to.labelProp || \'name\']) | ' +
+                  'highlight: $select.search"></div> </ui-select-choices> </ui-select>',
         link: function(scope, el, attrs, vm) {
           //incase we need link function
         },

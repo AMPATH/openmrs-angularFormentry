@@ -19,10 +19,11 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
     // set templates here
     formlyConfig.setType({
       name: 'section',
-      template: '<formly-form model="model[options.key]" fields="options.data.fields"></formly-form>'
+      template: '<formly-form model="model[options.key]" ' +
+                'fields="options.data.fields"></formly-form>'
     });
 
-	  formlyConfig.setWrapper({
+	   formlyConfig.setWrapper({
       name: 'panel',
       types: ['section'],
       templateUrl: 'section.html'
