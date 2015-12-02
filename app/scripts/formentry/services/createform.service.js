@@ -24,7 +24,8 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       form =  _createFormlyForm(schema);
       $log.debug('inspect compiled', form);
       var formlyForm = _createModel(form, model);
-      callback(formlyForm);
+      form.questionMap.model = model;
+      callback(formlyForm, form.questionMap);
     }
 
     function _createSectionId(seectionName) {

@@ -11,10 +11,11 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
         .module('openmrs.angularFormentry')
         .factory('FieldHandlerService', FieldHandlerService);
 
-  FieldHandlerService.$inject = ['$log', 'SearchDataService'];
+  FieldHandlerService.$inject = ['$log', 'SearchDataService', 'FormValidator'];
   var obsId = 0;
-  function FieldHandlerService($log, SearchDataService) {
+  function FieldHandlerService($log, SearchDataService, FormValidator) {
     var fieldHandlers = {};
+    var currentQuestionMap = {};
 
     //registerCoreFieldHandler
     fieldHandlers['obsFieldHandler'] = obsFieldHandler;
@@ -133,6 +134,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       $log.info('loading obs fieldHandler');
       var obsField = {};
       obsField = _createObsFormlyField(_question, model, questionMap);
+      currentQuestionMap = questionMap;
       return obsField;
     }
 
@@ -154,13 +156,14 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
     function _handleExpressionProperties(_field, _required, _disabled, _listener)
     {
       var field = _field || {};
-      var required = _required || 'false';
-      var disabled = _disabled || '';
+      var required = typeof _required === 'boolean'?_required : _required? FormValidator.getConditionalRequiredExpressionFunction(_required) :'false';
+      var disabled = typeof _disabled === 'boolean'?_required : _disabled? FormValidator.getHideDisableExpressionFunction_JS(_disabled) :'false';
       var listener = _listener || '';
       field['expressionProperties'] = {
         'templateOptions.required':required,
         'templateOptions.disabled':disabled,
-        'templateOptions.hasListeners':listener
+        'templateOptions.hasListeners':listener,
+        'templateOptions.onValueChanged':onFieldValueChanged
       };
     }
 
@@ -171,7 +174,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       field['defaultValue'] = defaultVal;
     }
 
-    function _handleValidators(_field, _validators)
+    function _handleValidators(_field, _validators, questionMap)
     {
       var field = _field || {};
       //set the validator to default validator
@@ -179,19 +182,18 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
         expression: function(viewValue, modelValue, scope) {
           return true;
         },
-
         message: ''
       };
-      var compiledValidators = {};
-      //this should change once we plugin the validators
-      compiledValidators['defaultValidator'] = defaultValidator || _validators;
+     
+      var compiledValidators = FormValidator.getFieldValidators(_validators);
+      compiledValidators['defaultValidator'] = defaultValidator;
       field['validators'] = compiledValidators;
     }
 
     function _handleHide(_field, _hide)
     {
       var field = _field || {};
-      var hide = hide || '';
+      var hide = typeof _hide === 'boolean'?_hide : _hide? FormValidator.getHideDisableExpressionFunction_JS(_hide) :'false';
       field['hideExpression'] = hide;
     }
 
@@ -258,14 +260,20 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       var fieldKey = field.key.split('.')[0];
       model[fieldKey] = m;
     }
+    
+    function onFieldValueChanged(viewVal, modelVal, fieldScope) {
+      if (fieldScope.options.data.id) {
+        FormValidator.updateListeners(fieldScope.options.data.id);
+      }
+    }
 
-    function _createFormlyFieldHelper(_question, model, _id) {
+    function _createFormlyFieldHelper(_question, model, questionMap) {
       var field = {};
       var m = {
         concept:_question.questionOptions.concept,
         schemaQuestion: _question, value:''
       };
-      var fieldKey = createFieldKey(_question, _id);
+      var fieldKey = createFieldKey(_question, obsId);
       var _model = {};
       _model[fieldKey] = m;
       var key = _model[fieldKey]; //'value';
@@ -283,10 +291,10 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       };
 
       $log.debug('debug key field ...', field);
-      _handleExpressionProperties(field, _question.required, _question.disable);
+      _handleExpressionProperties(field, _question.required, _question.disable, undefined);
       _handleDefaultValue(field, _question.default);
       _handleHide(field, _question.hide);
-      _handleValidators(field, _question.validators);
+      _handleValidators(field, _question.validators, questionMap);
 
       // if (_question.questionOptions.concept in model) { //add m to the array
       if (fieldKey in model) { //add m to the array
