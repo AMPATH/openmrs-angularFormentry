@@ -237,7 +237,7 @@
         expect(field).to.have.ownProperty('type');
         expect(field.templateOptions).to.have.ownProperty('type');
         expect(field.templateOptions).to.have.ownProperty('label');
-        expect(field).to.have.ownProperty('data');
+        expect(field).to.have.ownProperty('data').that.is.an('object');
         // expect(field).to.have.ownProperty('validators');
         expect(field).to.have.ownProperty('expressionProperties');
         expect(field).to.have.ownProperty('hideExpression');
@@ -251,6 +251,29 @@
         .property('templateOptions.label', 'Visit Date');
         expect(field).not.to.have.ownProperty('templateOptions.datepickerPopup');
         expect(field).to.have.deep.property('type', 'datetimepicker');
+        expect(field).to.have.deep.property('key', 'encounterDate.value');
+      });
+    });
+
+    describe('encounterProviderFieldHandler Method unit Tests', function() {
+      var handlerMethod;
+      var mockSchema;
+      var model = {};
+      var questionMap = {};
+      beforeEach(function() {
+        functionStub = sinon.spy(fhService, 'getFieldHandler');
+        var handlerName = 'encounterProviderFieldHandler';//or any name will return defaultFieldHandler
+        handlerMethod = fhService.getFieldHandler(handlerName);
+        mockSchema = mockData.getMockSchema();
+      });
+
+      it('should be able to set the right values for each field property -ui-select',
+      function() {
+        var mockField = mockSchema.pages[0].sections[0].questions[1];
+        var field = handlerMethod(mockField, model, questionMap);
+        expect(field).to.have.deep.property('templateOptions.label', 'Provider');
+        expect(field).to.have.deep.property('type', 'ui-select-extended');
+        expect(field).to.have.deep.property('key', 'encounterProvider.value');
       });
     });
 
