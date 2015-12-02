@@ -12,7 +12,7 @@
     "grunt-karma": "~0.12.1",
     "karma": "~0.4.6",
     "angular-ui-router": "~0.2.15",
-    "angular-formly": "~7.1.2",
+    "angular-formly": "~7.3.4",
     "angular-formly-templates-bootstrap": "6.1.4",
     "angular-ui-select": "~0.12.1",
     "bootstrap-ui-datetime-picker": "~1.2.5",
