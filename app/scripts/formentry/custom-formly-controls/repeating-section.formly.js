@@ -14,7 +14,30 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
   mod.run(function config(formlyConfig) {
     formlyConfig.setType({
       name: 'repeatSection',
-      templateUrl: 'repeatSection.html',
+      template: '<div class="panel panel-default"> ' +
+      '<div class="panel-heading"> ' +
+      '{{to.label}}' +
+      '</div> ' +
+      '<div class="panel-body"> ' +
+      // <!--loop through each element in model array-->
+      '<div class="{{hideRepeat}}"> ' +
+        '<div class="repeatsection" ng-repeat="element in model[options.key]" ' +
+        'ng-init="fields = copyFields(to.fields)"> ' +
+          '<formly-form fields="fields" '  +
+                       'model="element" bind-name="\'formly_ng_repeat\' + index + $parent.$index"> ' +
+          '</formly-form> ' +
+          '<p> ' +
+            '<button type="button" class="btn btn-sm btn-danger" ng-click="model[options.key].splice($index, 1)"> ' +
+              'Remove ' +
+            '</button> ' +
+          '</p> ' +
+          '<hr> ' +
+      '</div> ' +
+      '<p class="AddNewButton"> ' +
+        '<button type="button" class="btn btn-primary" ng-click="addNew()" >{{to.btnText}}</button> ' +
+      '</p> ' +
+      '</div> ' +
+      '</div>',
       controller: function($scope, $log) {
         $scope.formOptions = {formState: $scope.formState};
         $scope.addNew = addNew;

@@ -27,6 +27,10 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       callback(formlyForm);
     }
 
+    function _createSectionId(seectionName) {
+      return seectionName.replace(/ /gi, '_');
+    }
+
     function _createFormlyForm(schema) {
       var compiledSchema = [];
       var questionMap = {};
@@ -37,10 +41,13 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
         _.each(page.sections, function(section) {
           var sectionModel = {};
           var fields = [];
+          var sectionId;
           _createFieldsFactory(section.questions, fields, sectionModel, questionMap);
+          sectionId = _createSectionId(section.label);
+          $log.debug('Secion ID: ', sectionId);
           var sectionField =
           {
-            key:'section_' + section.label,
+            key:'section_' + sectionId,
             type: 'section',
             templateOptions: {
               label:section.label
@@ -73,8 +80,10 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             }
           }
         );
+
         _.each(page.compiledPage, function(section) {
-          model['section_' + section.section.label] = section.sectionModel;
+          var sectionId = _createSectionId(section.section.label);
+          model['section_' + sectionId] = section.sectionModel;
         });
       });
 
@@ -117,25 +126,26 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
           // model['obsGroup' + '_' + question.label] = {};
           var groupModel;
           var obsField = {};
+          var groupId = _createSectionId(question.label);
           if (question.questionOptions.rendering === 'group') {
-            model['obsGroup' + '_' + question.label] = {};
-            groupModel =  model['obsGroup' + '_' + question.label];
+            model['obsGroup' + '_' + groupId] = {};
+            groupModel =  model['obsGroup' + '_' + groupId];
             groupModel.groupConcept = question.questionOptions.concept;
             obsField = {
               className: 'row',
-              key:'obsGroup' + '_' + question.label,
+              key:'obsGroup' + '_' + groupId,
               fieldGroup:fieldsArray
             };
             _createFieldsFactory(question.questions, fieldsArray,
               groupModel, questionMap);
             fields.push(obsField);
           } else if (question.questionOptions.rendering === 'repeating') {
-            model['obsRepeating' + '_' + question.label] = [];
+            model['obsRepeating' + '_' + groupId] = [];
             groupModel =  {};
             groupModel.groupConcept = question.questionOptions.concept;
             obsField = {
               type: 'repeatSection',
-              key:'obsRepeating' + '_' + question.label,
+              key:'obsRepeating' + '_' + groupId,
               templateOptions: {
                 label:question.label,
                 btnText:'Add',
@@ -153,7 +163,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             var updateRepeatModel = [];
             updateRepeatModel.push(groupModel);
 
-            model['obsRepeating' + '_' + question.label] = updateRepeatModel;
+            model['obsRepeating' + '_' + groupId] = updateRepeatModel;
             fields.push(obsField);
           }
 

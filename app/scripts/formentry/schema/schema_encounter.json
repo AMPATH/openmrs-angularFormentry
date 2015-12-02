@@ -79,7 +79,7 @@
               }
             },
             {
-              "label": "Family Planning:",
+              "label": "Family Planning",
               "id": "onFamilyPlanning",
               "type":"obs",
               "questionOptions":{
@@ -99,7 +99,7 @@
               "validators": []
             },
             {
-              "label": "Family Planning Method:",
+              "label": "Family Planning Method",
               "id": "q12e",
               "type":"obsGroup",
               "questionOptions":{
@@ -224,7 +224,7 @@
           "questions":[
             {
                   "type": "obsGroup",
-                  "label": "Was patient hospitalized?",
+                  "label": "Was patient hospitalized",
                   "questionOptions": {
                     "rendering":"group",
                     "concept": "a8a003a6-1350-11df-a1f1-0026b9348838"
@@ -290,7 +290,7 @@
           "questions":[
             {
                   "type": "obsGroup",
-                  "label": "Was patient hospitalized?",
+                  "label": "Was patient hospitalized",
                   "questionOptions": {
                     "rendering":"repeating",
                     "concept": "a8a003a6y1350y11dfya1f1y0026b9348838"

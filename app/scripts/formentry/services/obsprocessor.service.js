@@ -25,6 +25,10 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
         callback(_getSections(model));
       }
 
+      function addExistingObsSetToForm(model, restObs) {
+        // callback(_getSections(model));
+      }
+
       function _parseDate(value, format, offset) {
         var format = format || 'yyyy-MM-dd HH:mm:ss';
         var offset = offset || '+0300';
@@ -51,8 +55,68 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
         });
       }
 
-      function _addObsToSection(section, restObs) {
+      function _addObsToField(field, obs) {
+        var val = _.find(obs, function(o) {
+          if (o.concept === field.concept) {return o;}
+        });
+
+        if (!(_.isUndefined(val))) {
+          if (!(_.isUndefined(val.value.uuid))) {
+            field.initialValue = val.value.uuid;
+            field.initialUuid = val.uuid;
+          } else {
+            field.initialValue = val.value;
+            field.initialUuid = val.uuid;
+          }
+        }
+      }
+
+      function _addObsToSection(sectionModel, restObs) {
         var fieldKeys = Object.keys(sectionModel);
+        //geting obs data without obs groups
+        var obsData = _.filter(restObs.obs, function(obs) {
+          if (obs.groupMembers === null) {
+            return obs;
+          }
+        });
+
+        //geting obs data with obs groups
+        var obsGroupData =  _.filter(restObs.obs, function(obs) {
+          if (obs.groupMembers !== null) {
+            return obs;
+          }
+        });
+
+        _.each(fieldKeys, function(fieldKey) {
+          if (fieldKey.startsWith('obsGroup')) {
+            var sectionFields = sectionModel[fieldKey];
+            var sectionKeys = Object.keys(sectionFields);
+            var concept = sectionFields[sectionKeys[0]];
+
+            _addObsToSection(sectionFields, sectionObs);
+
+          } else if (fieldKey.startsWith('obsRepeating')) {
+            var sectionFields = sectionModel[fieldKey];
+            var sectionKeys = Object.keys(sectionFields[0]);
+            // some repeating sections may miss the concept and schemaQuestion
+            // attributes, therefore we will be need to rebuild this b4 passing
+            // it on for processing
+            _.each(sectionFields, function(_sectionFields) {
+              var sectionObs = [];
+              var concept = sectionFields[0][sectionKeys[0]];
+              var obs = {
+                  concept:concept,
+                  groupMembers:sectionObs
+                };
+              _addObsToSection(_sectionFields, sectionObs);
+            });
+
+          } else if (fieldKey.startsWith('obs')) {
+            var field = sectionModel[fieldKey];
+            _addObsToField(field, obsData);
+          }
+
+        });
 
         var field;
         var questionModel = sectionModel[o.concept];

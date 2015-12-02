@@ -230,6 +230,11 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
         typeof _answers);
       }
 
+      field['templateOptions']['valueProp'] = 'value';
+      field['templateOptions']['labelProp'] = 'name';
+      field['templateOptions']['optionsAttr'] = 'bs-options';
+      field['templateOptions']['ngOptions'] = 'option[to.valueProp] ' +
+      'as option in to.options | filter: $select.search';
       field['templateOptions']['options'] = answerList;
     }
 
@@ -349,12 +354,15 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
         obsField['type'] = _question.questionOptions.rendering;
 
         // if (_question.questionOptions.rendering === 'multiCheckbox') {
-        //   $log.debug('MULTICHECKBOX KEY', obsField.key);
+        //   // $log.debug('MULTICHECKBOX KEY', obsField.key);
         //   var objKey = obsField.key;
         //   var obj = _model[objKey.split('.')[0]];
         //   obj.value = [];
-        //   obsField.key = objKey + '[0]';
-        //   $log.debug('MULTICHECKBOX KEY', obj);
+        //   // obsField.key = objKey + '[0]';
+        //   // $log.debug('MULTICHECKBOX KEY', obj);
+        //   obsField['type'] = 'ui-select-multiple';
+        // } else if (_question.questionOptions.rendering === 'select') {
+        //   obsField['type'] = 'ui-select-single-search';
         // }
       }
 

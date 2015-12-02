@@ -38,56 +38,12 @@
            </div>
 
      </script>
-         <!--
-         Custom template to allows representation of repeatSection
-         in a form.
-         I would love to move this in it own template but initial
-         tests did not work. Will give some further consultations
-         later.....
-         -->
-               <script type="text/ng-template" id="repeatSection.html">
-               <div class="panel panel-default">
-               <div class="panel-heading">
-               {{to.label}}
-               </div>
-               <div class="panel-body">
-               <!--loop through each element in model array-->
-               <div class="{{hideRepeat}}">
-                 <div class="repeatsection" ng-repeat="element in model[options.key]" ng-init="fields = copyFields(to.fields)">
-                   <formly-form fields="fields"
-                                model="element"
-                                bind-name="'formly_ng_repeat' + index + $parent.$index">
-                   </formly-form>
-                   <p>
-                     <button type="button" class="btn btn-sm btn-danger" ng-click="model[options.key].splice($index, 1)">
-                       Remove
-                     </button>
-                   </p>
-                   <hr>
-               </div>
-               <p class="AddNewButton">
-                 <button type="button" class="btn btn-primary" ng-click="addNew()" >{{to.btnText}}</button>
-               </p>
-               </div>
-
-               </div>
-               </script>
-
-
-        <script type="text/ng-template" id="section.html">
-        <div class="panel panel-primary">
-
-          <div class="panel-heading px-nested-panel-heading clearfix">
-            <strong class="control-label" ng-if="to.label">
-              {{to.label}}
-              {{to.required ? '*' : ''}}
-            </strong>
-          </div>
-
-          <div class="panel-body px-nested-panel-body">
-            <formly-transclude></formly-transclude>
-          </div>
-
-        </div>
+     <script type="text/ng-template" id="test-select.html">
+      <ui-select data-ng-model="model[options.key]" data-required="{{to.required}}" data-disabled="{{to.disabled}}" theme="select2">
+        <ui-select-match placeholder="{{to.placeholder}}">{{$select.selected[to.labelProp]}}</ui-select-match>
+        <ui-select-choices data-repeat="{{to.ngOptions}}">
+          <div ng-bind-html="option[to.labelProp] | highlight: $select.search"></div>
+        </ui-select-choices>
+      </ui-select>
     </script>
 </div>
