@@ -9,6 +9,7 @@
     <!-- build:css(.) styles/vendor.css -->
     <!-- bower:css -->
     <link rel="stylesheet" href="bower_components/bootstrap/dist/css/bootstrap.css" />
+    <link rel="stylesheet" href="bower_components/angular-ui-select/dist/select.css" />
     <!-- endbower -->
     <!-- endbuild -->
     <!-- build:css(.tmp) styles/main.css -->
@@ -41,6 +42,7 @@
             <ul class="nav navbar-nav">
               <li class="active"><a href="#/">Home</a></li>
               <li><a ng-href="#/about">About</a></li>
+              <li><a ng-href="#/recursive-test">Recursive Test</a></li>
               <li><a ng-href="#/">Contact</a></li>
             </ul>
           </div>
@@ -75,25 +77,47 @@
     <script src="bower_components/jquery/dist/jquery.js"></script>
     <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.5.0-beta.1/angular.min.js"></script>
     <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.5.0-beta.1/angular-animate.min.js"></script>
-    <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.5.0-beta.1/angular-cookies.min.js"></script>
     <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.5.0-beta.1/angular-messages.min.js"></script>
     <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.5.0-beta.1/angular-resource.min.js"></script>
-    <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.5.0-beta.1/angular-route.min.js"></script>
     <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.5.0-beta.1/angular-sanitize.min.js"></script>
     <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.5.0-beta.1/angular-touch.min.js"></script>
     <script src="bower_components/bootstrap/dist/js/bootstrap.js"></script>
     <script src="bower_components/angular-ui-router/release/angular-ui-router.js"></script>
+    <script src="bower_components/api-check/dist/api-check.js"></script>
+    <script src="bower_components/angular-formly/dist/formly.js"></script>
+    <script src="bower_components/angular-formly-templates-bootstrap/dist/angular-formly-templates-bootstrap.js"></script>
+    <script src="bower_components/angular-ui-select/dist/select.js"></script>
+    <script src="bower_components/angular-bootstrap/ui-bootstrap-tpls.js"></script>
+    <script src="bower_components/bootstrap-ui-datetime-picker/dist/datetime-picker.min.js"></script>
+    <script src="bower_components/lodash/lodash.js"></script>
     <!-- endbower -->
     <!-- endbuild -->
 
+    <script type="text/javascript" src="bower_components/ace-builds/src-min-noconflict/ace.js"></script>
 
-        <script src="scripts/app.module.js"></script>
-        <script src="scripts/controllers/main.js"></script>
-        <script src="scripts/controllers/about.js"></script>
-        <!-- Formentry Module files -->
-        <!-- build:js({.tmp,app}) scripts/angularFormentry.js -->
-        <script src="scripts/formentry/formentry.module.js"></script>
-        <script src="scripts/formentry/services/trial.service.js"></script>
-        <!-- endbuild -->
+
+    <script src="scripts/app.module.js"></script>
+    <script src="scripts/controllers/main.js"></script>
+    <script src="scripts/controllers/about.js"></script>
+    <script src="scripts/controllers/recursive-test.js"></script>
+    <!-- Formentry Module files -->
+    <!-- build:js({.tmp,app}) scripts/angularFormentry.js -->
+    <script src="scripts/formentry/formentry.module.js"></script>
+    <!-- services -->
+    <script src="scripts/formentry/services/formentry.testservice.js"></script>
+    <script src="scripts/formentry/services/formentry.service.js"></script>
+    <script src="scripts/formentry/services/createform.service.js"></script>
+    <script src="scripts/formentry/services/createform.v2.service.js"></script>
+    <script src="scripts/formentry/services/fieldHandler.service.js"></script>
+    <script src="scripts/services/util.service.js"></script>
+
+    <!-- Formly Custom Controls-->
+    <script src="scripts/formentry/custom-formly-controls/datepicker.formly.js"></script>
+    <script src="scripts/formentry/custom-formly-controls/datetimepicker.formly.js"></script>
+    <script src="scripts/formentry/custom-formly-controls/ui-select.formly.js"></script>
+    <script src="scripts/formentry/custom-formly-controls/repeating-section.formly.js"></script>
+    <script src="scripts/formentry/custom-formly-controls/sections.js"></script>
+    <script src="scripts/formentry/custom-formly-controls/concept-search-select.js"></script>
+      <!-- endbuild -->
 </body>
 </html>

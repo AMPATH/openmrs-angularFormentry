@@ -108,7 +108,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       $log.info('loading fieldHandler');
       var field = {};
       field = _createFormlyFieldHelper(_question, model, questionMap);
-      field = _handleFieldUiSelect(obsField);;
+      field = _handleFieldUiSelect(obsField);
       field['templateOptions']['type'] = _question.questionOptions.rendering;
       field['templateOptions']['deferredFilterFunction'] = SearchDataService.findLocation;
       field['templateOptions']['getSelectedObjectFunction'] = SearchDataService.getLocationByUuid;

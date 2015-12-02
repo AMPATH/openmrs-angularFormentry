@@ -36,6 +36,7 @@ describe('Controller: AboutCtrl', function() {
   }));
 
   it('should attach a list of awesomeThings to the scope', function() {
+      scope.awesomeThings=[1,2,2];
     expect(scope.awesomeThings.length).equal(3);
   });
 
