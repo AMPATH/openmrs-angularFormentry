@@ -167,7 +167,17 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             fields.push(obsField);
           }
 
-        } else {
+        }
+        else if (question.type.startsWith('encounter')) {
+          $log.debug('ENCOUNTER FIELDS', question);
+          $log.debug('ENCOUNTER Handler', question.type + 'FieldHandler');
+          handlerMethod = fieldHandlerService.getFieldHandler(question.type + 'FieldHandler');
+          var field = handlerMethod(question, model, questionMap);
+          $log.debug('ENCOUNTER Field', field);
+          fields.push(field);
+
+        }
+        else {
           handlerMethod = fieldHandlerService.getFieldHandler('defaultFieldHandler');
           var field = handlerMethod(question, model, questionMap);
 

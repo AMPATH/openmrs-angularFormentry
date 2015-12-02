@@ -17,7 +17,7 @@
     "angular-ui-select": "~0.12.1",
     "bootstrap-ui-datetime-picker": "~1.2.5",
     "api-check": "~7.5.0",
-    "angular-bootstrap": "~0.13.0",
+    "angular-bootstrap": "0.13.4",
     "lodash": "~3.10.1",
     "angular-ui-ace": "bower",
     "restangular": "~1.5.1",
