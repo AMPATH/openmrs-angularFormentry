@@ -1,13 +1,13 @@
-/*jshint -W026, -W030, -W106 */
+/*jshint -W026, -W030, -W106, -W117 */
 /*jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLinesBeforeLineComments, requireTrailingComma*/
 (function() {
   'use strict';
   describe('fieldHandler Service unit tests', function() {
     beforeEach(function() {
       module('angularFormentry');
-        module('openmrs.angularFormentry');
-        module('mock.data');
-      });
+      module('openmrs.angularFormentry');
+      module('mock.data');
+    });
 
     var mockData;
     var fhService;
@@ -35,44 +35,44 @@
           return this.slice(0, str.length) === str;
         };
 
-                if (typeof String.prototype.endsWith !== 'function') {
-                    String.prototype.endsWith = function (str) {
-                        return this.slice(-str.length) === str;
-                    };
-                }
-            }
-        }));
+        if (typeof String.prototype.endsWith !== 'function') {
+          String.prototype.endsWith = function(str) {
+            return this.slice(-str.length) === str;
+          };
+        }
+      }
+    }));
 
-        // afterEach(function() {
-        //     httpBackend.verifyNoOutstandingExpectation();
-        //     //httpBackend.verifyNoOutstandingRequest();
-        //   });
-        describe('getFieldHandler Method Unit Tests', function () {
-            beforeEach(function () {
-                functionStub = sinon.spy(fhService, 'getFieldHandler');
-            });
-
-            it('should return the fieldHandler Method when getFieldHandler is called',
-                    function () {
-                        var handlerName = 'obsDrugFieldHandler';
-                        var handlerMethod = fhService.getFieldHandler(handlerName);
-
-                        expect(functionStub).to.have.been.calledOnce;
-                        expect(functionStub.calledWith(handlerName)).to.be.true;
-                        expect(functionStub.returned(handlerMethod)).to.be.true;
-                        expect(handlerMethod).to.be.a('function');
-                    });
-
-            it('should return defaultfieldHandler Method when wrong handler is passed',
-                    function () {
-                        var handlerName = 'obsxFieldHandler';
-                        var handlerMethod = fhService.getFieldHandler(handlerName);
-
-        expect(functionStub).to.have.been.calledOnce;
-        expect(functionStub.alwaysCalledWith(handlerName)).to.be.true;
-        expect(functionStub.returned(handlerMethod)).to.be.true;
-        expect(handlerMethod).to.be.a('function');
+    // afterEach(function() {
+    //     httpBackend.verifyNoOutstandingExpectation();
+    //     //httpBackend.verifyNoOutstandingRequest();
+    //   });
+    describe('getFieldHandler Method Unit Tests', function() {
+      beforeEach(function() {
+        functionStub = sinon.spy(fhService, 'getFieldHandler');
       });
+
+      it('should return the fieldHandler Method when getFieldHandler is called',
+              function() {
+                var handlerName = 'obsDrugFieldHandler';
+                var handlerMethod = fhService.getFieldHandler(handlerName);
+
+                expect(functionStub).to.have.been.calledOnce;
+                expect(functionStub.calledWith(handlerName)).to.be.true;
+                expect(functionStub.returned(handlerMethod)).to.be.true;
+                expect(handlerMethod).to.be.a('function');
+              });
+
+      it('should return defaultfieldHandler Method when wrong handler is passed',
+              function() {
+                var handlerName = 'obsxFieldHandler';
+                var handlerMethod = fhService.getFieldHandler(handlerName);
+
+                expect(functionStub).to.have.been.calledOnce;
+                expect(functionStub.alwaysCalledWith(handlerName)).to.be.true;
+                expect(functionStub.returned(handlerMethod)).to.be.true;
+                expect(handlerMethod).to.be.a('function');
+              });
     });
 
     describe('obsFieldHandler Method unit Tests', function() {
@@ -111,8 +111,8 @@
         expect(field.key).to.match(/(value)/);
         // expect(field.key).to.have.string('a89ff9a6');
         expect(field.data.id).to.eql('q7a');
-       // expect(field.templateOptions).to.have.property('options');
-        expect(field.type).to.eql('select');
+        // expect(field.templateOptions).to.have.property('options');
+        expect(field.type).to.eql('ui-select-single');
         expect(field.templateOptions.label).to.eql('7a. Visit Type');
       });
 
@@ -157,9 +157,9 @@
         expect(field[1]).to.have.deep.property('type', 'datepicker');
         expect(field[0]).to.have.deep.property('type', 'input');
         expect(field[0].key).to.match(/(value)/);
-        // expect(field[1].key).to.match(/^obsDate/);
-        // expect(field[0].key).to.have.string('a896dea2');
-        // expect(field[1].key).to.have.string('a896dea2');
+        expect(field[1].key).to.match(/^obsDate/);
+        expect(field[0].key).to.have.string('a896dea2');
+        expect(field[1].key).to.have.string('a896dea2');
       });
     });
 
@@ -211,6 +211,46 @@
         expect(field[0]).not.to.have.ownProperty('templateOptions.datepickerPopup');
         expect(field[1]).to.have.deep.property('type', 'datepicker');
         expect(field[0]).to.have.deep.property('type', 'input');
+      });
+    });
+
+    describe('encounterDatetimeFieldHandler Method unit Tests', function() {
+      var handlerMethod;
+      var mockSchema;
+      var model = {};
+      var questionMap = {};
+      beforeEach(function() {
+        functionStub = sinon.spy(fhService, 'getFieldHandler');
+        var handlerName = 'encounterDatetimeFieldHandler';//or any name will return defaultFieldHandler
+        handlerMethod = fhService.getFieldHandler(handlerName);
+        mockSchema = mockData.getMockSchema();
+      });
+
+      it('should be able to create a formly field with required properties',
+      function() {
+        var mockField = mockSchema.pages[1].sections[0].questions[0];
+        var field = handlerMethod(mockField, model, questionMap);
+        // console.log('field', field);
+        expect(field).to.be.an('object');
+        expect(field).to.have.ownProperty('key');
+        expect(field).to.have.ownProperty('templateOptions');
+        expect(field).to.have.ownProperty('type');
+        expect(field.templateOptions).to.have.ownProperty('type');
+        expect(field.templateOptions).to.have.ownProperty('label');
+        expect(field).to.have.ownProperty('data');
+        // expect(field).to.have.ownProperty('validators');
+        expect(field).to.have.ownProperty('expressionProperties');
+        expect(field).to.have.ownProperty('hideExpression');
+      });
+
+      it('should be able to set the right values for each field property',
+      function() {
+        var mockField = mockSchema.pages[0].sections[0].questions[0];
+        var field = handlerMethod(mockField, model, questionMap);
+        expect(field).to.have.deep
+        .property('templateOptions.label', 'Visit Date');
+        expect(field).not.to.have.ownProperty('templateOptions.datepickerPopup');
+        expect(field).to.have.deep.property('type', 'datetimepicker');
       });
     });
 
