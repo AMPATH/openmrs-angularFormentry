@@ -109,9 +109,9 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
         if (question.type === 'obs') {
           handlerMethod = fieldHandlerService.getFieldHandler('obsFieldHandler');
-          $log.debug('about to create: ', question);
+          // $log.debug('about to create: ', question);
           var field = handlerMethod(question, model, questionMap);
-          $log.debug('Field Created', field);
+          // $log.debug('Field Created', field);
           if (angular.isArray(field)) {
             _.each(field, function(f) {
                 fields.push(f);
@@ -167,17 +167,12 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             fields.push(obsField);
           }
 
-        }
-        else if (question.type.startsWith('encounter')) {
-          $log.debug('ENCOUNTER FIELDS', question);
-          $log.debug('ENCOUNTER Handler', question.type + 'FieldHandler');
+        } else if (question.type.startsWith('encounter')) {
           handlerMethod = fieldHandlerService.getFieldHandler(question.type + 'FieldHandler');
           var field = handlerMethod(question, model, questionMap);
-          $log.debug('ENCOUNTER Field', field);
           fields.push(field);
 
-        }
-        else {
+        } else {
           handlerMethod = fieldHandlerService.getFieldHandler('defaultFieldHandler');
           var field = handlerMethod(question, model, questionMap);
 

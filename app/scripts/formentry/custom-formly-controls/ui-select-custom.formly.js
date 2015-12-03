@@ -31,7 +31,6 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
     formlyConfig.setType({
       name: 'ui-select-multiple',
-      extends: 'select',
       wrapper: ['bootstrapLabel', 'bootstrapHasError', 'validation'],
       template: '<ui-select multiple ng-model="model[options.key]" theme="bootstrap" ' +
       'ng-required="{{to.required}}" ng-disabled="{{to.disabled}}" ' +
