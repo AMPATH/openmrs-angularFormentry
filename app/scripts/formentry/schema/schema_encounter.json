@@ -13,7 +13,7 @@
           "questions": [
             {
               "label": "Visit Date",
-              "type": "encounterDate",
+              "type": "encounterDatetime",
               "required": "true",
               "default": "",
               "id":"encDate",

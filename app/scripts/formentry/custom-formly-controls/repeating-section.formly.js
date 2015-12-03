@@ -50,11 +50,11 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
         function addNew() {
           $scope.model[$scope.options.key] = $scope.model[$scope.options.key] || [];
-          $log.log('Repeat section');
-          $log.log($scope.model);
+          // $log.log('Repeat section');
+          // $log.log($scope.model);
           var repeatsection = $scope.model[$scope.options.key];
-          $log.log('Repeat section Val');
-          $log.log(repeatsection);
+          // $log.log('Repeat section Val');
+          // $log.log(repeatsection);
           var lastSection = repeatsection[repeatsection.length - 1];
           var newsection = {};
           // if (lastSection) {

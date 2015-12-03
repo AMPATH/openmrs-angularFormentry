@@ -38,12 +38,4 @@
            </div>
 
      </script>
-     <script type="text/ng-template" id="test-select.html">
-      <ui-select data-ng-model="model[options.key]" data-required="{{to.required}}" data-disabled="{{to.disabled}}" theme="select2">
-        <ui-select-match placeholder="{{to.placeholder}}">{{$select.selected[to.labelProp]}}</ui-select-match>
-        <ui-select-choices data-repeat="{{to.ngOptions}}">
-          <div ng-bind-html="option[to.labelProp] | highlight: $select.search"></div>
-        </ui-select-choices>
-      </ui-select>
-    </script>
 </div>

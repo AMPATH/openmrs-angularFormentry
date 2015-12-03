@@ -54,20 +54,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       $log.info('loading datetime fieldHandler');
       var field = {};
       field = _createFormlyFieldHelper(_question, model, questionMap);
-      field.key = 'value';
-      field.type = 'datepicker';
-      field.templateOptions['datepickerPopup'] = 'dd-MMMM-yyyy';
-      field.templateOptions['label'] = _question.label;
-      field.expressionProperties = {
-        'templateOptions.required': function($viewValue, $modelValue, scope, element) {
-          var value = $viewValue || $modelValue;
-          var fkey = 'value';
-          return scope.model[fkey] !== undefined && scope.model[fkey] !== null && scope.model[fkey] !== '';
-        }
-      };
-      field.validators = {
-        dateValidator: '' //FormValidator.getDateValidatorObject(curField.validators[0]) //this  will require refactoring as we move forward
-      };
+      field.type = 'datetimepicker';
       _addToQuestionMap(_question, field, questionMap);
       return field;
     }
@@ -76,19 +63,19 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       $log.info('loading location fieldHandler');
       var field = {};
       field = _createFormlyFieldHelper(_question, model, questionMap);
-      field = _handleFieldUiSelect(field);
-      field['templateOptions']['type'] = _question.questionOptions.rendering;
+      _handleFieldUiSelect(field);
       field['templateOptions']['deferredFilterFunction'] = SearchDataService.findLocation;
       field['templateOptions']['getSelectedObjectFunction'] = SearchDataService.getLocationByUuid;
       _addToQuestionMap(_question, field, questionMap);
+      return field;
     }
 
     function encounterProviderFieldHandler(_question, model, questionMap) {
       $log.info('loading provider fieldHandler');
       var field = {};
       field = _createFormlyFieldHelper(_question, model, questionMap);
-      field = _handleFieldUiSelect(field);
-      field['templateOptions']['type'] = _question.questionOptions.rendering;
+      _handleFieldUiSelect(field);
+      field['templateOptions']['valueProp'] = 'personUuid';
       field['templateOptions']['deferredFilterFunction'] = SearchDataService.findProvider;
       field['templateOptions']['getSelectedObjectFunction'] = SearchDataService.getProviderByUuid;
       _addToQuestionMap(_question, field, questionMap);
@@ -108,7 +95,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       $log.info('loading fieldHandler');
       var field = {};
       field = _createFormlyFieldHelper(_question, model, questionMap);
-      field = _handleFieldUiSelect(obsField);
+      _handleFieldUiSelect(field);
       field['templateOptions']['type'] = _question.questionOptions.rendering;
       field['templateOptions']['deferredFilterFunction'] = SearchDataService.findLocation;
       field['templateOptions']['getSelectedObjectFunction'] = SearchDataService.getLocationByUuid;
@@ -190,10 +177,6 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       //set the validator to default validator
       var defaultValidator = {
         expression: function(viewValue, modelValue, scope) {
-          // modelValue = viewValue;
-          $log.debug('view value here +++', viewValue);
-          $log.debug('Model value here +++', modelValue);
-          $log.debug('scope value here +++', scope);
           return true;
         },
 
@@ -215,7 +198,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
     function _handleFieldAnswers(_field, _answers) {
       var field = _field || {};
       var answerList = [];
-      answerList.push({name:'unselect', value:undefined});
+      // answerList.push({name:'unselect', value:undefined});
       //get the anserq options for radio/select options/multicheckbox
       if (angular.isArray(_answers)) {
         _.each(_answers, function(answer) {
@@ -232,18 +215,16 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
       field['templateOptions']['valueProp'] = 'value';
       field['templateOptions']['labelProp'] = 'name';
-      field['templateOptions']['optionsAttr'] = 'bs-options';
-      field['templateOptions']['ngOptions'] = 'option[to.valueProp] ' +
-      'as option in to.options | filter: $select.search';
       field['templateOptions']['options'] = answerList;
     }
 
     function _handleFieldUiSelect(_field) {
       var field = _field || {};
+      field['type'] = 'ui-select-extended';
       field['templateOptions']['valueProp'] = 'uuId';
       field['templateOptions']['labelProp'] = 'display';
       field['templateOptions']['options'] = [];
-      return field;
+      // return field;
     }
 
     function _handleShowDate(_field) {
@@ -332,12 +313,10 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
       }else if (_question.questionOptions.rendering === 'problem') {
         obsField = _handleFieldUiSelect(obsField);
-        obsField['templateOptions']['type'] = _question.questionOptions.rendering;
         obsField['templateOptions']['deferredFilterFunction'] = SearchDataService.findProblem;
         obsField['templateOptions']['getSelectedObjectFunction'] = SearchDataService.getProblemByUuid;
       } else if (_question.questionOptions.rendering === 'drug') {
         obsField = _handleFieldUiSelect(obsField);
-        obsField['templateOptions']['type'] = _question.questionOptions.rendering;
         obsField['templateOptions']['deferredFilterFunction'] = SearchDataService.findDrugConcepts;
         obsField['templateOptions']['getSelectedObjectFunction'] = SearchDataService.getDrugConceptByUuid;
       } else if (_question.questionOptions.rendering === 'select-concept-answers') {
@@ -351,19 +330,14 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       (_question.questionOptions.rendering === 'select') ||
       (_question.questionOptions.rendering === 'multiCheckbox')) {
         _handleFieldAnswers(obsField, _question.questionOptions.answers);
-        obsField['type'] = _question.questionOptions.rendering;
 
-        // if (_question.questionOptions.rendering === 'multiCheckbox') {
-        //   // $log.debug('MULTICHECKBOX KEY', obsField.key);
-        //   var objKey = obsField.key;
-        //   var obj = _model[objKey.split('.')[0]];
-        //   obj.value = [];
-        //   // obsField.key = objKey + '[0]';
-        //   // $log.debug('MULTICHECKBOX KEY', obj);
-        //   obsField['type'] = 'ui-select-multiple';
-        // } else if (_question.questionOptions.rendering === 'select') {
-        //   obsField['type'] = 'ui-select-single-search';
-        // }
+        if (_question.questionOptions.rendering === 'multiCheckbox') {
+          obsField['type'] = 'ui-select-multiple';
+        } else if (_question.questionOptions.rendering === 'select') {
+          obsField['type'] = 'ui-select-single';
+        } else {
+          obsField['type'] = 'radio';
+        }
       }
 
       _addToQuestionMap(_question, obsField, questionMap);

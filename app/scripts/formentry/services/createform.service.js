@@ -109,9 +109,9 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
         if (question.type === 'obs') {
           handlerMethod = fieldHandlerService.getFieldHandler('obsFieldHandler');
-          $log.debug('about to create: ', question);
+          // $log.debug('about to create: ', question);
           var field = handlerMethod(question, model, questionMap);
-          $log.debug('Field Created', field);
+          // $log.debug('Field Created', field);
           if (angular.isArray(field)) {
             _.each(field, function(f) {
                 fields.push(f);
@@ -166,6 +166,11 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             model['obsRepeating' + '_' + groupId] = updateRepeatModel;
             fields.push(obsField);
           }
+
+        } else if (question.type.startsWith('encounter')) {
+          handlerMethod = fieldHandlerService.getFieldHandler(question.type + 'FieldHandler');
+          var field = handlerMethod(question, model, questionMap);
+          fields.push(field);
 
         } else {
           handlerMethod = fieldHandlerService.getFieldHandler('defaultFieldHandler');

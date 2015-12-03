@@ -35,7 +35,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
         if (!(value instanceof Date)) {
           value = new Date(value);
-          if (value === null || value === undefined) {
+          if (_.isNull(value) || _.isUndefined(value)) {
             return '';
           }
         }
@@ -75,7 +75,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
         var fieldKeys = Object.keys(sectionModel);
         //geting obs data without obs groups
         var obsData = _.filter(restObs.obs, function(obs) {
-          if (obs.groupMembers === null) {
+          if (_.isNull(obs.groupMembers)) {
             return obs;
           }
         });
@@ -98,9 +98,10 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
           } else if (fieldKey.startsWith('obsRepeating')) {
             var sectionFields = sectionModel[fieldKey];
             var sectionKeys = Object.keys(sectionFields[0]);
+            $log.debug('Repeating section', sectionKeys);
             // some repeating sections may miss the concept and schemaQuestion
-            // attributes, therefore we will be need to rebuild this b4 passing
-            // it on for processing
+            // attributes, therefore we will need to rebuild this b4 passing
+            // it for processing
             _.each(sectionFields, function(_sectionFields) {
               var sectionObs = [];
               var concept = sectionFields[0][sectionKeys[0]];
@@ -176,12 +177,27 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
           } else if (fieldKey.startsWith('obsRepeating')) {
             var sectionFields = sectionModel[fieldKey];
             var sectionKeys = Object.keys(sectionFields[0]);
-            // some repeating sections may miss the concept and schemaQuestion
-            // attributes, therefore we will be need to rebuild this b4 passing
-            // it on for processing
+            $log.debug('Repeating section', sectionKeys);
+            $log.debug('Repeating fields', sectionFields);
+            var objProps = sectionFields[0];
             _.each(sectionFields, function(_sectionFields) {
+              var fieldKeys = Object.keys(_sectionFields);
               var sectionObs = [];
               var concept = sectionFields[0][sectionKeys[0]];
+              // some repeating sections may miss the concept and schemaQuestion
+              // attributes, therefore we will be need to rebuild this b4 passing
+              // it on for processing
+              _.each(sectionKeys, function(key) {
+                if (!key.startsWith('$$') && key !== 'groupConcept') {
+                  if (_.contains(fieldKeys, key)) {
+                    var obj = objProps[key]; //object with all the required properties
+                    var thisField = _sectionFields[key];
+                    thisField.concept = obj.concept;
+                    thisField.schemaQuestion = obj.schemaQuestion;
+                  }
+                }
+              });
+
               var obs = {
                   concept:concept,
                   groupMembers:sectionObs
