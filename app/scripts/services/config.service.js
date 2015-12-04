@@ -10,9 +10,9 @@
     'use strict';
     angular.module('openmrs.angularFormentry')
             .factory('configService', configService);
-    configService.$inject = ['$http', '$log', 'fieldHandlerService', 'formlyConfig', '$rootScope', '$q'];
+    configService.$inject = ['$http', '$log', 'FieldHandlerService', 'formlyConfig', '$rootScope', '$q'];
 
-    function  configService($http, $log, fieldHandlerService, formlyConfig, $rootScope, $q) {
+    function  configService($http, $log, FieldHandlerService, formlyConfig, $rootScope, $q) {
         $rootScope.jsonSchema = [];
         var service = {
             addFieldHandler: addFieldHandler,
@@ -30,7 +30,7 @@
          * @returns {undefined}
          */
         function  addFieldHandler(fieldHandlerName, handlerFunction) {
-            fieldHandlerService.registerCustomFieldHandler(fieldHandlerName,
+            FieldHandlerService.registerCustomFieldHandler(fieldHandlerName,
                     handlerFunction);
         }
         /**

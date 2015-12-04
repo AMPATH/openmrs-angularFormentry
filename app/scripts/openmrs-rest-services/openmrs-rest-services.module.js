@@ -3,7 +3,7 @@
   'use strict';
 
   angular
-        .module('openmrsRestServices', [
+        .module('openmrs.RestServices', [
             'base64',
             'ngResource',
             'ngCookies',

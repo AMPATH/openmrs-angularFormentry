@@ -42,6 +42,39 @@
               "questionOptions":{
                 "rendering":"ui-select-extended"
               }
+            },            
+            {
+              "type":"personAttribute",
+              "label":"Transfer in from other AMPATH clinic (specify):",
+              "id":"transfered_in_to_ampath",
+              "required":"true",
+              "default":"",
+              "questionOptions":{
+                "rendering":"ui-select-extended",
+                "attributeType":"7ef225db-94db-4e40-9dd8-fb121d9dc370"
+              }
+            },
+            {
+              "type":"personAttribute",
+              "label":"Transfer out to another AMPATH clinic (specify):",
+              "id":"transfered_out_to_ampath",
+              "required":"true",
+              "default":"",
+              "questionOptions":{
+                "rendering":"ui-select-extended",
+                "attributeType":"8d87236c-c2cc-11de-8d13-0010c6dffd0f"
+              }
+            },
+            {
+              "type":"obs",
+              "label":"question1",
+              "id":"q1",
+              "required":"true",
+              "default":"",
+              "questionOptions":{
+                "rendering":"text",
+                "concept":"1232"
+              }
             },
             {
               "label": "Patient covered by NHIF:",

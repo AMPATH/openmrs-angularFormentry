@@ -8,28 +8,30 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
   'use strict';
 
   angular
-        .module('openmrs.angularFormentry')
-        .factory('FormEntry', FormEntry);
+    .module('openmrs.angularFormentry')
+    .factory('FormEntry', FormEntry);
 
   FormEntry.$inject = ['CreateFormService', '$log', 'FieldHandlerService',
-  'FormProcessorService', 'CurrentLoadedFormService','moment'];
+    'FormProcessorService', 'CurrentLoadedFormService', 'moment'
+  ];
 
   function FormEntry(createFormService, $log, fieldHandlerService,
-  formProcessorService, CurrentLoadedFormService, moment) {
+    formProcessorService, CurrentLoadedFormService, moment) {
 
     var service = {
-          createForm: createForm,
-          registerCustomFieldHandler: registerCustomFieldHandler,
-          getFormPayload:getFormPayload,
-          updateFormWithExistingObs: updateFormWithExistingObs
-        };
+      createForm: createForm,
+      registerCustomFieldHandler: registerCustomFieldHandler,
+      getFormPayload: getFormPayload,
+      updateFormWithExistingObs: updateFormWithExistingObs,
+      getPersonAttributesPayload: getPersonAttributesPayload
+    };
 
     return service;
 
     function registerCustomFieldHandler(_handlerName, _handlerMethod) {
       if (typeof _handlerMethod === 'function') {
         fieldHandlerService
-        .registerCustomFieldHandler(_handlerName, _handlerMethod);
+          .registerCustomFieldHandler(_handlerName, _handlerMethod);
       } else {
         $log.info('Handler was not registered!!');
       }
@@ -38,7 +40,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
     function createForm(schema, model, callback) {
       createFormService.createForm(schema, model, function(tabs, questionMap) {
         CurrentLoadedFormService.formModel = model;
-         CurrentLoadedFormService.questionMap = questionMap;
+        CurrentLoadedFormService.questionMap = questionMap;
         callback(tabs, questionMap);
       });
     }
@@ -48,6 +50,14 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       formProcessorService.obsFormProccesor(model, function(payload) {
         obsPayload = payload;
         callback(obsPayload);
+      });
+    }
+
+    function getPersonAttributesPayload(model, callback) {
+      var personAttributePayload;
+      formProcessorService.personAttributeFormProccesor(model, function(payload) {
+        personAttributePayload = payload;
+        callback(personAttributePayload);
       });
     }
 

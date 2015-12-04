@@ -8,39 +8,49 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
   'use strict';
 
   angular
-        .module('openmrs.angularFormentry')
-        .factory('FormProcessorService', FormProcessorService);
+    .module('openmrs.angularFormentry')
+    .factory('FormProcessorService', FormProcessorService);
 
-  FormProcessorService.$inject = ['ObsProcessorService'];
+  FormProcessorService.$inject = ['ObsProcessorService', 'PersonAttributesProcessorService'];
 
-  function FormProcessorService(ObsProcessorService) {
-      var service = {
-        obsFormProccesor: obsFormProccesor,
-        encounterFormProcessor: encounterFormProcessor,
-        addExistingDataSetToEncounterForm:addExistingDataSetToEncounterForm,
-        addExistingDataSetToObsForm:addExistingDataSetToObsForm
-      };
+  function FormProcessorService(ObsProcessorService, PersonAttributesProcessorService) {
+    var service = {
+      obsFormProccesor: obsFormProccesor,
+      encounterFormProcessor: encounterFormProcessor,
+      personAttributeFormProccesor: personAttributeFormProccesor,
+      addExistingDataSetToEncounterForm: addExistingDataSetToEncounterForm,
+      addExistingDataSetToObsForm: addExistingDataSetToObsForm,
 
-      return service;
+    };
 
-      function obsFormProccesor(model, callback) {
-        var obsPayload;
-        ObsProcessorService.generateObsPayload(model, function(payload) {
-          obsPayload = payload;
-          callback(obsPayload);
-        });
-      }
+    return service;
 
-      function encounterFormProcessor(model) {
-
-      }
-
-      function addExistingDataSetToObsForm(restObs, model) {
-        ObsProcessorService.addExistingObsSetToForm(model, restObs);
-      }
-
-      function addExistingDataSetToEncounterForm(restDataset, model) {
-
-      }
+    function obsFormProccesor(model, callback) {
+      var obsPayload;
+      ObsProcessorService.generateObsPayload(model, function(payload) {
+        obsPayload = payload;
+        callback(obsPayload);
+      });
     }
+
+    function personAttributeFormProccesor(model, callback) {
+      var personAttributesPayload;
+      PersonAttributesProcessorService.generatePersonAttributesPayload(model, function(payload) {
+        personAttributesPayload = payload;
+        callback(personAttributesPayload);
+      });
+    }
+
+    function encounterFormProcessor(model) {
+
+    }
+
+    function addExistingDataSetToObsForm(restObs, model) {
+      ObsProcessorService.addExistingObsSetToForm(model, restObs);
+    }
+
+    function addExistingDataSetToEncounterForm(restDataset, model) {
+
+    }
+  }
 })();
