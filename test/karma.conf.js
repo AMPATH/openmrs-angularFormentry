@@ -54,6 +54,7 @@ module.exports = function(config) {
       'test/mock/**/*.module.mock.js',
       'test/mock/**/*.js',
       'test/spec/**/*.js'
+    //'test/spec/formentry/services/encounter-processor.service.test.js'
     ],
 
     // list of files / patterns to exclude

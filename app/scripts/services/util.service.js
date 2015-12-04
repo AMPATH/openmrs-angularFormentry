@@ -11,12 +11,12 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
         .module('angularFormentry')
         .factory('UtilService', UtilService);
 
-  UtilService.$inject = ['$http', '$log'];
+  UtilService.$inject = ['$http', '$log', '$filter'];
 
-  function UtilService($http, $log) {
+  function UtilService($http, $log, $filter) {
     var service = {
-          getFormSchema: getFormSchema
-        };
+      getFormSchema: getFormSchema
+    };
 
     return service;
 
