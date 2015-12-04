@@ -20,7 +20,8 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
     var service = {
           createForm: createForm,
           registerCustomFieldHandler: registerCustomFieldHandler,
-          getFormPayload:getFormPayload
+          getFormPayload:getFormPayload,
+          updateFormWithExistingObs: updateFormWithExistingObs
         };
 
     return service;
@@ -46,6 +47,10 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
         obsPayload = payload;
         callback(obsPayload);
       });
+    }
+
+    function updateFormWithExistingObs(model, restObs) {
+      formProcessorService.addExistingDataSetToObsForm(restObs, model);
     }
 
   }

@@ -71,7 +71,7 @@
       });
 
       it('should create obs payload for simple questions', function() {
-        var sampleSection = model['section_Section Name'];
+        var sampleSection = model['section_Section_Name'];
         var sampleField1 = sampleSection['obs1_1232'];
         var sampleField2 = sampleSection['obs1_1234'];
         expect(obsPayload[0].concept).to.equal(sampleField1.concept);
@@ -88,7 +88,7 @@
 
       it('should create obs payload with the right data type as schemaQuestion',
       function() {
-        var sampleSection = model['section_Section Name'];
+        var sampleSection = model['section_Section_Name'];
         var sampleField1 = sampleSection['obs1_1232'];
         var sampleField2 = sampleSection['obs1_1234'];
         var sampleField3 = sampleSection['obs1_1233'];
