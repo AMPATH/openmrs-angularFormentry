@@ -235,27 +235,17 @@
                       label: 'Visit Date',
                       type: 'encounterDate',
                       required: 'true',
-                      id:'encDate',
-                      questionOptions:{
-                        rendering:'date'
-                      },
                       validators:[{type:'date'}]
                     },
                     {
                       type: 'encounterProvider',
                       label: 'Provider',
-                      required: 'true',
-                      questionOptions:{
-                        rendering:'ui-select-extended'
-                      }
+                      required: 'true'
                     },
                     {
                       type: 'encounterLocation',
                       label: 'Facility Name',
-                      required: 'true',
-                      questionOptions:{
-                        rendering:'ui-select-extended'
-                      }
+                      required: 'true'
                     }
                   ]
                 }
@@ -290,26 +280,26 @@
                       label: '6 Transfer in from other AMPATH clinic (specify):',
                       type: 'location-attribute',
                       validators: []
-                    },
-                    {
-                      label:'Problem List',
-                      questions:[
-                        {
-                          concept: 'a89c2d8a-1350-11df-a1f1-0026b9348838',
-                          type: 'group_repeating',
-                          label: '23a. Problem Added',
-                          questions:[
-                            {
-                              concept: 'a8ae835e-1350-11df-a1f1-0026b9348838',
-                              label: 'Problem Added',
-                              type: 'problem',
-                              validators: []
-                            }
-                          ]
-                        }
-                  ]
                     }
                   ]
+                },
+                {
+                  label:'Problem List',
+                  questions:[
+                    {
+                      concept: 'a89c2d8a-1350-11df-a1f1-0026b9348838',
+                      type: 'group_repeating',
+                      label: '23a. Problem Added',
+                      questions:[
+                        {
+                          concept: 'a8ae835e-1350-11df-a1f1-0026b9348838',
+                          label: 'Problem Added',
+                          type: 'problem',
+                          validators: []
+                        }
+                      ]
+                    }
+              ]
                 }
             ]
             }
