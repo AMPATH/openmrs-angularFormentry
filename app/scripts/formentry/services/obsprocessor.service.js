@@ -63,7 +63,12 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
         var opts = [];
         var optsUuid = [];
         _.each(val, function(o) {
-          if (field.schemaQuestion.questionOptions.rendering === 'date') {
+          if (field.obsDatetime) {
+            //special case for fields having showDate property
+            field.initialValue = new Date(o.obsDatetime);
+            field.initialUuid = o.uuid;
+            field.value = new Date(o.obsDatetime);
+          } else if (field.schemaQuestion.questionOptions.rendering === 'date') {
             field.initialValue = new Date(o.value);
             field.initialUuid = o.uuid;
             field.value = new Date(o.value);
@@ -325,7 +330,13 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       function _generateFieldPayload(field, obsRestPayload) {
         var obs = {};
         var qRender = field.schemaQuestion.questionOptions.rendering;
-        if (qRender === 'number' || qRender === 'text' || qRender === 'select' ||
+        if (field.schemaQuestion.questionOptions.showDate &&
+          field.obsDatetime) {
+          //This shld be an obs date for the previous field
+          var lastFieldPayload = obsRestPayload[obsRestPayload.length - 1];
+          $log.debug('last obs payload', lastFieldPayload);
+          lastFieldPayload.obsDatetime =  _parseDate(field.value);
+        } else if (qRender === 'number' || qRender === 'text' || qRender === 'select' ||
         qRender === 'radio') {
           obs = _setValue(field);
           if (Object.keys(obs).length > 0) {obsRestPayload.push(obs);}

@@ -229,21 +229,34 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
     function _handleShowDate(_field) {
       var field = _field || {};
+      field.templateOptions = {};
       var key = field.key;
-      field.key = key.replace(/obs/gi, 'obsDate');
-      field.type = 'datepicker';
-      field.templateOptions['datepickerPopup'] = 'dd-MMMM-yyyy';
-      field.templateOptions['label'] = 'Date';
-      field.expressionProperties = {
-        'templateOptions.required': function($viewValue, $modelValue, scope, element) {
-          var value = $viewValue || $modelValue;
-          var fkey = selField.key;
-          return scope.model[fkey] !== undefined && scope.model[fkey] !== null && scope.model[fkey] !== '';
-        }
+      field['key'] = key.replace(/obs/gi, 'obsDate');;
+      field['type'] = 'datepicker';
+      field['templateOptions']['datepickerPopup'] = 'dd-MMMM-yyyy';
+      field['templateOptions']['label'] = 'Date';
+      field['templateOptions']['type'] = 'text';
+      // field.expressionProperties = {
+      //   'templateOptions.required': function($viewValue, $modelValue, scope, element) {
+      //     var value = $viewValue || $modelValue;
+      //     var fkey = field.key.split('.')[0];
+      //     return scope.model[fkey].value !== undefined &&
+      //     scope.model[fkey].value !== null && scope.model[fkey].value !== '';
+      //   }
+      // };
+      // field.validators = {
+      //   dateValidator: '' //FormValidator.getDateValidatorObject(curField.validators[0]) //this  will require refactoring as we move forward
+      // };
+    }
+
+    function _updateModelObsDateField(_question, model, field) {
+      var m = {
+        concept:_question.questionOptions.concept,
+        schemaQuestion: _question, value:'',
+        obsDatetime:'true'
       };
-      field.validators = {
-        dateValidator: '' //FormValidator.getDateValidatorObject(curField.validators[0]) //this  will require refactoring as we move forward
-      };
+      var fieldKey = field.key.split('.')[0];
+      model[fieldKey] = m;
     }
 
     function _createFormlyFieldHelper(_question, model, _id) {
@@ -285,7 +298,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       }
 
       // field.model = _model;
-      $log.debug('loosing value property', model);
+      // $log.debug('loosing value property', model);
       return field;
     }
 
@@ -343,10 +356,12 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       _addToQuestionMap(_question, obsField, questionMap);
 
       var fieldArray = [];
-      var obsDateField;
+      var obsDateField = {};
       if (_question.questionOptions.showDate === 'true') {
-        obsDateField = angular.copy(obsField);
+        var key = angular.copy(obsField.key);
+        obsDateField.key = key;
         _handleShowDate(obsDateField);
+        _updateModelObsDateField(angular.copy(_question), _model, obsDateField);
         fieldArray.push(obsField);
         fieldArray.push(obsDateField);
         return fieldArray;

@@ -26,7 +26,7 @@
     $scope.vm.model = {};
     var schema;
     var newForm;
-    var testSchema = 'schema_encounter';
+    var testSchema = 'triage';
     UtilService.getFormSchema(testSchema, function(data) {
       schema = data;
       $log.info('Schema Controller', schema);

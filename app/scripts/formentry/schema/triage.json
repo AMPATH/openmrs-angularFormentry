@@ -276,7 +276,8 @@
                     "rendering":"number",
                     "concept": "a8a65d5a-1350-11df-a1f1-0026b9348838",
                     "max": "250",
-                    "min": "0"
+                    "min": "0",
+                    "showDate":"true"
                   },
                   "type": "obs",
                   "validators": []
