@@ -71,7 +71,7 @@
       });
 
       it('should create obs payload for simple questions', function() {
-        var sampleSection = model['section_Section Name'];
+        var sampleSection = model['section_Section_Name'];
         var sampleField1 = sampleSection['obs1_1232'];
         var sampleField2 = sampleSection['obs1_1234'];
         expect(obsPayload[0].concept).to.equal(sampleField1.concept);
@@ -88,7 +88,7 @@
 
       it('should create obs payload with the right data type as schemaQuestion',
       function() {
-        var sampleSection = model['section_Section Name'];
+        var sampleSection = model['section_Section_Name'];
         var sampleField1 = sampleSection['obs1_1232'];
         var sampleField2 = sampleSection['obs1_1234'];
         var sampleField3 = sampleSection['obs1_1233'];
@@ -100,6 +100,58 @@
 
     });
 
+    describe('addExistingObsSetToForm unit tests', function() {
+      var model = {};
+      var restObs;
+      beforeEach(function() {
+        functionStub = sinon.spy(opService, 'addExistingObsSetToForm');
+        model = mockData.getTriageFormModel();
+        restObs = mockData.getMockRestEncounter();
+        opService.addExistingObsSetToForm(model, restObs);
+      });
+
+      it('should be called with parameters', function() {
+        expect(functionStub).to.have.been.calledOnce;
+        expect(functionStub.firstCall.calledWithExactly(sinon.match.object,
+          sinon.match.object)).to.be.true;
+      });
+
+      it('should be able to update obs for a select field', function() {
+        var selectConcept = '9ce5dbf0-a141-4ad8-8c9d-cd2bf84fe72b';
+        var selectedField;
+        for (var i in model) {
+          var section = model[i];
+          for (var k in section) {
+            var field = section[k];
+            // console.log('key in', field);
+            if (field.concept === selectConcept) {
+              selectedField = field;
+            }
+          }
+        }
+
+        expect(selectedField.concept).to.equal(selectConcept);
+        expect(selectedField.value).to.equal('9ce5dbf0-a141-4ad8-8c9d-cd2bf84fe72b').that.is.a('string');
+      });
+
+      it('should be able to update obs for a numeric field', function() {
+        var selectConcept = 'a8a65fee-1350-11df-a1f1-0026b9348838';
+        var selectedField;
+        for (var i in model) {
+          var section = model[i];
+          for (var k in section) {
+            var field = section[k];
+            // console.log('key in', field);
+            if (field.concept === selectConcept) {
+              selectedField = field;
+            }
+          }
+        }
+
+        expect(selectedField.concept).to.equal(selectConcept);
+        expect(selectedField.value).to.equal(35).that.is.a('number');
+      });
+    });
   });
 
 })();

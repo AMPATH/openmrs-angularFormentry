@@ -21,7 +21,8 @@
             getMockLocations: getMockLocations,
             getMockEtlLocations: getMockEtlLocations,
             getMockedFormList:getMockedFormList,
-            getMockRestEncounter:getMockRestEncounter
+            getMockRestEncounter:getMockRestEncounter,
+            getTriageFormModel:getTriageFormModel
           };
 
     return mock;
@@ -425,7 +426,7 @@
               uuid: "9ce5dbf0-a141-4ad8-8c9d-cd2bf84fe72b"
             },
             value: {
-              uuid: "a89ad3a4-1350-11df-a1f1-0026b9348838",
+              uuid: "9ce5dbf0-a141-4ad8-8c9d-cd2bf84fe72b",
               display: "NOT APPLICABLE"
             },
           groupMembers: null

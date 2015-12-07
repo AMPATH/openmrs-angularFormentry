@@ -36,7 +36,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       }
 
       function addExistingDataSetToObsForm(restObs, model) {
-
+        ObsProcessorService.addExistingObsSetToForm(model, restObs);
       }
 
       function addExistingDataSetToEncounterForm(restDataset, model) {
