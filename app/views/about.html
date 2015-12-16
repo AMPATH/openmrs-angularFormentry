@@ -1,41 +1,51 @@
 <div class="panel panel-info" style="padding:4px;">
   <link href="bower_components/bootstrap/dist/css/bootstrap.css" rel="stylesheet">
   <link rel="stylesheet" href="bower_components/angular-bootstrap/ui-bootstrap-csp.css">
+  
+  <div id="error-summary-container" class="panel panel-danger" data-ng-show="(vm.form.$valid === false && vm.hasClickedSubmit)">
+    <div><h3 style="margin-left:4px; margin-top: 0px" class="text-danger">.</h3></div>
+    <div style="margin-left:4px; margin-top: 0px" data-ng-repeat="tab in vm.tabs" data-ng-show="(vm.form.$valid === false && vm.hasClickedSubmit)">
+      <h4 data-ng-show="(vm.form.$valid === false && vm.hasClickedSubmit && vm.anyFieldsInError(tab.currentFields))">{{tab.title}}</h4>
+      <formly-error-summary form="vm.form" fields="tab.form.fields" page-fields="tab.currentFields" tab-title="tab.title"></formly-error-summary>
+    </div>
+  </div>
+  
   <form name="vm.form" novalidate>
     <div class="breadcrumb">
       <h4>TEST CUSTOM FORM</h4>
     </div>
-       <tabset>
-         <tab ng-repeat="tab in vm.tabs"
-              heading="{{tab.title}}"
-              active="tab.active"
-              disable="tab.disabled"
-              select="vm.tabSelected($index)">
-           <formly-form model="tab.form.model" fields="tab.form.fields" form="vm.form" options="tab.form.options">
-           </formly-form>
-         </tab>
-       </tabset>
-       <button type="submit" class="btn btn-primary submit-button" ng-click="vm.onSubmit()">{{vm.submitLabel}}</button>
-       <button type="button" class="btn btn-default" ng-click="vm.resetAllForms()">Cancel</button>
+    <tabset>
+      <tab ng-repeat="tab in vm.tabs" heading="{{tab.title}}" active="tab.active" disable="tab.disabled" select="vm.tabSelected($index)">
+        <formly-form model="tab.form.model" fields="tab.form.fields" form="vm.form" options="tab.form.options">
+        </formly-form>
+      </tab>
+    </tabset>
+    <button type="submit" class="btn btn-primary submit-button" ng-click="vm.onSubmit()">{{vm.submitLabel}}</button>
+    <button type="button" class="btn btn-default" ng-click="vm.resetAllForms()">Cancel</button>
 
-     </form>
-     <hr />
-     <h2>Model Value</h2>
+  </form>
+  <hr />
+  <h2>Model Value</h2>
   <pre>{{vm.model | json}}</pre>
-     <!-- <h2>Tabs <small>(note, functions are not shown)</small></h2>
+
+  <hr />
+  <h2>Question Map</h2>
+  <pre>{{vm.questionMap | json}}</pre>
+
+  <!-- <h2>Tabs <small>(note, functions are not shown)</small></h2>
      <pre>{{vm.originalTabs | json}}</pre>
      <h2>Form Fields</h2>
      <pre ng-repeat="tab in vm.tabs">{{tab.form.fields | json}}</pre> -->
 
-     <!-- important scripts Section -->
-     <!-- Put custom templates here -->
-     <script type="text/ng-template" id="error-messages.html">
-           <formly-transclude></formly-transclude>
-           <div class="error-messages" ng-messages="fc.$error" ng-if="form.$submitted || options.formControl.$touched">
-             <div class="message" ng-message="{{::name}}" ng-repeat="(name, message) in ::options.validation.messages" style="color:red;">
-               {{message(fc.$viewValue, fc.$modelValue, this)}}
-             </div>
-           </div>
+  <!-- important scripts Section -->
+  <!-- Put custom templates here -->
+  <script type="text/ng-template" id="error-messages.html">
+    <formly-transclude></formly-transclude>
+    <div class="error-messages" ng-messages="fc.$error" ng-if="form.$submitted || options.formControl.$touched">
+      <div class="message" ng-message="{{::name}}" ng-repeat="(name, message) in ::options.validation.messages" style="color:red;">
+        {{message(fc.$viewValue, fc.$modelValue, this)}}
+      </div>
+    </div>
 
-     </script>
+  </script>
 </div>

@@ -16,7 +16,8 @@
         "id": "encDate",
         "questionOptions": {
           "rendering": "date"
-        }
+        },
+        "validators": []
       }, {
         "type": "encounterProvider",
         "label": "Provider",
@@ -25,7 +26,8 @@
         "default": "",
         "questionOptions": {
           "rendering": "ui-select-extended"
-        }
+        },
+        "validators": []
       }, {
         "type": "encounterLocation",
         "label": "Facility name (site/satellite clinic required):",
@@ -33,7 +35,8 @@
         "required": "true",
         "questionOptions": {
           "rendering": "ui-select-extended"
-        }
+        },
+        "validators": []
       }]
     }, {
       "label": "Section Name",
@@ -46,7 +49,72 @@
         "questionOptions": {
           "rendering": "text",
           "concept": "1232"
-        }
+        },
+        "validators": []
+      }, {
+        "type": "obs",
+        "label": "question4",
+        "id": "q4",
+        "required": {
+          "type": "conditionalRequired",
+          "message": "When q1 is requiredanswer, this is required",
+          "referenceQuestionId": "q1",
+          "referenceQuestionAnswers": [
+            "requiredanswer"
+          ]
+        },
+        "default": "",
+        "questionOptions": {
+          "rendering": "text",
+          "concept": "12324"
+        },
+        "validators": []
+      }, {
+        "type": "obs",
+        "label": "question5",
+        "id": "q5",
+        "required": "false",
+        "default": "",
+        "questionOptions": {
+          "rendering": "text",
+          "concept": "123266"
+        },
+        "validators": [{
+          "type": "conditionalAnswered",
+          "message": "Only answer when q1 is answerQ5",
+          "referenceQuestionId": "q1",
+          "referenceQuestionAnswers": [
+            "answerQ5"
+          ]
+        }]
+      }, {
+        "type": "obs",
+        "label": "question6",
+        "id": "q6",
+        "required": "false",
+        "default": "",
+        "disable": {
+          "disableWhenExpression": "q1 === 'disableq-6'"
+        },
+        "questionOptions": {
+          "rendering": "text",
+          "concept": "123267"
+        },
+        "validators": []
+      }, {
+        "type": "obs",
+        "label": "question7",
+        "id": "q7",
+        "required": "false",
+        "default": "",
+        "hide": {
+          "hideWhenExpression": "q1 === 'hideq-7'"
+        },
+        "questionOptions": {
+          "rendering": "text",
+          "concept": "1203267"
+        },
+        "validators": []
       }, {
         "type": "obs",
         "label": "question2",
@@ -56,17 +124,23 @@
         "questionOptions": {
           "rendering": "date",
           "concept": "1234"
-        }
+        },
+        "validators": []
       }, {
         "type": "obs",
         "label": "question3",
         "id": "q3",
-        "required": "true",
+        "required": "false",
         "default": "",
         "questionOptions": {
           "rendering": "number",
           "concept": "1233"
-        }
+        },
+        "validators": [{
+          "type": "js_expression",
+          "failsWhenExpression": "isEmpty(myValue) && !isEmpty(q1) && q1 === 'fail'",
+          "message": "Patient previously marked as on ART. Please provide the treatment category."
+        }]
       }, {
         "label": "Family Planning",
         "id": "onFamilyPlanning",
@@ -170,7 +244,11 @@
             "label": "Other"
           }]
         },
-        "validators": []
+        "validators": [{
+          "type": "js_expression",
+          "failsWhenExpression": "arrayContains(myValue, 'a8aaf3e2-1350-11df-a1f1-0026b9348838') && isEmpty(q1)",
+          "message": "Patient previously marked as on ART. Please provide the treatment category."
+        }]
       }]
     }]
   }, {
@@ -208,22 +286,20 @@
             "concept": "made-up-concept"
           },
           "questions": [{
-              "type": "obs",
-              "label": "Start Date",
-              "questionOptions": {
-                "rendering": "date",
-                "concept": "made-up-concept-2"
-              }
-            }, {
-              "type": "obs",
-              "label": "End Date",
-              "questionOptions": {
-                "rendering": "date",
-                "concept": "made-up-concept-3"
-              }
+            "type": "obs",
+            "label": "Start Date",
+            "questionOptions": {
+              "rendering": "date",
+              "concept": "made-up-concept-2"
             }
-
-          ]
+          }, {
+            "type": "obs",
+            "label": "End Date",
+            "questionOptions": {
+              "rendering": "date",
+              "concept": "made-up-concept-3"
+            }
+          }]
         }]
       }]
     }]
@@ -262,22 +338,20 @@
             "concept": "made-up-concept-4"
           },
           "questions": [{
-              "type": "obs",
-              "label": "Start Date",
-              "questionOptions": {
-                "rendering": "date",
-                "concept": "made-up-concept-5"
-              }
-            }, {
-              "type": "obs",
-              "label": "End Date",
-              "questionOptions": {
-                "rendering": "date",
-                "concept": "made-up-concept-6"
-              }
+            "type": "obs",
+            "label": "Start Date",
+            "questionOptions": {
+              "rendering": "date",
+              "concept": "made-up-concept-5"
             }
-
-          ]
+          }, {
+            "type": "obs",
+            "label": "End Date",
+            "questionOptions": {
+              "rendering": "date",
+              "concept": "made-up-concept-6"
+            }
+          }]
         }]
       }]
     }]

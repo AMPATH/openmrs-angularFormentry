@@ -12,10 +12,10 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
         .factory('FormEntry', FormEntry);
 
   FormEntry.$inject = ['CreateFormService', '$log', 'FieldHandlerService',
-  'FormProcessorService'];
+  'FormProcessorService', 'CurrentLoadedFormService','moment'];
 
   function FormEntry(createFormService, $log, fieldHandlerService,
-  formProcessorService) {
+  formProcessorService, CurrentLoadedFormService, moment) {
 
     var service = {
           createForm: createForm,
@@ -36,8 +36,10 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
     }
 
     function createForm(schema, model, callback) {
-      createFormService.createForm(schema, model, function(tabs) {
-        callback(tabs);
+      createFormService.createForm(schema, model, function(tabs, questionMap) {
+        CurrentLoadedFormService.formModel = model;
+         CurrentLoadedFormService.questionMap = questionMap;
+        callback(tabs, questionMap);
       });
     }
 
