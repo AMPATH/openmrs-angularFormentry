@@ -17,7 +17,8 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
           'openmrs.RestServices',
           'ui.bootstrap.datetimepicker',
 	        'ui.select',
-          'ngSanitize'
+          'ngSanitize',
+          'angularMoment'
         ])
 
         .run(function(formlyConfig, formlyValidationMessages, formlyApiCheck) {
