@@ -28,8 +28,9 @@
     $scope.vm.hasClickedSubmit = false;
     var schema;
     var newForm;
+    var testSchema = 'schema_encounter';
 
-    UtilService.getFormSchema('schema_encounter', function (data) {
+    UtilService.getFormSchema(testSchema, function (data) {
       schema = data;
       $log.info('Schema Controller', schema);
       FormEntry.createForm(schema, $scope.vm.model, function (_form, _questionMap) {

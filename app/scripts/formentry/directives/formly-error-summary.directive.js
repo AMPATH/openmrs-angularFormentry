@@ -11,7 +11,7 @@ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069
 
   function formlyErrorSummary() {
     var directive = {
-        templateUrl: 'formly-error-summary.html',
+        templateUrl: 'views/formly-error-summary.html',
         scope: {},
         bindToController: {
           form: '=',

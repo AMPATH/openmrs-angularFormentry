@@ -48,46 +48,4 @@
     </div>
 
   </script>
-
-  <!-- Error summary template -->
-  <script type="text/ng-template" id="formly-error-summary.html">
-    <style type="text/css">
-      body {
-        margin: 20px
-      }
-      
-      .formly-field {
-        margin-bottom: 16px;
-      }
-      
-      .formly-error-summary {
-        margin-bottom: 20px;
-      }
-      
-      .color-error {
-        color: red;
-      }
-      
-      .color-success {
-        color: green
-      }
-    </style>
-    <!-- The field here are the fields passed within the directives scope -->
-    <div class="formly-error-summary">
-      <!--
-    Allow all validations to be run on form submit only and when its rendered
-    Other custom validations will still run  when the field is touched anyway
-     -->
-      <div style="margin-left:4px; margin-bottom: 4px;" data-ng-repeat="field in vm.pageFields" class="color-error">
-        <div ng-click="vm.navigateToQuestion(vm.tabTitle, field.key, field)" data-ng-show="field.formControl.$invalid">
-          <span class="text-primary"><i class="glyphicon glyphicon-zoom-in"></i> {{field.templateOptions.label}} </span>
-          <br/>
-          <i style="margin-left:10px;" class="glyphicon glyphicon-{{field.formControl.$invalid ? 'remove' : 'ok'}}"></i>
-          <span data-ng-if="field.formControl.$invalid">
-              {{vm.getErrorAsList(field)}} 
-          </span>
-        </div>
-      </div>
-    </div>
-  </script>
 </div>
