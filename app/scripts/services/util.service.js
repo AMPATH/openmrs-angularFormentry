@@ -16,7 +16,8 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
   function UtilService($http, $log, $resource) {
     var service = {
           getFormSchema: getFormSchema,
-          getTestEncounterData:getTestEncounterData
+          getTestEncounterData:getTestEncounterData,
+          getServerUrl:getServerUrl
         };
 
     return service;
@@ -66,5 +67,10 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
           $log.error(error);
         });
     }
+    
+    function getServerUrl() {
+      return 'http://localhost:8080/amrs/ws/rest/v1';
+    }
+    
   }
 })();

@@ -17,11 +17,11 @@
 
   AboutCtrl.$inject = ['$log', '$location', '$scope',
     'FormEntry', '$timeout', '$filter',
-    'TestService', 'UtilService'
+    'TestService', 'UtilService', '$rootScope', 'configService', 'AuthService', 'SearchDataService'
   ];
 
   function AboutCtrl($log, $location, $scope, FormEntry,
-    $timeout, $filter, TestService, UtilService, configService) {
+    $timeout, $filter, TestService, UtilService, $rootScope, configService, AuthService, SearchDataService) {
     $scope.vm = {};
     $scope.vm.model = {};
     $scope.vm.questionMap = {};
@@ -30,6 +30,31 @@
     var newForm;
     var testSchema = 'schema_encounter';
 
+//connect to database
+configService.addJsonSchema('hostServer','http://localhost:8080/amrs/ws/rest/v1/');
+
+//broad cast server connection
+$rootScope.$broadcast('hostServer',configService.getSchema('hostServer'));
+var user={username:'akwatuha', password:'ttt'};
+        AuthService.isAuthenticated(user, function(authenticated) {       
+        if (!authenticated) // check if user is authenticated
+        {          
+          console.log('Invalid user name or password. Please try again');
+        } else {
+         console.log(authenticated)
+        }
+
+      }); 
+       
+       //testing search connection
+       SearchDataService.findLocation('abu',function(success){
+         console.log(JSON.stringify(success));
+       },
+       function(error){
+         console.log(JSON.stringify(error))
+       })
+       
+       
     UtilService.getFormSchema(testSchema, function (data) {
       schema = data;
       $log.info('Schema Controller', schema);
@@ -41,7 +66,8 @@
 
         console.log('final question map', $scope.vm.questionMap);
       });
-    });
+    });    
+   
 
     var restObs = {
       uuid: "test-uuid",
@@ -364,6 +390,11 @@
       FormEntry.getFormPayload($scope.vm.model, function (payload) {
         var obsPayload = payload;
         $log.debug('test payload', JSON.stringify(obsPayload));
+      });
+
+      FormEntry.getPersonAttributesPayload($scope.vm.model, function(payload) {
+        var personAttributePayload = payload;
+        $log.debug('test person attribute payload', JSON.stringify(personAttributePayload));
       });
     };
 

@@ -8,11 +8,12 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
   'use strict';
 
   angular
-        .module('openmrs.angularFormentry')
-        .factory('FieldHandlerService', FieldHandlerService);
+    .module('openmrs.angularFormentry')
+    .factory('FieldHandlerService', FieldHandlerService);
 
   FieldHandlerService.$inject = ['$log', 'SearchDataService', 'FormValidator'];
   var obsId = 0;
+
   function FieldHandlerService($log, SearchDataService, FormValidator) {
     var fieldHandlers = {};
     var currentQuestionMap = {};
@@ -105,9 +106,13 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
     }
 
     function personAttributeFieldHandler(_question, model, questionMap) {
-      $log.info('loading fieldHandler');
+      $log.info('loading person attribute fieldHandler');
       var field = {};
       field = _createFormlyFieldHelper(_question, model, questionMap);
+      _handlePersonAttributeField(field);
+      field['templateOptions']['type'] = _question.questionOptions.rendering;
+      field['templateOptions']['deferredFilterFunction'] = SearchDataService.findLocation;
+      field['templateOptions']['getSelectedObjectFunction'] = SearchDataService.getLocationByUuid;
       _addToQuestionMap(_question, field, questionMap);
       return field;
     }
@@ -138,14 +143,16 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       return obsField;
     }
 
-    function createFieldKey(_question, _id)
-    {
+    function createFieldKey(_question, _id) {
       var key;
       var fKey;
       var id = _id + 1;
       if (_question.type === 'obs') {
         fKey = _question.questionOptions.concept;
         key = 'obs' + id + '_' + fKey.replace(/-/gi, 'n'); // $$ Inserts a "$".
+      } else if (_question.type === 'personAttribute') {
+        fKey = _question.questionOptions.attributeType;
+        key = 'personAttribute' + '_' + fKey.replace(/-/gi, 'n');
       } else {
         key = _question.type;
       }
@@ -153,29 +160,26 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       return key;
     }
 
-    function _handleExpressionProperties(_field, _required, _disabled, _listener)
-    {
+    function _handleExpressionProperties(_field, _required, _disabled, _listener) {
       var field = _field || {};
-      var required = typeof _required === 'boolean'?_required : _required? FormValidator.getConditionalRequiredExpressionFunction(_required) :'false';
-      var disabled = typeof _disabled === 'boolean'?_required : _disabled? FormValidator.getHideDisableExpressionFunction_JS(_disabled) :'false';
+      var required = typeof _required === 'boolean' ? _required : _required ? FormValidator.getConditionalRequiredExpressionFunction(_required) : 'false';
+      var disabled = typeof _disabled === 'boolean' ? _required : _disabled ? FormValidator.getHideDisableExpressionFunction_JS(_disabled) : 'false';
       var listener = _listener || '';
       field['expressionProperties'] = {
-        'templateOptions.required':required,
-        'templateOptions.disabled':disabled,
-        'templateOptions.hasListeners':listener,
-        'templateOptions.onValueChanged':onFieldValueChanged
+        'templateOptions.required': required,
+        'templateOptions.disabled': disabled,
+        'templateOptions.hasListeners': listener,
+        'templateOptions.onValueChanged': onFieldValueChanged
       };
     }
 
-    function _handleDefaultValue(_field, _defaultValue)
-    {
+    function _handleDefaultValue(_field, _defaultValue) {
       var field = _field || {};
       var defaultVal = _defaultValue || '';
       field['defaultValue'] = defaultVal;
     }
 
-    function _handleValidators(_field, _validators, questionMap)
-    {
+    function _handleValidators(_field, _validators, questionMap) {
       var field = _field || {};
       //set the validator to default validator
       var defaultValidator = {
@@ -184,16 +188,15 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
         },
         message: ''
       };
-     
+
       var compiledValidators = FormValidator.getFieldValidators(_validators);
       compiledValidators['defaultValidator'] = defaultValidator;
       field['validators'] = compiledValidators;
     }
 
-    function _handleHide(_field, _hide)
-    {
+    function _handleHide(_field, _hide) {
       var field = _field || {};
-      var hide = typeof _hide === 'boolean'?_hide : _hide? FormValidator.getHideDisableExpressionFunction_JS(_hide) :'false';
+      var hide = typeof _hide === 'boolean' ? _hide : _hide ? FormValidator.getHideDisableExpressionFunction_JS(_hide) : 'false';
       field['hideExpression'] = hide;
     }
 
@@ -205,14 +208,14 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       if (angular.isArray(_answers)) {
         _.each(_answers, function(answer) {
           var item = {
-            name:answer.label,
-            value:answer.concept
+            name: answer.label,
+            value: answer.concept
           };
           answerList.push(item);
         });
       } else {
         $log.error('Error: Expected ' + _answers + ' to be an Array but got: ',
-        typeof _answers);
+          typeof _answers);
       }
 
       field['templateOptions']['valueProp'] = 'value';
@@ -227,6 +230,15 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       field['templateOptions']['labelProp'] = 'display';
       field['templateOptions']['options'] = [];
       // return field;
+    }
+
+    function _handlePersonAttributeField(_field) {
+      var field = _field || {};
+      field['type'] = 'ui-select-extended';
+      field['templateOptions']['valueProp'] = 'uuId';
+      field['templateOptions']['labelProp'] = 'display';
+      field['templateOptions']['options'] = [];
+      return field;
     }
 
     function _handleShowDate(_field) {
@@ -253,14 +265,15 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
     function _updateModelObsDateField(_question, model, field) {
       var m = {
-        concept:_question.questionOptions.concept,
-        schemaQuestion: _question, value:'',
-        obsDatetime:'true'
+        concept: _question.questionOptions.concept,
+        schemaQuestion: _question,
+        value: '',
+        obsDatetime: 'true'
       };
       var fieldKey = field.key.split('.')[0];
       model[fieldKey] = m;
     }
-    
+
     function onFieldValueChanged(viewVal, modelVal, fieldScope) {
       if (fieldScope.options.data.id) {
         FormValidator.updateListeners(fieldScope.options.data.id);
@@ -269,10 +282,21 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
     function _createFormlyFieldHelper(_question, model, questionMap) {
       var field = {};
-      var m = {
-        concept:_question.questionOptions.concept,
-        schemaQuestion: _question, value:''
+      var m = {};
+      m = {
+        concept: _question.questionOptions.concept,
+        schemaQuestion: _question,
+        value: ''
       };
+
+      if (_question.type === 'personAttribute') {
+        m = {
+          attributeType: _question.questionOptions.attributeType,
+          schemaQuestion: _question,
+          value: ''
+        };
+      }
+
       var fieldKey = createFieldKey(_question, obsId);
       var _model = {};
       _model[fieldKey] = m;
@@ -280,9 +304,11 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       var keyNames = Object.keys(_model);
       // $log.debug('debug key ...', key);
       field = {
-        key:keyNames[0] + '.value',
-        data: {concept:_question.questionOptions.concept,
-          id:_question.id},
+        key: keyNames[0] + '.value',
+        data: {
+          concept: _question.questionOptions.concept,
+          id: _question.id
+        },
         type: 'input',
         templateOptions: {
           type: 'text',
@@ -332,7 +358,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
         obsField['templateOptions']['min'] = _question.questionOptions.min;
         obsField['templateOptions']['max'] = _question.questionOptions.max;
 
-      }else if (_question.questionOptions.rendering === 'problem') {
+      } else if (_question.questionOptions.rendering === 'problem') {
         obsField = _handleFieldUiSelect(obsField);
         obsField['templateOptions']['deferredFilterFunction'] = SearchDataService.findProblem;
         obsField['templateOptions']['getSelectedObjectFunction'] = SearchDataService.getProblemByUuid;
@@ -347,9 +373,9 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
         obsField['questionConceptUuid'] = _question.questionOptions.concept;
         obsField['templateOptions']['type'] = _question.questionOptions.rendering;
         obsField['templateOptions']['fetchOptionsFunction'] = SearchDataService.getDrugConceptByUuid;
-      }else if ((_question.questionOptions.rendering === 'radio') ||
-      (_question.questionOptions.rendering === 'select') ||
-      (_question.questionOptions.rendering === 'multiCheckbox')) {
+      } else if ((_question.questionOptions.rendering === 'radio') ||
+        (_question.questionOptions.rendering === 'select') ||
+        (_question.questionOptions.rendering === 'multiCheckbox')) {
         _handleFieldAnswers(obsField, _question.questionOptions.answers);
 
         if (_question.questionOptions.rendering === 'multiCheckbox') {

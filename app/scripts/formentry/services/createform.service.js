@@ -8,10 +8,11 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
   'use strict';
 
   angular
-      .module('openmrs.angularFormentry')
-      .factory('CreateFormService', CreateFormService);
+    .module('openmrs.angularFormentry')
+    .factory('CreateFormService', CreateFormService);
 
   CreateFormService.$inject = ['$log', 'FieldHandlerService'];
+
   function CreateFormService($log, fieldHandlerService) {
     var service = {
       createForm: createForm
@@ -21,7 +22,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
     function createForm(schema, model, callback) {
       var form;
-      form =  _createFormlyForm(schema);
+      form = _createFormlyForm(schema);
       $log.debug('inspect compiled', form);
       var formlyForm = _createModel(form, model);
       form.questionMap.model = model;
@@ -46,41 +47,48 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
           _createFieldsFactory(section.questions, fields, sectionModel, questionMap);
           sectionId = _createSectionId(section.label);
           $log.debug('Secion ID: ', sectionId);
-          var sectionField =
-          {
-            key:'section_' + sectionId,
+          var sectionField = {
+            key: 'section_' + sectionId,
             type: 'section',
             templateOptions: {
-              label:section.label
+              label: section.label
             },
-            data:{
-              fields:fields
+            data: {
+              fields: fields
             }
           };
           // model['section_' + sectionId] = sectionModel;
           pageFields.push(sectionField);
-          compiledPage.push({section:section, formlyFields:sectionField, sectionModel:sectionModel});
+          compiledPage.push({
+            section: section,
+            formlyFields: sectionField,
+            sectionModel: sectionModel
+          });
         });
 
-        compiledSchema.push({page:page,compiledPage:compiledPage});
+        compiledSchema.push({
+          page: page,
+          compiledPage: compiledPage
+        });
       });
 
-      return ({compiledSchema:compiledSchema,questionMap:questionMap});
+      return ({
+        compiledSchema: compiledSchema,
+        questionMap: questionMap
+      });
     }
 
     function _createModel(form, model) {
       var tabs = [];
       _.each(form.compiledSchema, function(page) {
-        tabs.push(
-          {
-            title: page.page.label,
-            form: {
-              options: {},
-              model: model,
-              fields: _generateFormlySections(page.compiledPage)
-            }
+        tabs.push({
+          title: page.page.label,
+          form: {
+            options: {},
+            model: model,
+            fields: _generateFormlySections(page.compiledPage)
           }
-        );
+        });
 
         _.each(page.compiledPage, function(section) {
           var sectionId = _createSectionId(section.section.label);
@@ -115,8 +123,8 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
           // $log.debug('Field Created', field);
           if (angular.isArray(field)) {
             _.each(field, function(f) {
-                fields.push(f);
-              });
+              fields.push(f);
+            });
           } else {
             fields.push(field);
           }
@@ -130,32 +138,30 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
           var groupId = _createSectionId(question.label);
           if (question.questionOptions.rendering === 'group') {
             model['obsGroup' + '_' + groupId] = {};
-            groupModel =  model['obsGroup' + '_' + groupId];
+            groupModel = model['obsGroup' + '_' + groupId];
             groupModel.groupConcept = question.questionOptions.concept;
             obsField = {
               className: 'row',
-              key:'obsGroup' + '_' + groupId,
-              fieldGroup:fieldsArray
+              key: 'obsGroup' + '_' + groupId,
+              fieldGroup: fieldsArray
             };
             _createFieldsFactory(question.questions, fieldsArray,
               groupModel, questionMap);
             fields.push(obsField);
           } else if (question.questionOptions.rendering === 'repeating') {
             model['obsRepeating' + '_' + groupId] = [];
-            groupModel =  {};
+            groupModel = {};
             groupModel.groupConcept = question.questionOptions.concept;
             obsField = {
               type: 'repeatSection',
-              key:'obsRepeating' + '_' + groupId,
+              key: 'obsRepeating' + '_' + groupId,
               templateOptions: {
-                label:question.label,
-                btnText:'Add',
-                fields:[
-                  {
-                    className: 'row',
-                    fieldGroup:fieldsArray
-                  }
-                ]
+                label: question.label,
+                btnText: 'Add',
+                fields: [{
+                  className: 'row',
+                  fieldGroup: fieldsArray
+                }]
               }
             };
             _createFieldsFactory(question.questions, fieldsArray,
@@ -170,6 +176,11 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
         } else if (question.type.startsWith('encounter')) {
           handlerMethod = fieldHandlerService.getFieldHandler(question.type + 'FieldHandler');
+          var field = handlerMethod(question, model, questionMap);
+          fields.push(field);
+
+        } else if (question.type.startsWith('personAttribute')) {
+          handlerMethod = fieldHandlerService.getFieldHandler('personAttributeFieldHandler');
           var field = handlerMethod(question, model, questionMap);
           fields.push(field);
 

@@ -13,7 +13,8 @@ jshint -W003,-W109, -W106, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W11
 
   function LocationResService($resource) {
     var serviceDefinition;
-
+    var restHost='http://localhost:8080/amrs/ws/rest/v1';
+   
     var cachedLocations = [];
 
     serviceDefinition = {
@@ -35,7 +36,7 @@ jshint -W003,-W109, -W106, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W11
     }
 
     function getResource() {
-      return $resource('/location/:uuid',
+      return $resource(restHost+'/location/:uuid',
         { uuid: '@uuid' },
         { query: { method: 'GET', isArray: false } });
     }
@@ -47,13 +48,13 @@ jshint -W003,-W109, -W106, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W11
     }
 
     function getListResource() {
-      return $resource('/location?v=default',
+      return $resource(restHost+'/location?v=default',
         { uuid: '@uuid' },
         { query: { method: 'GET', isArray: false } });
     }
 
     function searchResource() {
-      return $resource('/location?q=:search&v=default',
+      return $resource(restHost+'/location?q=:search&v=default',
         { search: '@search' },
         { query: { method: 'GET', isArray: false } });
     }
@@ -77,12 +78,11 @@ jshint -W003,-W109, -W106, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W11
           successCallback(response);
         })
         .catch(function(error) {
-          alert(JSON.stringify(error));
           console.error(error);
         });
     }
 
-    function findLocation(searchText, successCallback, failedCallback) {
+    function findLocation(searchText, successCallback, failedCallback) {       
       var resource = searchResource();
       return resource.get({ search: searchText }).$promise
         .then(function(response) {
@@ -91,7 +91,7 @@ jshint -W003,-W109, -W106, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W11
         .catch(function(error) {
           failedCallback('Error processing request', error);
           console.error(error);
-        });
+        });  
     }
 
     function getLocations(successCallback, failedCallback, refreshCache) {
@@ -112,5 +112,7 @@ jshint -W003,-W109, -W106, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W11
           console.error(error);
         });
     }
-  }
+    
+     
+  }               
 })();

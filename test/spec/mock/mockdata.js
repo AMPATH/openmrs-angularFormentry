@@ -166,6 +166,7 @@
               }]
       };
     }
+    
 
     function getMockPersonAttributesArray() {
       var testData = [{uuid:'f123244d-8f1d-4430-9191-98ce60f3723b',
@@ -1002,6 +1003,36 @@
         }
       },
       "section_Section_Name": {
+        "personAttribute_1233": {
+          "attributeType": "1234",
+          "schemaQuestion": {
+            "type": "personAttribute",
+            "label": "First Person Attribute",
+            "id": "first_person_attribute",
+            "required": "true",
+            "default": "",
+            "questionOptions": {
+              "rendering": "location-attribute",
+              "attributeType": "1234"
+            }
+          },
+          "value": "Test person attribute 1"
+        },
+        "personAttribute_1234": {
+          "attributeType": "12345",
+          "schemaQuestion": {
+            "type": "personAttribute",
+            "label": "First Person Attribute",
+            "id": "first_person_attribute",
+            "required": "true",
+            "default": "",
+            "questionOptions": {
+              "rendering": "location-attribute",
+              "attributeType": "12345"
+            }
+          },
+          "value": "Test person attribute 2"
+        },
         "obs1_1232": {
           "concept": "1232",
           "schemaQuestion": {

@@ -49,16 +49,26 @@
           "label": "Section Name",
           "questions": [
             {
-              "type": "obs",
-              "label": "question1",
-              "id": "q1",
-              "required": "true",
-              "default": "",
-              "questionOptions": {
-                "rendering": "text",
-                "concept": "1232"
-              },
-              "validators": []
+              "type":"personAttribute",
+              "label":"Person Attribute 1",
+              "id":"first_person_attribute",
+              "required":"true",
+              "default":"",
+              "questionOptions":{
+                "rendering":"ui-select-extended",
+                "attributeType":"1232"
+              }
+            },
+            {
+              "type":"obs",
+              "label":"question1",
+              "id":"q1",
+              "required":"true",
+              "default":"",
+              "questionOptions":{
+                "rendering":"text",
+                "concept":"1232"
+              }
             },
             {
               "type": "obs",

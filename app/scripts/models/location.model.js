@@ -224,6 +224,7 @@
       };
 
       modelDefinition.openmrsModel = function(value) {
+       
         return {name: _name,
                 description: _description,
                 address1: _address1,
@@ -257,7 +258,6 @@
         openmrsModel.parentLocation, openmrsModel.childLocations,
         openmrsModel.attributes
       );
-
       return obj;
         
       }
