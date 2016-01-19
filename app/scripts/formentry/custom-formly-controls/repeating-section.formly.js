@@ -60,6 +60,9 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
           // if (lastSection) {
           //   newsection = angular.copy(lastSection);
           // }
+        //   newsection.obs1_a894b1ccn1350n11dfna1f1n0026b9348838 = {
+        //       value: 'a893516a-1350-11df-a1f1-0026b9348838'
+        //   };
 
           repeatsection.push(newsection);
         }
