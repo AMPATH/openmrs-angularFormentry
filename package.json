@@ -39,7 +39,7 @@
     "phantomjs": "^1.9.18",
     "sinon": "^1.17.2",
     "sinon-chai": "^2.8.0",
-    "time-grunt": "^1.0.0"
+    "time-grunt": "^1.2.2"
   },
   "engines": {
     "node": ">=0.10.0"
@@ -48,9 +48,6 @@
     "test": "grunt test"
   },
   "dependencies": {
-    "grunt": "^0.4.5",
-    "jit-grunt": "^0.9.1",
-    "jshint-stylish": "^2.1.0",
-    "time-grunt": "^1.2.2"
+      
   }
 }

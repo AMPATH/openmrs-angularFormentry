@@ -25,8 +25,8 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       callback(_getSections(model));
     }
 
-    function addExistingObsSetToForm(model, restObs) {
-      _addExistingObsToSections(model, restObs);
+    function addExistingObsSetToForm(model, openmrsRestObj) {
+      _addExistingObsToSections(model, openmrsRestObj);
     }
 
     function _parseDate(value, format, offset) {
@@ -43,7 +43,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       return $filter('date')(value, format, offset);
     }
 
-    function _addExistingObsToSections(model, restObs) {
+    function _addExistingObsToSections(model, openmrsRestObj) {
       var obsRestPayload = [];
       // $log.debug('Model', model);
       var sectionKeys = Object.keys(model);
@@ -51,7 +51,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       _.each(sectionKeys, function(section) {
         var sectionModel = model[section];
         // $log.debug('Section Models', sectionModel);
-        _addObsToSection(sectionModel, restObs);
+        _addObsToSection(sectionModel, openmrsRestObj);
       });
     }
 
@@ -124,17 +124,17 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       return results;
     }
 
-    function _addObsToSection(sectionModel, restObs) {
+    function _addObsToSection(sectionModel, openmrsRestObj) {
       var fieldKeys = Object.keys(sectionModel);
       //geting obs data without obs groups
-      var obsData = _.filter(restObs.obs, function(obs) {
+      var obsData = _.filter(openmrsRestObj.obs, function(obs) {
         if (_.isNull(obs.groupMembers)) {
           return obs;
         }
       });
 
       //geting obs data with obs groups
-      var obsGroupData = _.filter(restObs.obs, function(obs) {
+      var obsGroupData = _.filter(openmrsRestObj.obs, function(obs) {
         if (obs.groupMembers !== null) {
           return obs;
         }

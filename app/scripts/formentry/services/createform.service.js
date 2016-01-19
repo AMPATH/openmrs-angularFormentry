@@ -21,8 +21,10 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
     return service;
 
     function createForm(schema, model, callback) {
-      var form;
-      form = _createFormlyForm(schema);
+      // Add form information to Model
+      __addFormInfoToModel(schema, model);
+      
+      var form = _createFormlyForm(schema);
       $log.debug('inspect compiled', form);
       var formlyForm = _createModel(form, model);
       form.questionMap.model = model;
@@ -46,7 +48,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
           var sectionId;
           _createFieldsFactory(section.questions, fields, sectionModel, questionMap);
           sectionId = _createSectionId(section.label);
-          $log.debug('Secion ID: ', sectionId);
+          $log.debug('Section ID: ', sectionId);
           var sectionField = {
             key: 'section_' + sectionId,
             type: 'section',
@@ -199,6 +201,22 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       }
 
       return fields;
+    }
+    
+    //Add form information to Model
+    function __addFormInfoToModel(schema, model) {
+        model.form_info = {
+            name: schema.name,
+            version: schema.version
+        };
+        
+        if(schema.encounterType) {
+            model.form_info.encounterType = schema.encounterType;
+        }
+        
+        if(schema.form) {
+            model.form_info.form = schema.form;
+        }
     }
 
   }
