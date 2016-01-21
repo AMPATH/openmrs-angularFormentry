@@ -11,16 +11,20 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
     .module('openmrs.angularFormentry')
     .factory('FormProcessorService', FormProcessorService);
 
-  FormProcessorService.$inject = ['ObsProcessorService', 'PersonAttributesProcessorService'];
+  FormProcessorService.$inject = [
+      'ObsProcessorService',
+      'PersonAttributesProcessorService',
+      'EncounterProcessorService'
+  ];
 
-  function FormProcessorService(ObsProcessorService, PersonAttributesProcessorService) {
+  function FormProcessorService(ObsProcessorService, PersonAttributesProcessorService,
+      EncounterProcessorService) {
     var service = {
       obsFormProccesor: obsFormProccesor,
       encounterFormProcessor: encounterFormProcessor,
       personAttributeFormProccesor: personAttributeFormProccesor,
       addExistingDataSetToEncounterForm: addExistingDataSetToEncounterForm,
-      addExistingDataSetToObsForm: addExistingDataSetToObsForm,
-
+      addExistingDataSetToObsForm: addExistingDataSetToObsForm
     };
 
     return service;
@@ -41,8 +45,12 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       });
     }
 
-    function encounterFormProcessor(model) {
-
+    function encounterFormProcessor(model, callback) {
+        var encounterPayload = null;
+        EncounterProcessorService.generateEncounterPayload(model, function(payload) {
+            encounterPayload = payload;
+            callback(payload);
+        });
     }
 
     function addExistingDataSetToObsForm(restObs, model) {

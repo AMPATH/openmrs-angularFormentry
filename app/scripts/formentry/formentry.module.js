@@ -16,7 +16,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
           'ui.bootstrap',
           'openmrs.RestServices',
           'ui.bootstrap.datetimepicker',
-	        'ui.select',
+	      'ui.select',
           'ngSanitize',
           'angularMoment'
         ])

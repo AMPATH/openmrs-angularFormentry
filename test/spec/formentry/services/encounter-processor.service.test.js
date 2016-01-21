@@ -32,5 +32,20 @@
                 expect(payload).to.contain.keys('obs');
             });
         });
+        
+        describe('populateModel tests', function() {
+            it('Should populate model with correct values from OpenMRS Rest ' +
+               'encounter', function() {
+                var encounter = mockData.getMockRestEncounter();
+                var model = mockData.getTriageFormModel();
+                var encSection = model['section_Encounter_Details'];
+                
+                encProcessor.populateModel(model, encounter);
+                
+                expect(encSection.encounterDatetime.value).to.equal(encounter.encounterDatetime);
+                expect(encSection.encounterLocation.value).to.equal(encounter.location.uuid);
+                expect(encSection.encounterProvider.value).to.equal(encounter.provider.uuid);   
+            });
+        });
     });
 })();

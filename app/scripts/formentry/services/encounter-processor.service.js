@@ -19,51 +19,45 @@ jscs:disable requirePaddingNewLinesBeforeLineComments, requireTrailingComma
     var UNKNOWN_ROLE_UUID = 'a0b03050-c99b-11e0-9572-0800200c9a66';
     function EncounterProcessor(utils, obsProcessor, $log) {
         var service = {
-            generateEncounterPayload: generateEncounterPayload
+            generateEncounterPayload: generateEncounterPayload,
+            populateModel: populateModel
         };
         
         return service;
         
         function generateEncounterPayload(model, callback) {
             var payload = {};
-             
-            // Find a section with encounter Details
-            var encDatetime = null, encLocation = null, encProvider = null;
-            for(var section in model) {
-                if(_.has(model[section], 'encounterDate') || 
-                        _.has(model[section], 'encounterDatetime')) {
-                    encDatetime = model[section].encounterDatetime 
-                                    || model[section].encounterDate;
-                }
-                if(_.has(model[section], 'encounterLocation')) {
-                    encLocation = model[section].encounterLocation;
-                }
-                if(_.has(model[section], 'encounterProvider')) {
-                    encProvider = model[section].encounterProvider;
-                }
-            }
-            
-            if(encLocation === null && encProvider === null 
-                && encDatetime === null) {
-                throw new Error('The passed model is not encounter based');
+            var encDetails = _findEncounterDetailsInModel(model); 
+
+            if(encDetails.encLocation === null && encDetails.encProvider === null 
+                && encDetails.encDatetime === null) {
+                throw new Error('NoneEncounterForm','The passed model is not encounter based');
                 $log.debug(model);    
             } else {
-                if(encDatetime !== null) {            
+                if(encDetails.encDatetime !== null) {            
                     payload.encounterDatetime = 
-                        utils.formatDate(encDatetime.value, null, '+0300');
+                        utils.formatDate(encDetails.encDatetime.value, null, '+0300');
                 }
-                if(encLocation !== null) {
-                    payload.location = encLocation.value;
+                if(encDetails.encLocation !== null) {
+                    payload.location = encDetails.encLocation.value;
                 }
                 
                 // Create encounterProviders (Assume one for now)
-                if(encProvider !== null) {
+                if(encDetails.encProvider !== null) {
                     payload.encounterProviders = [{
-                        provider: encProvider.value,
+                        provider: encDetails.encProvider.value,
                         encounterRole: UNKNOWN_ROLE_UUID
                     }];
                 }
                 
+                if(model.form_info) {
+                    if(model.form_info.encounterType) {
+                        payload.encounterType = model.form_info.encounterType;
+                    }
+                    if(model.form_info.form) {
+                        payload.form = model.form_info.form;
+                    }
+                }
                 //Add obs if any
                 var obsPayload = null;
                 obsProcessor.generateObsPayload(model, function(payload) {
@@ -81,6 +75,58 @@ jscs:disable requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                     return payload;
                 }
             }
+        }
+    
+        function populateModel(model, openmrsRestObj) {
+            if(!model || !openmrsRestObj) return;
+            
+            var details = _findEncounterDetailsInModel(model);
+            //Search for encounterDatetime in the OpenmrsRestObj
+            if(_.has(openmrsRestObj, 'encounterDatetime') && details.encDatetime) {
+                details.encDatetime.value = openmrsRestObj['encounterDatetime'];
+            }
+            
+            if(_.has(openmrsRestObj, 'location') && details.encLocation) {
+                details.encLocation.value = openmrsRestObj['location'].uuid;
+            }
+            
+            if(_.has(openmrsRestObj, 'encounterProvider') && details.encProvider) {
+                // Take the first provider in the array [Usually it is one anyway]
+                details.encProvider.value = openmrsRestObj['encounterProvider'][0].uuid;
+            } else if(_.has(openmrsRestObj, 'provider') && details.encProvider) {
+                details.encProvider.value = openmrsRestObj['provider'].uuid;
+            }
+            
+            // Populate obs if any
+            obsProcessor.addExistingObsSetToForm(model, openmrsRestObj);
+        }
+        
+        function _findEncounterDetailsInModel(model) {
+            // Find encounter Details questions
+            var details = {
+                encDatetime: null, 
+                encLocation: null,
+                encProvider: null
+            };
+            
+            for(var section in model) {
+                if(_.has(model[section], 'encounterDate') || 
+                        _.has(model[section], 'encounterDatetime')) {
+                    details.encDatetime = model[section].encounterDatetime 
+                                    || model[section].encounterDate;
+                }
+                if(_.has(model[section], 'encounterLocation')) {
+                    details.encLocation = model[section].encounterLocation;
+                }
+                if(_.has(model[section], 'encounterProvider')) {
+                    details.encProvider = model[section].encounterProvider;
+                }
+                
+                if(details.encDatetime && details.encLocation && details.encProvider) {
+                    break;
+                }
+            }
+            return details;
         }
     }
 })();
