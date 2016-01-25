@@ -65,6 +65,7 @@
               "id":"q1",
               "required":"true",
               "default":"",
+              "historicalExpression":"'previous test'",
               "questionOptions":{
                 "rendering":"text",
                 "concept":"1232"
@@ -158,6 +159,7 @@
               "id": "q3",
               "required": "false",
               "default": "",
+              "historicalExpression":"120",
               "questionOptions": {
                 "rendering": "number",
                 "concept": "1233"
@@ -174,6 +176,7 @@
               "label": "Family Planning",
               "id": "onFamilyPlanning",
               "type": "obs",
+              "historicalExpression":"'a899b35c-1350-11df-a1f1-0026b9348838'",
               "questionOptions": {
                 "rendering": "select",
                 "concept": "774961c6-232f-4332-8a9f-f5c55ebe86d0",
@@ -388,6 +391,7 @@
             {
               "type": "obsGroup",
               "label": "Was patient hospitalized",
+              "historicalExpression": "sampleRepeatingGroupValue",
               "questionOptions": {
                 "rendering": "repeating",
                 "concept": "a8a003a6y1350y11dfya1f1y0026b9348838"
