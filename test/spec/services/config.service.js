@@ -1,8 +1,7 @@
 /*
  jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106, -W026
- */
-/*
- jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLinesBeforeLineComments, requireTrailingComma
+ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation
+ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
  */
 /* global _ */
 
@@ -10,9 +9,19 @@
     'use strict';
     angular.module('openmrs.angularFormentry')
             .factory('configService', configService);
-    configService.$inject = ['$http', '$log', 'FieldHandlerService', 'formlyConfig', '$rootScope', '$q'];
+            
+    configService.$inject = [
+        '$http',
+        '$log',
+        'FieldHandlerUtil', 
+        'formlyConfig',
+        '$rootScope',
+        '$q'
+    ];
 
-    function  configService($http, $log, FieldHandlerService, formlyConfig, $rootScope, $q) {
+    function  configService($http, $log, FieldHandlerUtil, formlyConfig,
+                    $rootScope, $q) {
+                        
         $rootScope.jsonSchema = [];
         var service = {
             addFieldHandler: addFieldHandler,
@@ -30,9 +39,10 @@
          * @returns {undefined}
          */
         function  addFieldHandler(fieldHandlerName, handlerFunction) {
-            FieldHandlerService.registerCustomFieldHandler(fieldHandlerName,
+            FieldHandlerUtil.registerFieldHandler(fieldHandlerName,
                     handlerFunction);
         }
+        
         /**
          *
          * @param {String} schemaKey ,The key allows one  config  object
@@ -45,6 +55,7 @@
             $rootScope.jsonSchema[schemaKey] = jsonObject;
             $rootScope.$broadcast('schemaAdded', {schemaKey: schemaKey, status: true});
         }
+        
         /**
          *
          * @param {String} schemaKey ,The key allows one  config  object
@@ -54,8 +65,7 @@
          * @param {String} requestMethod ,The method of the request
          * @returns {undefined}
          */
-        function addJsonSchemaSource(schemaKey, SourceUrl, requestMethod)
-        {
+        function addJsonSchemaSource(schemaKey, SourceUrl, requestMethod) {
             var longRequest = $q.defer();
             $http({
                 method: requestMethod,
@@ -70,15 +80,14 @@
             });
             return longRequest.promise;
         }
+        
         function getSchema(schemaKey) {
             if (angular.isDefined($rootScope.jsonSchema[schemaKey])) {
                 return{schema: $rootScope.jsonSchema[schemaKey]};
             } else {
                 return {message: 'missing schema', schema: undefined};
             }
-
         }
-
 
         /**
          *
@@ -88,6 +97,5 @@
         function getformlyConfig() {
             return formlyConfig;
         }
-
     }
 })();

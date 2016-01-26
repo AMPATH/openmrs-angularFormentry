@@ -2,7 +2,7 @@
 /*jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLinesBeforeLineComments, requireTrailingComma*/
 (function() {
   'use strict';
-  describe('fieldHandler Service unit tests', function() {
+  describe('OpenmrsFieldHandlerService Service unit tests', function() {
     beforeEach(function() {
       module('angularFormentry');
       module('openmrs.angularFormentry');
@@ -10,7 +10,7 @@
     });
 
     var mockData;
-    var fhService;
+    var openmrsFHService;
     var functionStub;
     var spy;
     var log;
@@ -18,7 +18,7 @@
 
     beforeEach(inject(function($injector) {
       log = $injector.get('$log');
-      fhService = $injector.get('FieldHandlerService');
+      openmrsFHService = $injector.get('OpenmrsFieldHandlerService');
       mockData = $injector.get('mockData');
       searchDataService = $injector.get('SearchDataService');
       /*
@@ -43,19 +43,15 @@
       }
     }));
 
-    // afterEach(function() {
-    //     httpBackend.verifyNoOutstandingExpectation();
-    //     //httpBackend.verifyNoOutstandingRequest();
-    //   });
     describe('getFieldHandler Method Unit Tests', function() {
       beforeEach(function() {
-        functionStub = sinon.spy(fhService, 'getFieldHandler');
+        functionStub = sinon.spy(openmrsFHService, 'getFieldHandler');
       });
 
       it('should return the fieldHandler Method when getFieldHandler is called',
               function() {
                 var handlerName = 'obsDrugFieldHandler';
-                var handlerMethod = fhService.getFieldHandler(handlerName);
+                var handlerMethod = openmrsFHService.getFieldHandler(handlerName);
 
                 expect(functionStub).to.have.been.calledOnce;
                 expect(functionStub.calledWith(handlerName)).to.be.true;
@@ -66,7 +62,7 @@
       it('should return defaultfieldHandler Method when wrong handler is passed',
               function() {
                 var handlerName = 'obsxFieldHandler';
-                var handlerMethod = fhService.getFieldHandler(handlerName);
+                var handlerMethod = openmrsFHService.getFieldHandler(handlerName);
 
                 expect(functionStub).to.have.been.calledOnce;
                 expect(functionStub.alwaysCalledWith(handlerName)).to.be.true;
@@ -81,9 +77,9 @@
       var model = {};
       var questionMap = {};
       beforeEach(function() {
-        functionStub = sinon.spy(fhService, 'getFieldHandler');
+        functionStub = sinon.spy(openmrsFHService, 'getFieldHandler');
         var handlerName = 'obsFieldHandler';
-        handlerMethod = fhService.getFieldHandler(handlerName);
+        handlerMethod = openmrsFHService.getFieldHandler(handlerName);
         mockSchema = mockData.getMockSchema();
       });
 
@@ -169,9 +165,9 @@
       var model = {};
       var questionMap = {};
       beforeEach(function() {
-        functionStub = sinon.spy(fhService, 'getFieldHandler');
+        functionStub = sinon.spy(openmrsFHService, 'getFieldHandler');
         var handlerName = 'defaultFieldHandler';//or any name will return defaultFieldHandler
-        handlerMethod = fhService.getFieldHandler(handlerName);
+        handlerMethod = openmrsFHService.getFieldHandler(handlerName);
         mockSchema = mockData.getMockSchema();
       });
 
@@ -220,9 +216,9 @@
       var model = {};
       var questionMap = {};
       beforeEach(function() {
-        functionStub = sinon.spy(fhService, 'getFieldHandler');
+        functionStub = sinon.spy(openmrsFHService, 'getFieldHandler');
         var handlerName = 'encounterDatetimeFieldHandler';//or any name will return defaultFieldHandler
-        handlerMethod = fhService.getFieldHandler(handlerName);
+        handlerMethod = openmrsFHService.getFieldHandler(handlerName);
         mockSchema = mockData.getMockSchema();
       });
 
@@ -261,9 +257,9 @@
       var model = {};
       var questionMap = {};
       beforeEach(function() {
-        functionStub = sinon.spy(fhService, 'getFieldHandler');
+        functionStub = sinon.spy(openmrsFHService, 'getFieldHandler');
         var handlerName = 'encounterProviderFieldHandler';//or any name will return defaultFieldHandler
-        handlerMethod = fhService.getFieldHandler(handlerName);
+        handlerMethod = openmrsFHService.getFieldHandler(handlerName);
         mockSchema = mockData.getMockSchema();
       });
 

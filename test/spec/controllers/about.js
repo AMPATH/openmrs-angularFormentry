@@ -1,6 +1,7 @@
 /*
 jshint -W303, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106
-jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLinesBeforeLineComments, requireTrailingComma
+jscs:disable disallowMixedSpacesAndTabs, requireDotNotation
+jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 */
 'use strict';
 
@@ -45,10 +46,4 @@ describe('Controller: AboutCtrl', function() {
     expect(scope.vm.model).to.be.defined;
     expect(scope.vm.tabs).to.be.defined;
   });
-
-  // it('should call the activate Method', function() {
-  //   spyMethod = sinon.spy(AboutCtrl, '_activate');
-  //   expect(spyMethod).to.have.been.calledOnce;
-  // });
-
 });

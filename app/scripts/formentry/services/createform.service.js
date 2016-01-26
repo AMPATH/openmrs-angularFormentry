@@ -1,8 +1,7 @@
 /*
 jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106, -W026
-*/
-/*
-jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLinesBeforeLineComments, requireTrailingComma
+jscs:disable disallowMixedSpacesAndTabs, requireDotNotation
+jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 */
 (function () {
     'use strict';
@@ -11,9 +10,9 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
         .module('openmrs.angularFormentry')
         .factory('CreateFormService', CreateFormService);
 
-    CreateFormService.$inject = ['$log', 'FieldHandlerService'];
+    CreateFormService.$inject = ['$log', 'OpenmrsFieldHandlerService'];
 
-    function CreateFormService($log, fieldHandlerService) {
+    function CreateFormService($log, OpenmrsFieldHandler) {
         var service = {
             createForm: createForm
         };
@@ -136,7 +135,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
                 var modelType = question.type;
 
                 if (question.type === 'obs') {
-                    handlerMethod = fieldHandlerService.getFieldHandler('obsFieldHandler');
+                    handlerMethod = OpenmrsFieldHandler.getFieldHandler('obsFieldHandler');
                     // $log.debug('about to create: ', question);
                     var field = handlerMethod(question, model, questionMap);
                     // $log.debug('Field Created', field);
@@ -188,7 +187,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
                         obsField['templateOptions']['createModelBluePrint'] =
                         function (parentModel, value) {
-                            var groupModel = fieldHandlerService.createModelForGroupSection(parentModel,
+                            var groupModel = OpenmrsFieldHandler.createModelForGroupSection(parentModel,
                                 obsField.key, question, question.questionOptions.concept);
 
                             _.each(obsField.fieldGroup, function (field) {
@@ -245,18 +244,18 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
                         };
                         _createFieldsFactory(question.questions, fieldsArray,
                             groupModel, questionMap);
-
-                        fieldHandlerService.handleHistoricalExpressionProperty(obsField, question);
+                        
+                        OpenmrsFieldHandler.handleHistoricalExpressionProperty(obsField, question);    
 
                         if (typeof obsField['templateOptions']['setFieldValue'] !== 'function') {
-                            obsField['templateOptions']['setFieldValue'] = fieldHandlerService.fillGroups;
+                            obsField['templateOptions']['setFieldValue'] = OpenmrsFieldHandler.fillGroups;
                         }
                         obsField['templateOptions']['createModelBluePrint'] =
                         function (parentModel, values) {
                             var repeatingGroupModel = [];
                             _.each(values, function (value) {
 
-                                var groupModel = fieldHandlerService.createModelForGroupSection(null,
+                                var groupModel = OpenmrsFieldHandler.createModelForGroupSection(null,
                                     obsField.key, question, question.questionOptions.concept);
                                 _.each(obsField.templateOptions.fields, function (field) {
                                     _.each(field.fieldGroup, function (innerfield) {
@@ -318,17 +317,17 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
                     }
 
                 } else if (question.type.startsWith('encounter')) {
-                    handlerMethod = fieldHandlerService.getFieldHandler(question.type + 'FieldHandler');
+                    handlerMethod = OpenmrsFieldHandler.getFieldHandler(question.type + 'FieldHandler');
                     var field = handlerMethod(question, model, questionMap);
                     fields.push(field);
 
                 } else if (question.type.startsWith('personAttribute')) {
-                    handlerMethod = fieldHandlerService.getFieldHandler('personAttributeFieldHandler');
+                    handlerMethod = OpenmrsFieldHandler.getFieldHandler('personAttributeFieldHandler');
                     var field = handlerMethod(question, model, questionMap);
                     fields.push(field);
 
                 } else {
-                    handlerMethod = fieldHandlerService.getFieldHandler('defaultFieldHandler');
+                    handlerMethod = OpenmrsFieldHandler.getFieldHandler('defaultFieldHandler');
                     var field = handlerMethod(question, model, questionMap);
 
                     if (angular.isArray(field)) {

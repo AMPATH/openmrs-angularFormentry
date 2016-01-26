@@ -15,10 +15,10 @@
         .module('angularFormentry')
         .controller('AboutCtrl', AboutCtrl);
 
-    AboutCtrl.$inject = ['$log', '$location', '$scope',
-        'FormEntry', '$timeout', '$filter',
-        'TestService', 'UtilService', '$rootScope', 'configService', 'AuthService', 'SearchDataService'
-    ];
+  AboutCtrl.$inject = ['$log', '$location', '$scope','FormEntry', '$timeout', 
+    '$filter','TestService', 'UtilService', '$rootScope', 'configService',
+    'AuthService', 'SearchDataService'
+  ];
 
     function AboutCtrl($log, $location, $scope, FormEntry,
         $timeout, $filter, TestService, UtilService, $rootScope, configService, AuthService, SearchDataService) {
