@@ -21,8 +21,8 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
     return service;
 
-    function generatePersonAttributesPayload(model, callback) {
-      callback(_getSections(model));
+    function generatePersonAttributesPayload(model) {
+      return _getSections(model);
     }
 
     function addExistingPersonAttributesToForm(model, restObs) {

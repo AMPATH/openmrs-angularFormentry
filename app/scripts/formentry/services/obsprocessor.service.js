@@ -21,8 +21,8 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
     return service;
 
-    function generateObsPayload(model, callback) {
-      callback(_getSections(model));
+    function generateObsPayload(model) {
+      return _getSections(model);
     }
 
     function addExistingObsSetToForm(model, openmrsRestObj) {
