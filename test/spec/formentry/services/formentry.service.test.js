@@ -1,3 +1,4 @@
+/* global assert */
 /*
  jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106
  */
@@ -12,18 +13,11 @@ describe('Formentry service Tests:config.service', function () {
 
     });
 
-    var mockData;
     var fhService;
     var functionStub;
     var configService;
-    var spy;
     var log;
-    var proxy;
     var addSchemaStub;
-    var addJsonSchemaSourceSpy;
-    var getSchemaSpy;
-    var clock;
-    var req;
     var $q;
 
     beforeEach(inject(function ($injector) {
@@ -64,22 +58,18 @@ describe('Formentry service Tests:config.service', function () {
 
         });
         it('Should add a schema and attempt to retrieve it',
-                function () {
-                    //adding  a  schema  and  attemping  to  retrive it
-                    addSchemaStub('john', {john: 1, mukii: 6});
-                    var h = functionStub('john');
-                    assert.isTrue(functionStub.called, "Get Schema  function was  not  called");
-                    assert.deepEqual(h, {schema: {john: 1, mukii: 6}}, 'Wrong  schema  was  retured');
-                    //attempting  to retrive  a  schema  that  has  not  been  added
-                    var notadded = functionStub('unknown');
-                    assert.isTrue(functionStub.calledTwice, "Get Schema function should  have  been called twice");
-                    assert.deepEqual(notadded, {message: 'missing schema', schema: undefined}, 'No Schema  was  supposed  to  be returned');
-
-
-
-                });
+            function () {
+                //adding  a  schema  and  attemping  to  retrive it
+                addSchemaStub('john', { john: 1, mukii: 6 });
+                var h = functionStub('john');
+                assert.isTrue(functionStub.called, "Get Schema  function was  not  called");
+                assert.deepEqual(h, { schema: { john: 1, mukii: 6 } }, 'Wrong  schema  was  retured');
+                //attempting  to retrive  a  schema  that  has  not  been  added
+                var notadded = functionStub('unknown');
+                assert.isTrue(functionStub.calledTwice, "Get Schema function should  have  been called twice");
+                assert.deepEqual(notadded, { message: 'missing schema', schema: undefined }, 'No Schema  was  supposed  to  be returned');
+            });
+            
     });
-
-
 
 });

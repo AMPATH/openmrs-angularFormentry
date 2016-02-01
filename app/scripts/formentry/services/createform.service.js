@@ -20,13 +20,16 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
         return service;
 
-        function createForm(schema, model, callback) {
+        function createForm(schema, model) {
             var form;
             form = _createFormlyForm(schema);
             $log.debug('inspect compiled', form);
             var formlyForm = _createModel(form, model);
             form.questionMap.model = model;
-            callback(formlyForm, form.questionMap);
+            return {
+                formlyForm: formlyForm,
+                questionMap: form.questionMap
+            };
         }
 
         function _createSectionId(seectionName) {
@@ -124,7 +127,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
                 model.form_info.form = schema.form;
             }
         }
-        
+
         function _createFieldsFactory(questions, fields, model, questionMap) {
             for (var i in questions) {
                 var question = questions[i];
@@ -242,8 +245,8 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
                         };
                         _createFieldsFactory(question.questions, fieldsArray,
                             groupModel, questionMap);
-                        
-                        fieldHandlerService.handleHistoricalExpressionProperty(obsField, question);    
+
+                        fieldHandlerService.handleHistoricalExpressionProperty(obsField, question);
 
                         if (typeof obsField['templateOptions']['setFieldValue'] !== 'function') {
                             obsField['templateOptions']['setFieldValue'] = fieldHandlerService.fillGroups;
