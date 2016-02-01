@@ -5,41 +5,40 @@
 /* global beforeEach */
 /* global describe */
 /*jshint -W026, -W030, -W106 */
-/*jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLinesBeforeLineComments, requireTrailingComma*/
-(function () {
-    'use strict';
-    describe('CreateFormService Service unit tests', function () {
-        beforeEach(function () {
-            module('openmrs.angularFormentry');
-            module('openmrs.RestServices');
-            module('mock.data');
-        });
+/*jscs:disable disallowMixedSpacesAndTabs, requireDotNotation
+/*jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma*/
+(function() {
+  'use strict';
+  describe('CreateFormService Service unit tests', function() {
+    beforeEach(function() {
+        module('openmrs.angularFormentry');
+        module('openmrs.RestServices');
+        module('mock.data');
+      });
 
-        var mockData;
-        var fhService;
-        var functionStub;
-        var log;
-        var createFormService;
+    var mockData;
+    var functionStub;
+    var spy;
+    var log;
+    var createFormService;
 
-        beforeEach(inject(function ($injector) {
-            log = $injector.get('$log');
-            fhService = $injector.get('FieldHandlerService');
-            mockData = $injector.get('mockData');
-            createFormService = $injector.get('CreateFormService');
-            /*
-            Apperently underscore.string is not loading in thr headless browser during the tests
-            this library has specific classes for handling string comparison.
-            To solve this problem am adding simple hack to able to load following two functions
-            when running the tests.
-            NB: as pointed out in the comments ECMAScript 2015 (ES6) introduces startsWith,
-            however, at the time of writing this update (2015) browser-support is
-            far from complete.
-            */
-            if (typeof String.prototype.startsWith !== 'function') {
-                String.prototype.startsWith = function (str) {
-                    return this.slice(0, str.length) === str;
-                };
-
+    beforeEach(inject(function($injector) {
+      log = $injector.get('$log');
+      mockData = $injector.get('mockData');
+      createFormService = $injector.get('CreateFormService');
+      /*
+      Apperently underscore.string is not loading in thr headless browser during the tests
+      this library has specific classes for handling string comparison.
+      To solve this problem am adding simple hack to able to load following two functions
+      when running the tests.
+      NB: as pointed out in the comments ECMAScript 2015 (ES6) introduces startsWith,
+      however, at the time of writing this update (2015) browser-support is
+      far from complete.
+      */
+      if (typeof String.prototype.startsWith !== 'function') {
+        String.prototype.startsWith = function(str) {
+          return this.slice(0, str.length) === str;
+        };
                 if (typeof String.prototype.endsWith !== 'function') {
                     String.prototype.endsWith = function (str) {
                         return this.slice(-str.length) === str;
@@ -76,15 +75,12 @@
                 expect(mockForm[0].form).to.have.property('options');
             });
 
-            it('should create formly form with equal number of pages/sections as schema',
-                function () {
-                    expect(mockSchema.pages.length).to.equal(mockForm.length);
-                    expect(mockSchema.pages[0].sections.length).to.equal(mockForm[0].form.fields.length);
-                    expect(mockSchema.pages[0].label).to.equal(mockForm[0].title);
-                });
-
-        });
-
+      it('should create formly form with equal number of pages/sections as schema',
+      function() {
+        expect(mockSchema.pages.length).to.equal(mockForm.length);
+        expect(mockSchema.pages[0].sections.length).to.equal(mockForm[0].form.fields.length);
+        expect(mockSchema.pages[0].label).to.equal(mockForm[0].title);
+      });
     });
-
+  });
 })();

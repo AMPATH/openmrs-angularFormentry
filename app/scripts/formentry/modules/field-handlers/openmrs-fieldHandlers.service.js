@@ -1,55 +1,56 @@
 /*
 jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106, -W026
-*/
-/*
-jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLinesBeforeLineComments, requireTrailingComma
+jscs:disable disallowMixedSpacesAndTabs, requireDotNotation
+jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 */
 (function () {
     'use strict';
 
     angular
         .module('openmrs.angularFormentry')
-        .factory('FieldHandlerService', FieldHandlerService);
+        .factory('OpenmrsFieldHandlerService', OpenmrsFieldHandler);
 
-    FieldHandlerService.$inject = ['$log', 'SearchDataService', 'FormValidator'];
+    OpenmrsFieldHandler.$inject = [
+        '$log',
+        'SearchDataService',
+        'FormValidator',
+        'FieldHandlerUtil'
+    ];
+    
     var obsId = 0;
 
-    function FieldHandlerService($log, SearchDataService, FormValidator) {
-        var fieldHandlers = {};
+    function OpenmrsFieldHandler($log, SearchDataService, FormValidator,
+        FieldHandlerUtil) {
         var currentQuestionMap = {};
 
-        //registerCoreFieldHandler
-        fieldHandlers['obsFieldHandler'] = obsFieldHandler;
-        fieldHandlers['encounterTypeFieldHandler'] = encounterTypeFieldHandler;
-        fieldHandlers['personAttributeFieldHandler'] = personAttributeFieldHandler;
-        fieldHandlers['encounterDatetimeFieldHandler'] = encounterDatetimeFieldHandler;
-        fieldHandlers['encounterProviderFieldHandler'] = encounterProviderFieldHandler;
-        fieldHandlers['encounterLocationFieldHandler'] = encounterLocationFieldHandler;
-        fieldHandlers['conceptSearchFieldHandler'] = conceptSearchFieldHandler;
-        fieldHandlers['locationAttributeFieldHandler'] = locationAttributeFieldHandler;
-        fieldHandlers['defaultFieldHandler'] = defaultFieldHandler;
+        // Register Openmrs specific handlers
+        FieldHandlerUtil.registerFieldHandler('obsFieldHandler',
+                                                        obsFieldHandler);
+        FieldHandlerUtil.registerFieldHandler('encounterTypeFieldHandler',
+                                                    encounterTypeFieldHandler);
+        FieldHandlerUtil.registerFieldHandler('personAttributeFieldHandler',
+                                                    personAttributeFieldHandler);
+        FieldHandlerUtil.registerFieldHandler('encounterDatetimeFieldHandler',
+                                                encounterDatetimeFieldHandler);
+        FieldHandlerUtil.registerFieldHandler('encounterProviderFieldHandler',
+                                                encounterProviderFieldHandler);
+        FieldHandlerUtil.registerFieldHandler('encounterLocationFieldHandler',
+                                                encounterLocationFieldHandler);
+        FieldHandlerUtil.registerFieldHandler('conceptSearchFieldHandler',
+                                                    conceptSearchFieldHandler);
+        FieldHandlerUtil.registerFieldHandler('locationAttributeFieldHandler',
+                                                locationAttributeFieldHandler);
+        FieldHandlerUtil.registerFieldHandler('defaultFieldHandler',
+                                                    defaultFieldHandler); 
+                                                                                           
         var service = {
-            getFieldHandler: getFieldHandler,
-            registerCustomFieldHandler: registerCustomFieldHandler,
+            getFieldHandler: FieldHandlerUtil.getFieldHandler,
             fillGroups: fillGroups,
             createModelForGroupSection: createModelForGroupSection,
             handleHistoricalExpressionProperty: handleHistoricalExpressionProperty
         };
 
         return service;
-
-        function getFieldHandler(handlerName) {
-            if (handlerName in fieldHandlers) {
-                return fieldHandlers[handlerName];
-            } else {
-                $log.warn('Failed to get the required fieldHandler, returning defaultFieldHandler');
-                return fieldHandlers['defaultFieldHandler'];
-            }
-        }
-
-        function registerCustomFieldHandler(handlerName, handlerMethod) {
-            fieldHandlers[handlerName] = handlerMethod;
-        }
 
         function encounterTypeFieldHandler(_field) {
             $log.info('loading fieldHandler');
@@ -228,7 +229,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             var field = _field || {};
             var answerList = [];
             // answerList.push({name:'unselect', value:undefined});
-            //get the anserq options for radio/select options/multicheckbox
+            // get the anserq options for radio/select options/multicheckbox
             if (angular.isArray(_answers)) {
                 _.each(_answers, function (answer) {
                     var item = {
@@ -253,7 +254,6 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             field['templateOptions']['valueProp'] = 'uuId';
             field['templateOptions']['labelProp'] = 'display';
             field['templateOptions']['options'] = [];
-            // return field;
         }
 
         function _handlePersonAttributeField(_field) {
@@ -262,7 +262,6 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             field['templateOptions']['valueProp'] = 'uuId';
             field['templateOptions']['labelProp'] = 'display';
             field['templateOptions']['options'] = [];
-            return field;
         }
 
         function _handleShowDate(_field) {
@@ -274,7 +273,6 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             field['templateOptions']['datepickerPopup'] = 'dd-MMMM-yyyy';
             field['templateOptions']['label'] = 'Date';
             field['templateOptions']['type'] = 'text';
-
         }
 
         function _updateModelObsDateField(_question, model, field) {
@@ -347,9 +345,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
                 // model[_question.questionOptions.concept] = [m];
                 model[fieldKey] = m;
             }
-
-            // field.model = _model;
-            // $log.debug('loosing value property', model);
+            
             return field;
         }
 
@@ -381,8 +377,6 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
                     };
                 }
 
-
-
             } else if (_question.questionOptions.rendering === 'number') {
                 obsField['templateOptions']['type'] = _question.questionOptions.rendering;
                 obsField['templateOptions']['min'] = _question.questionOptions.min;
@@ -407,8 +401,6 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
                 if (typeof obsField['templateOptions']['setFieldValue'] !== 'function') {
                     obsField['templateOptions']['setFieldValue'] = _fillPrimitiveValue;
                 }
-
-
             } else if (_question.questionOptions.rendering === 'drug') {
                 obsField = _handleFieldUiSelect(obsField);
                 obsField['templateOptions']['deferredFilterFunction'] = SearchDataService.findDrugConcepts;
@@ -417,7 +409,6 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
                 if (typeof obsField['templateOptions']['setFieldValue'] !== 'function') {
                     obsField['templateOptions']['setFieldValue'] = _fillPrimitiveValue;
                 }
-
             } else if (_question.questionOptions.rendering === 'select-concept-answers') {
                 obsField['type'] = 'concept-search-select';
                 obsField['displayMember'] = 'label';
@@ -429,9 +420,6 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
                 if (typeof obsField['templateOptions']['setFieldValue'] !== 'function') {
                     obsField['templateOptions']['setFieldValue'] = _fillPrimitiveValue;
                 }
-
-
-
             } else if ((_question.questionOptions.rendering === 'radio') ||
                 (_question.questionOptions.rendering === 'select') ||
                 (_question.questionOptions.rendering === 'multiCheckbox')) {
@@ -487,7 +475,6 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
         }
         
         //#region Functions to create model chunks for a particular fields
-        
         function createModelForRegularField(parentModel, key, _question, concept, value) {
 
             var model = {
@@ -517,9 +504,6 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             return model;
         }
         
-        //#endregion 
-    
-    
         //#region Functions to handle setting of values and display
         function _fillPrimitiveValue(field, newValue) {
             field.value(newValue);
@@ -558,8 +542,5 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             }
             callback(label + ': ' + displayText);
         }
-        
-        //#endregion
-
     }
 })();

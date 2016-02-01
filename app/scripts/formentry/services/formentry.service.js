@@ -1,8 +1,7 @@
 /*
 jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106, -W026
-*/
-/*
-jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLinesBeforeLineComments, requireTrailingComma
+jscs:disable disallowMixedSpacesAndTabs, requireDotNotation 
+jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 */
 (function () {
     'use strict';
@@ -11,11 +10,11 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
         .module('openmrs.angularFormentry')
         .factory('FormEntry', FormEntry);
 
-    FormEntry.$inject = ['CreateFormService', '$log', 'FieldHandlerService',
+    FormEntry.$inject = ['CreateFormService', '$log', 'FieldHandlerUtil',
         'FormProcessorService', 'CurrentLoadedFormService', 'moment'
     ];
 
-    function FormEntry(createFormService, $log, fieldHandlerService,
+    function FormEntry(createFormService, $log, FieldHandlerUtil,
         formProcessorService, CurrentLoadedFormService, moment) {
 
         var service = {
@@ -30,8 +29,8 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
         function registerCustomFieldHandler(_handlerName, _handlerMethod) {
             if (typeof _handlerMethod === 'function') {
-                fieldHandlerService
-                    .registerCustomFieldHandler(_handlerName, _handlerMethod);
+                FieldHandlerUtil
+                    .registerFieldHandler(_handlerName, _handlerMethod);
             } else {
                 $log.info('Handler was not registered!!');
             }
