@@ -17,11 +17,12 @@
 
   AboutCtrl.$inject = ['$log', '$location', '$scope','FormEntry', '$timeout', 
     '$filter','TestService', 'FormentryUtilService', '$rootScope', 'configService',
-    'AuthService', 'SearchDataService'
+    'AuthService', 'SearchDataService', 'EncounterDataService'
   ];
 
     function AboutCtrl($log, $location, $scope, FormEntry,
-        $timeout, $filter, TestService, FormentryUtilService, $rootScope, configService, AuthService, SearchDataService) {
+        $timeout, $filter, TestService, FormentryUtilService, $rootScope, configService, 
+        AuthService, SearchDataService, EncounterDataService) {
         $scope.vm = {};
         $scope.vm.model = {};
         $scope.vm.questionMap = {};
@@ -57,6 +58,10 @@
 
         FormentryUtilService.getFormSchema(testSchema, function (data) {
             schema = data;
+            
+            //set up historical data for triage form
+            setUpHistoricalData();
+            
             $log.info('Schema Controller', schema);
             var formObject = FormEntry.createForm(schema, $scope.vm.model);
             newForm = formObject.formlyForm;
@@ -400,6 +405,10 @@
         _activate();
         function parseDate(value) {
             return $filter('date')(value || new Date(), 'yyyy-MM-dd HH:mm:ss', '+0300');
+        }
+        
+        function setUpHistoricalData() {
+             EncounterDataService.registerPreviousEncounters('prevEnc', restObs);
         }
 
         function _activate() {

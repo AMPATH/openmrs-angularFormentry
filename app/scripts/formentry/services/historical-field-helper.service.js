@@ -66,52 +66,52 @@
         }
 
         function _getDisplayValueFunctionForRepeatingGroup(obsField, schemaQuestion) {
-            return function (values, callback) {
-                var displayTest = '';
+            return function (values, callback, skipDelimiters) {
+                var displayText = '';
                 _.each(values, function (value) {
-                    displayTest = displayTest + schemaQuestion.label + "[ ";
+                    
+                    if(skipDelimiters !== true)
+                        displayText = displayText+ "[ ";
+                        
                     _.each(obsField.templateOptions.fields, function (field) {
-                        displayTest = displayTest + "(";
                         _.each(field.fieldGroup, function (innerfield) {
                             if (innerfield.templateOptions &&
                                 typeof innerfield.templateOptions.getDisplayValue === 'function') {
                                 innerfield.templateOptions.getDisplayValue(
                                     value[innerfield.data.concept],
                                     function (display) {
-                                        displayTest = displayTest + display + ', ';
-                                    });
+                                        displayText = displayText + display + ', ';
+                                    }, true);
                             }
                         });
-
-                        displayTest = displayTest + " ) ";
                     });
-                    displayTest = displayTest + " ], ";
+                    displayText = displayText.trim();
+                    displayText = displayText.replace(/,(?=[^,]*$)/, '');
+                     if(skipDelimiters !== true)
+                        displayText = displayText + " ] ";
                 });
-                callback(displayTest);
+                callback(displayText);
             };
         }
 
         function _getDisplayValueFunctionForGroup(obsField, schemaQuestion) {
             return function (values, callback) {
-                var displayTest = '';
+                var displayText = '';
                 _.each(values, function (value) {
-                    displayTest = displayTest + obsField.label + "[ ";
-
                     _.each(obsField.fieldGroup, function (field) {
                         if (field.templateOptions &&
                             typeof field.templateOptions.getDisplayValue === 'function') {
                             field.templateOptions.getDisplayValue(
                                 value[field.data.concept],
                                 function (display) {
-                                    displayTest = displayTest + display + ', ';
+                                    displayText = displayText + display + ', ';
                                 });
                         }
                     });
-
-
-                    displayTest = displayTest + " ] ";
                 });
-                callback(displayTest);
+                displayText = displayText.trim();
+                displayText = displayText.replace(/,(?=[^,]*$)/, '');
+                callback(displayText);
             };
         }
 
@@ -217,7 +217,7 @@
         }
 
         function getDisplayText(value, callback, fieldLabel) {
-            callback(fieldLabel + ': ' + value);
+            callback('"' + value + '"');
         }
 
         function getDisplayTextFromOptions(value, options, valueProperty,
@@ -245,7 +245,7 @@
 
                 });
             }
-            callback(fieldLabel + ': ' + displayText);
+            callback('"' + displayText + '"');
         }
         
         //#endregion
