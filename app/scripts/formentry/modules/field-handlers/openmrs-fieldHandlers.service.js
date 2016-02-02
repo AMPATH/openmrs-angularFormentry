@@ -14,40 +14,38 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
         '$log',
         'SearchDataService',
         'FormValidator',
-        'FieldHandlerUtil'
+        'FieldHandlerUtil',
+        'HistoricalFieldHelperService'
     ];
-    
+
     var obsId = 0;
 
     function OpenmrsFieldHandler($log, SearchDataService, FormValidator,
-        FieldHandlerUtil) {
+        FieldHandlerUtil, HistoricalFieldHelperService) {
         var currentQuestionMap = {};
 
         // Register Openmrs specific handlers
         FieldHandlerUtil.registerFieldHandler('obsFieldHandler',
-                                                        obsFieldHandler);
+            obsFieldHandler);
         FieldHandlerUtil.registerFieldHandler('encounterTypeFieldHandler',
-                                                    encounterTypeFieldHandler);
+            encounterTypeFieldHandler);
         FieldHandlerUtil.registerFieldHandler('personAttributeFieldHandler',
-                                                    personAttributeFieldHandler);
+            personAttributeFieldHandler);
         FieldHandlerUtil.registerFieldHandler('encounterDatetimeFieldHandler',
-                                                encounterDatetimeFieldHandler);
+            encounterDatetimeFieldHandler);
         FieldHandlerUtil.registerFieldHandler('encounterProviderFieldHandler',
-                                                encounterProviderFieldHandler);
+            encounterProviderFieldHandler);
         FieldHandlerUtil.registerFieldHandler('encounterLocationFieldHandler',
-                                                encounterLocationFieldHandler);
+            encounterLocationFieldHandler);
         FieldHandlerUtil.registerFieldHandler('conceptSearchFieldHandler',
-                                                    conceptSearchFieldHandler);
+            conceptSearchFieldHandler);
         FieldHandlerUtil.registerFieldHandler('locationAttributeFieldHandler',
-                                                locationAttributeFieldHandler);
+            locationAttributeFieldHandler);
         FieldHandlerUtil.registerFieldHandler('defaultFieldHandler',
-                                                    defaultFieldHandler); 
-                                                                                           
+            defaultFieldHandler);
+
         var service = {
-            getFieldHandler: FieldHandlerUtil.getFieldHandler,
-            fillGroups: fillGroups,
-            createModelForGroupSection: createModelForGroupSection,
-            handleHistoricalExpressionProperty: handleHistoricalExpressionProperty
+            getFieldHandler: FieldHandlerUtil.getFieldHandler
         };
 
         return service;
@@ -201,23 +199,21 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
         function _handleHistoricalValueSetters(field) {
             //handle external value setters
             if (typeof field['templateOptions']['setFieldValue'] !== 'function') {
-                field['templateOptions']['setFieldValue'] = _fillPrimitiveValue;
+                field['templateOptions']['setFieldValue'] =
+                HistoricalFieldHelperService.fillPrimitiveValue;
             }
         }
 
         function _handleFieldModelBlueprintCreators(field, question) {
             //handle external model blue print creators
             field['templateOptions']['createModelBluePrint'] = function (parentModel) {
-                return createModelForRegularField(parentModel, field.key,
-                    question, question.questionOptions.concept, 20);
+                return HistoricalFieldHelperService.
+                    createModelForRegularField(parentModel, field.key,
+                        question, question.questionOptions.concept, 20);
             };
         }
-        
-        function handleHistoricalExpressionProperty(field, question){
-            if(question.historicalExpression) {
-                field['templateOptions']['historicalExpression'] = question.historicalExpression;
-            }
-        }
+
+
 
         function _handleHide(_field, _hide) {
             var field = _field || {};
@@ -335,7 +331,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
             _handleValidators(field, _question.validators, questionMap);
             _handleHistoricalValueSetters(field);
             _handleFieldModelBlueprintCreators(field, _question);
-            handleHistoricalExpressionProperty(field, _question);
+            HistoricalFieldHelperService.handleHistoricalExpressionProperty(field, _question);
 
             // if (_question.questionOptions.concept in model) { //add m to the array
             if (fieldKey in model) { //add m to the array
@@ -345,7 +341,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                 // model[_question.questionOptions.concept] = [m];
                 model[fieldKey] = m;
             }
-            
+
             return field;
         }
 
@@ -367,13 +363,15 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                 obsField['templateOptions']['datepickerPopup'] = 'dd-MMMM-yyyy';
 
                 if (typeof obsField['templateOptions']['setFieldValue'] !== 'function') {
-                    obsField['templateOptions']['setFieldValue'] = _fillPrimitiveValue;
+                    obsField['templateOptions']['setFieldValue'] =
+                    HistoricalFieldHelperService.fillPrimitiveValue;
                 }
 
                 if (typeof obsField['templateOptions']['getDisplayValue'] !== 'function') {
                     obsField['templateOptions']['getDisplayValue'] =
                     function (value, callback) {
-                        _getDisplayText(value, callback, _question.label);
+                        HistoricalFieldHelperService.
+                            getDisplayText(value, callback, _question.label);
                     };
                 }
 
@@ -383,13 +381,14 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                 obsField['templateOptions']['max'] = _question.questionOptions.max;
 
                 if (typeof obsField['templateOptions']['setFieldValue'] !== 'function') {
-                    obsField['templateOptions']['setFieldValue'] = _fillPrimitiveValue;
+                    obsField['templateOptions']['setFieldValue'] =
+                    HistoricalFieldHelperService.fillPrimitiveValue;
                 }
 
                 if (typeof obsField['templateOptions']['getDisplayValue'] !== 'function') {
                     obsField['templateOptions']['getDisplayValue'] =
                     function (value, callback) {
-                        _getDisplayText(value, callback, _question.label);
+                        HistoricalFieldHelperService.getDisplayText(value, callback, _question.label);
                     };
                 }
 
@@ -399,7 +398,8 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                 obsField['templateOptions']['getSelectedObjectFunction'] = SearchDataService.getProblemByUuid;
 
                 if (typeof obsField['templateOptions']['setFieldValue'] !== 'function') {
-                    obsField['templateOptions']['setFieldValue'] = _fillPrimitiveValue;
+                    obsField['templateOptions']['setFieldValue'] =
+                    HistoricalFieldHelperService.fillPrimitiveValue;
                 }
             } else if (_question.questionOptions.rendering === 'drug') {
                 obsField = _handleFieldUiSelect(obsField);
@@ -407,7 +407,8 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                 obsField['templateOptions']['getSelectedObjectFunction'] = SearchDataService.getDrugConceptByUuid;
 
                 if (typeof obsField['templateOptions']['setFieldValue'] !== 'function') {
-                    obsField['templateOptions']['setFieldValue'] = _fillPrimitiveValue;
+                    obsField['templateOptions']['setFieldValue'] =
+                    HistoricalFieldHelperService.fillPrimitiveValue;
                 }
             } else if (_question.questionOptions.rendering === 'select-concept-answers') {
                 obsField['type'] = 'concept-search-select';
@@ -418,7 +419,8 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                 obsField['templateOptions']['fetchOptionsFunction'] = SearchDataService.getDrugConceptByUuid;
 
                 if (typeof obsField['templateOptions']['setFieldValue'] !== 'function') {
-                    obsField['templateOptions']['setFieldValue'] = _fillPrimitiveValue;
+                    obsField['templateOptions']['setFieldValue'] =
+                    HistoricalFieldHelperService.fillPrimitiveValue;
                 }
             } else if ((_question.questionOptions.rendering === 'radio') ||
                 (_question.questionOptions.rendering === 'select') ||
@@ -426,13 +428,15 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                 _handleFieldAnswers(obsField, _question.questionOptions.answers);
 
                 if (typeof obsField['templateOptions']['setFieldValue'] !== 'function') {
-                    obsField['templateOptions']['setFieldValue'] = _fillArrayOfPrimitives;
+                    obsField['templateOptions']['setFieldValue'] =
+                    HistoricalFieldHelperService.fillArrayOfPrimitives;
                 }
 
                 obsField['templateOptions']['getDisplayValue'] =
                 function (value, callback) {
-                    _getDisplayTextFromOptions(value, _question.questionOptions.answers,
-                        'concept', 'label', callback, _question.label);
+                    HistoricalFieldHelperService.
+                        getDisplayTextFromOptions(value, _question.questionOptions.answers,
+                            'concept', 'label', callback, _question.label);
                 };
 
                 if (_question.questionOptions.rendering === 'multiCheckbox') {
@@ -445,15 +449,16 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
             }
 
             obsField['templateOptions']['createModelBluePrint'] = function (parentModel, value) {
-                return createModelForRegularField(parentModel, obsField.key,
-                    _question, _question.questionOptions.concept, value);
+                return HistoricalFieldHelperService.
+                    createModelForRegularField(parentModel, obsField.key,
+                        _question, _question.questionOptions.concept, value);
             };
             
             //finally, ensure all fields have getDisplayValue
             if (typeof obsField['templateOptions']['getDisplayValue'] !== 'function') {
                 obsField['templateOptions']['getDisplayValue'] =
                 function (value, callback) {
-                    _getDisplayText(value, callback, _question.label);
+                    HistoricalFieldHelperService.getDisplayText(value, callback, _question.label);
                 };
             }
 
@@ -472,75 +477,6 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
             } else {
                 return obsField;
             }
-        }
-        
-        //#region Functions to create model chunks for a particular fields
-        function createModelForRegularField(parentModel, key, _question, concept, value) {
-
-            var model = {
-                concept: _question.questionOptions.concept,
-                schemaQuestion: _question,
-                value: value
-            };
-
-            if (parentModel !== null || parentModel !== undefined) {
-                var effectiveKey = key.split('.')[0];
-                parentModel[effectiveKey || key] = model;
-            }
-
-            return model;
-        }
-
-        function createModelForGroupSection(parentModel, key, _question, concept) {
-            var model = {
-                groupConcept: _question.questionOptions.concept,
-                schemaQuestion: _question
-            };
-
-            if (parentModel !== null && parentModel !== undefined) {
-                parentModel[key] = model;
-            }
-
-            return model;
-        }
-        
-        //#region Functions to handle setting of values and display
-        function _fillPrimitiveValue(field, newValue) {
-            field.value(newValue);
-        }
-
-        function _fillArrayOfPrimitives(field, newValue) {
-            field.value(newValue);
-        }
-
-        function fillGroups(field, newValue) {
-            var parentModel = field.templateOptions.createModelBluePrint(undefined, newValue);
-            field.value(parentModel);
-        }
-
-
-        function _getDisplayText(value, callback, label) {
-            callback(label + ': ' + value);
-        }
-
-        function _getDisplayTextFromOptions(value, options, valueProperty,
-            displayProperty, callback, label) {
-            var displayText = '';
-            if (angular.isArray(value)) {
-                _.each(options, function (option) {
-                    if (option[valueProperty] === value) {
-                        displayText = displayText + ", " + option[displayProperty];
-                    }
-                });
-            } else {
-                _.each(options, function (option) {
-                    if (option[valueProperty] === value) {
-                        displayText = option[displayProperty];
-                    }
-
-                });
-            }
-            callback(label + ': ' + displayText);
         }
     }
 })();

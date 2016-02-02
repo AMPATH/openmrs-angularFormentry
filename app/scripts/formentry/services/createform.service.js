@@ -10,9 +10,9 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
         .module('openmrs.angularFormentry')
         .factory('CreateFormService', CreateFormService);
 
-    CreateFormService.$inject = ['$log', 'OpenmrsFieldHandlerService'];
+    CreateFormService.$inject = ['$log', 'OpenmrsFieldHandlerService', 'HistoricalFieldHelperService'];
 
-    function CreateFormService($log, OpenmrsFieldHandler) {
+    function CreateFormService($log, OpenmrsFieldHandler, HistoricalFieldHelperService) {
         var service = {
             createForm: createForm
         };
@@ -145,19 +145,9 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                         });
                     } else {
                         fields.push(field);
-                        fields.push({
-                            key: 'historical-text-val',
-                            type: 'historical-text',
-                            templateOptions: {
-                                parentFieldKey: field.key,
-                                parentFieldModel: model,
-                                parentField: field
-                            }
-                        });
+                        fields.push(HistoricalFieldHelperService.
+                        createHistoricalTextField(field, model, field.key));
                     }
-
-
-
 
                 } else if (question.type === 'obsGroup') {
                     var fieldsArray = [];
@@ -185,43 +175,12 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                             obsField['templateOptions'] = {};
                         }
 
-                        obsField['templateOptions']['createModelBluePrint'] =
-                        function (parentModel, value) {
-                            var groupModel = OpenmrsFieldHandler.createModelForGroupSection(parentModel,
-                                obsField.key, question, question.questionOptions.concept);
+                        HistoricalFieldHelperService.
+                            handleModelBluePrintFunctionForGroupsProperty(obsField, question);
 
-                            _.each(obsField.fieldGroup, function (field) {
-                                if (field.templateOptions &&
-                                    typeof field.templateOptions.createModelBluePrint === 'function') {
-                                    field.templateOptions.createModelBluePrint(groupModel,
-                                        value[0][field.data.concept]);
-                                }
-                            });
-                            return groupModel;
-                        };
+                        HistoricalFieldHelperService.
+                            handleGetDisplayValueFunctionForGroupsProperty(obsField, question);
 
-                        obsField['templateOptions']['getDisplayValue'] =
-                        function (values, callback) {
-                            var displayTest = '';
-                            _.each(values, function (value) {
-                                displayTest = displayTest + obsField.label + "[ ";
-
-                                _.each(obsField.fieldGroup, function (field) {
-                                    if (field.templateOptions &&
-                                        typeof field.templateOptions.getDisplayValue === 'function') {
-                                        field.templateOptions.getDisplayValue(
-                                            value[field.data.concept],
-                                            function (display) {
-                                                displayTest = displayTest + display + ', ';
-                                            });
-                                    }
-                                });
-
-
-                                displayTest = displayTest + " ] ";
-                            });
-                            callback(displayTest);
-                        };
                         fields.push(obsField);
                     } else if (question.questionOptions.rendering === 'repeating') {
                         model['obsRepeating' + '_' + groupId] = [];
@@ -244,60 +203,19 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                         };
                         _createFieldsFactory(question.questions, fieldsArray,
                             groupModel, questionMap);
-                        
-                        OpenmrsFieldHandler.handleHistoricalExpressionProperty(obsField, question);    
+
+                        HistoricalFieldHelperService.handleHistoricalExpressionProperty(obsField, question);
 
                         if (typeof obsField['templateOptions']['setFieldValue'] !== 'function') {
-                            obsField['templateOptions']['setFieldValue'] = OpenmrsFieldHandler.fillGroups;
+                            obsField['templateOptions']['setFieldValue'] = 
+                            HistoricalFieldHelperService.fillGroups;
                         }
-                        obsField['templateOptions']['createModelBluePrint'] =
-                        function (parentModel, values) {
-                            var repeatingGroupModel = [];
-                            _.each(values, function (value) {
 
-                                var groupModel = OpenmrsFieldHandler.createModelForGroupSection(null,
-                                    obsField.key, question, question.questionOptions.concept);
-                                _.each(obsField.templateOptions.fields, function (field) {
-                                    _.each(field.fieldGroup, function (innerfield) {
-                                        if (innerfield.templateOptions &&
-                                            typeof innerfield.templateOptions.createModelBluePrint === 'function') {
-                                            innerfield.templateOptions.createModelBluePrint(groupModel,
-                                                value[innerfield.data.concept]);
-                                        }
-                                    });
-                                });
-                                repeatingGroupModel.push(groupModel);
-                            });
-                            if (parentModel) {
-                                parentModel[obsField.key] = repeatingGroupModel;
-                            }
-                            return repeatingGroupModel;
-                        };
+                        HistoricalFieldHelperService.
+                            handleModelBluePrintFunctionForGroupsProperty(obsField, question);
 
-                        obsField['templateOptions']['getDisplayValue'] =
-                        function (values, callback) {
-                            var displayTest = '';
-                            _.each(values, function (value) {
-                                displayTest = displayTest + question.label + "[ ";
-                                _.each(obsField.templateOptions.fields, function (field) {
-                                    displayTest = displayTest + "(";
-                                    _.each(field.fieldGroup, function (innerfield) {
-                                        if (innerfield.templateOptions &&
-                                            typeof innerfield.templateOptions.getDisplayValue === 'function') {
-                                            innerfield.templateOptions.getDisplayValue(
-                                                value[innerfield.data.concept],
-                                                function (display) {
-                                                    displayTest = displayTest + display + ', ';
-                                                });
-                                        }
-                                    });
-
-                                    displayTest = displayTest + " ) ";
-                                });
-                                displayTest = displayTest + " ], ";
-                            });
-                            callback(displayTest);
-                        };
+                        HistoricalFieldHelperService.
+                            handleGetDisplayValueFunctionForGroupsProperty(obsField, question);
                         
                         //convert to array
                         var updateRepeatModel = [];
@@ -305,15 +223,8 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 
                         model['obsRepeating' + '_' + groupId] = updateRepeatModel;
                         fields.push(obsField);
-                        fields.push({
-                            key: 'historical-text-val',
-                            type: 'historical-text',
-                            templateOptions: {
-                                parentFieldKey: obsField.key,
-                                parentFieldModel: model,
-                                parentField: obsField
-                            }
-                        });
+                        fields.push(HistoricalFieldHelperService.
+                        createHistoricalTextField(obsField, model, obsField.key));
                     }
 
                 } else if (question.type.startsWith('encounter')) {
