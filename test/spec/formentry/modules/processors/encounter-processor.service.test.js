@@ -8,6 +8,7 @@
     var mockData;
     describe('Encounter Processor Unit Tests', function(){
         beforeEach(function(){
+            module('angularFormentry');
             module('openmrs.angularFormentry');
             module('mock.data');
         });
