@@ -12,13 +12,13 @@
     configService.$inject = [
         '$http',
         '$log',
-        'FieldHandlerUtil',
+        'FormentryConfig',
         'formlyConfig',
         '$rootScope',
         '$q'
     ];
 
-    function  configService($http, $log, FieldHandler, formlyConfig, $rootScope, $q) {
+    function  configService($http, $log, FormentryConfig, formlyConfig, $rootScope, $q) {
         $rootScope.jsonSchema = [];
         var service = {
             addFieldHandler: addFieldHandler,
@@ -36,7 +36,7 @@
          * @returns {undefined}
          */
         function  addFieldHandler(fieldHandlerName, handlerFunction) {
-            FieldHandler.registerFieldHandler(fieldHandlerName,
+            FormentryConfig.registerFieldHandler(fieldHandlerName,
                     handlerFunction);
         }
         

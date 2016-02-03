@@ -7,6 +7,7 @@
     beforeEach(function () {
       module('openmrs.RestServices');
       module('openmrs.angularFormentry');
+      module('openmrs.angularFormentry');
     });
 
     var callbacks;

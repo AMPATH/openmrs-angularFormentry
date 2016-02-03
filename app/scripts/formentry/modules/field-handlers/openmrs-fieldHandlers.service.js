@@ -14,38 +14,38 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
         '$log',
         'SearchDataService',
         'FormValidator',
-        'FieldHandlerUtil',
+        'FormentryConfig',
         'HistoricalFieldHelperService'
     ];
 
     var obsId = 0;
 
     function OpenmrsFieldHandler($log, SearchDataService, FormValidator,
-        FieldHandlerUtil, HistoricalFieldHelperService) {
+        FormentryConfig, HistoricalFieldHelperService) {
         var currentQuestionMap = {};
 
         // Register Openmrs specific handlers
-        FieldHandlerUtil.registerFieldHandler('obsFieldHandler',
+        FormentryConfig.registerFieldHandler('obsFieldHandler',
             obsFieldHandler);
-        FieldHandlerUtil.registerFieldHandler('encounterTypeFieldHandler',
+        FormentryConfig.registerFieldHandler('encounterTypeFieldHandler',
             encounterTypeFieldHandler);
-        FieldHandlerUtil.registerFieldHandler('personAttributeFieldHandler',
+        FormentryConfig.registerFieldHandler('personAttributeFieldHandler',
             personAttributeFieldHandler);
-        FieldHandlerUtil.registerFieldHandler('encounterDatetimeFieldHandler',
+        FormentryConfig.registerFieldHandler('encounterDatetimeFieldHandler',
             encounterDatetimeFieldHandler);
-        FieldHandlerUtil.registerFieldHandler('encounterProviderFieldHandler',
+        FormentryConfig.registerFieldHandler('encounterProviderFieldHandler',
             encounterProviderFieldHandler);
-        FieldHandlerUtil.registerFieldHandler('encounterLocationFieldHandler',
+        FormentryConfig.registerFieldHandler('encounterLocationFieldHandler',
             encounterLocationFieldHandler);
-        FieldHandlerUtil.registerFieldHandler('conceptSearchFieldHandler',
+        FormentryConfig.registerFieldHandler('conceptSearchFieldHandler',
             conceptSearchFieldHandler);
-        FieldHandlerUtil.registerFieldHandler('locationAttributeFieldHandler',
+        FormentryConfig.registerFieldHandler('locationAttributeFieldHandler',
             locationAttributeFieldHandler);
-        FieldHandlerUtil.registerFieldHandler('defaultFieldHandler',
+        FormentryConfig.registerFieldHandler('defaultFieldHandler',
             defaultFieldHandler);
 
         var service = {
-            getFieldHandler: FieldHandlerUtil.getFieldHandler
+            getFieldHandler: FormentryConfig.getFieldHandler
         };
 
         return service;

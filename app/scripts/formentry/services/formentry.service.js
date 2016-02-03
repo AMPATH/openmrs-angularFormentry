@@ -10,11 +10,11 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
         .module('openmrs.angularFormentry')
         .factory('FormEntry', FormEntry);
 
-    FormEntry.$inject = ['CreateFormService', '$log', 'FieldHandlerUtil',
+    FormEntry.$inject = ['CreateFormService', '$log', 'FormentryConfig',
         'FormProcessorService', 'CurrentLoadedFormService', 'moment'
     ];
 
-    function FormEntry(createFormService, $log, FieldHandlerUtil,
+    function FormEntry(createFormService, $log, FormentryConfig,
         formProcessorService, CurrentLoadedFormService, moment) {
 
         var service = {
@@ -29,7 +29,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 
         function registerCustomFieldHandler(_handlerName, _handlerMethod) {
             if (typeof _handlerMethod === 'function') {
-                FieldHandlerUtil
+                FormentryConfig
                     .registerFieldHandler(_handlerName, _handlerMethod);
             } else {
                 $log.info('Handler was not registered!!');

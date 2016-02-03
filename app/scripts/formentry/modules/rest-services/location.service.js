@@ -9,12 +9,10 @@ jshint -W003,-W109, -W106, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W11
     .module('openmrs.RestServices')
     .service('LocationResService', LocationResService);
 
-  LocationResService.$inject = ['$resource'];
+  LocationResService.$inject = ['$resource', 'FormentryConfig'];
 
-  function LocationResService($resource) {
+  function LocationResService($resource, FormentryConfig) {
     var serviceDefinition;
-    var restHost='http://localhost:8080/amrs/ws/rest/v1';
-   
     var cachedLocations = [];
 
     serviceDefinition = {
@@ -36,25 +34,29 @@ jshint -W003,-W109, -W106, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W11
     }
 
     function getResource() {
-      return $resource(restHost+'/location/:uuid',
+      return $resource(FormentryConfig.getOpenmrsBaseUrl().trim() +
+      '/location/:uuid',
         { uuid: '@uuid' },
         { query: { method: 'GET', isArray: false } });
     }
 
     function getResourceFromEtl() {
-      return $resource('/custom_data/location/uuid/:uuid',
+      return $resource(FormentryConfig.getOpenmrsBaseUrl().trim() +
+      '/custom_data/location/uuid/:uuid',
         { uuid: '@uuid' },
         { query: { method: 'GET', isArray: false } });
     }
 
     function getListResource() {
-      return $resource(restHost+'/location?v=default',
+      return $resource(FormentryConfig.getOpenmrsBaseUrl().trim() +
+      '/location?v=default',
         { uuid: '@uuid' },
         { query: { method: 'GET', isArray: false } });
     }
 
     function searchResource() {
-      return $resource(restHost+'/location?q=:search&v=default',
+      return $resource(FormentryConfig.getOpenmrsBaseUrl().trim() +
+      '/location?q=:search&v=default',
         { search: '@search' },
         { query: { method: 'GET', isArray: false } });
     }
