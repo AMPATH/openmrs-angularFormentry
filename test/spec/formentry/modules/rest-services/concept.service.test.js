@@ -6,6 +6,7 @@
   describe('OpenMRS Concept Service Unit Tests', function () {
     beforeEach(function () {
       module('openmrs.RestServices');
+      module('openmrs.angularFormentry');
     });
 
     var callbacks;

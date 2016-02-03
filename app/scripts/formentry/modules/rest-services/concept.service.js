@@ -7,9 +7,9 @@
     .module('openmrs.RestServices')
     .service('ConceptResService', ProviderResService);
 
-  ProviderResService.$inject = ['$resource'];
+  ProviderResService.$inject = ['$resource', 'FormentryConfig'];
 
-  function ProviderResService($resource) {
+  function ProviderResService($resource, FormentryConfig) {
     var serviceDefinition;
     serviceDefinition = {
       getResource: getResource,
@@ -26,25 +26,29 @@
     return serviceDefinition;
 
     function getResource() {
-      return $resource('/concept/:uuid?v=custom:(uuid,name,conceptClass)',
+      return $resource(FormentryConfig.getOpenmrsBaseUrl().trim() +
+       '/concept/:uuid?v=custom:(uuid,name,conceptClass)',
         { uuid: '@uuid' },
         { query: { method: 'GET', isArray: false } });
     }
 
     function getSearchResource() {
-      return $resource('/concept?q=:q&v=custom:(uuid,name,conceptClass)',
+      return $resource(FormentryConfig.getOpenmrsBaseUrl().trim() +
+      '/concept?q=:q&v=custom:(uuid,name,conceptClass)',
         { q: '@q' },
         { query: { method: 'GET', isArray: false } });
     }
 
     function getConceptClassResource() {
-      return $resource('/conceptclass',
+      return $resource(FormentryConfig.getOpenmrsBaseUrl().trim() +
+      '/conceptclass',
         { uuid: '@uuid' },
         { query: { method: 'GET', isArray: false } });
     }
 
     function getConceptWithAnswersResource() {
-      return $resource('/concept/:uuid?v=custom:(uuid,name,answers)',
+      return $resource(FormentryConfig.getOpenmrsBaseUrl().trim() +
+      '/concept/:uuid?v=custom:(uuid,name,answers)',
         { q: '@q' },
         { query: { method: 'GET', isArray: false } });
     }

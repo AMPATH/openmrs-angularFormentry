@@ -12,10 +12,10 @@
         ])
         .run(RestangularConfig);
 
-  RestangularConfig.$inject = ['Restangular'];
+  RestangularConfig.$inject = ['Restangular', 'FormentryConfig'];
 
-  function RestangularConfig(Restangular, envService) {  // jshint ignore:line
+  function RestangularConfig(Restangular, FormentryConfig) {  // jshint ignore:line
     // Should of the form /ws/rest/v1 or https://host/ws/rest/v1
-    Restangular.setBaseUrl('http://host.com/');
+    Restangular.setBaseUrl(FormentryConfig.getOpenmrsBaseUrl());
   }
 })();

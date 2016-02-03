@@ -7,9 +7,9 @@
     .module('openmrs.RestServices')
     .service('DrugResService', DrugResService);
 
-  DrugResService.$inject = ['$resource'];
+  DrugResService.$inject = ['$resource', 'FormentryConfig'];
 
-  function DrugResService($resource) {
+  function DrugResService($resource, FormentryConfig) {
     var serviceDefinition;
     serviceDefinition = {
       getResource: getResource,
@@ -21,13 +21,15 @@
     return serviceDefinition;
 
     function getResource() {
-      return $resource('/drug/:uuid?v=custom:(uuid,name,concept)',
+      return $resource(FormentryConfig.getOpenmrsBaseUrl().trim() +
+      '/drug/:uuid?v=custom:(uuid,name,concept)',
         { uuid: '@uuid' },
         { query: { method: 'GET', isArray: false } });
     }
 
     function getSearchResource() {
-      return $resource('/drug?q=:q&v=custom:(uuid,name,concept)',
+      return $resource(FormentryConfig.getOpenmrsBaseUrl().trim() +
+      '/drug?q=:q&v=custom:(uuid,name,concept)',
         { q: '@q' },
         { query: { method: 'GET', isArray: false } });
     }
