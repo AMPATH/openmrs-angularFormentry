@@ -361,6 +361,8 @@
                 }
             ]
         };
+        
+        
         // UtilService.getTestEncounterData('xx', function(data) {
         //   restObs = data;
         // },
@@ -390,8 +392,10 @@
 
             var personAttributePayload = FormEntry.getPersonAttributesPayload($scope.vm.model);
             $log.debug('test person attribute payload', JSON.stringify(personAttributePayload));
+            var personAttributes=getMockPersonAttribute();
+            FormEntry.updateExistingPersonAttributeToForm(personAttributes,$scope.vm.model);
         };
-
+        //addExistingPersonAttributesToForm
         // var form = TestService.getCompiledForm();
         // $scope.vm.model = form.compiledSchema[0].compiledPage[0].sectionModel;
 
@@ -542,7 +546,45 @@
             // ];
 
         }
-
+        
+        function getMockPersonAttribute() {
+            return [
+                {
+                    "uuid": "32c0399f-aa1f-48c0-99d8-9dbf691ed30e",
+                    "attributeType": "8d87236c-c2cc-11de-8d13-0010c6dffd0f",
+                    "name": "Health Center",
+                    "value": {
+                        "uuid": "08feb6b0-1352-11df-a1f1-0026b9348838",
+                        "display": "Location-6",
+                        "links": [
+                            {
+                                "uri": "NEED-TO-CONFIGURE/ws/rest/v1/location/08feb6b0-1352-11df-a1f1-0026b9348838",
+                                "rel": "self"
+                            }
+                        ]
+                    },
+                    "size": 2
+                },
+                {
+                    "uuid": "1ea516d7-95d2-4d24-9218-514e110c2ba6",
+                    "attributeType": "72a76074-1359-11df-a1f1-0026b9348838",
+                    "name": "Point of HIV Testing",
+                    "value": {
+                        "uuid": "a8a359a2-1350-11df-a1f1-0026b9348838",
+                        "display": "PROVIDER INITIATED TESTING AND COUNSELING",
+                        "links": [
+                            {
+                                "uri": "NEED-TO-CONFIGURE/ws/rest/v1/concept/a8a359a2-1350-11df-a1f1-0026b9348838",
+                                "rel": "self"
+                            }
+                        ]
+                    },
+                    "size": 2
+                }
+            ];
+        }
     }
+
+    
 }
     )();

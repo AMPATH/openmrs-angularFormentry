@@ -23,7 +23,8 @@
             getMockedFormList:getMockedFormList,
             getMockRestEncounter:getMockRestEncounter,
             getTriageFormModel:getTriageFormModel,
-            getOpenmrsRestAndHistoricalEncounterRepMocks: getOpenmrsRestAndHistoricalEncounterRepMocks
+            getOpenmrsRestAndHistoricalEncounterRepMocks: getOpenmrsRestAndHistoricalEncounterRepMocks,
+            getMockRestPersonAttributes:getMockRestPersonAttributes
           };
 
     return mock;
@@ -168,7 +169,43 @@
       };
     }
     
-
+function getMockRestPersonAttributes() {
+            return [
+                {
+                    "uuid": "32c0399f-aa1f-48c0-99d8-9dbf691ed30e",
+                    "attributeType": "8d87236c-c2cc-11de-8d13-0010c6dffd0f",
+                    "name": "Health Center",
+                    "value": {
+                        "uuid": "08feb6b0-1352-11df-a1f1-0026b9348838",
+                        "display": "Location-6",
+                        "links": [
+                            {
+                                "uri": "NEED-TO-CONFIGURE/ws/rest/v1/location/08feb6b0-1352-11df-a1f1-0026b9348838",
+                                "rel": "self"
+                            }
+                        ]
+                    },
+                    "size": 2
+                },
+                {
+                    "uuid": "1ea516d7-95d2-4d24-9218-514e110c2ba6",
+                    "attributeType": "72a76074-1359-11df-a1f1-0026b9348838",
+                    "name": "Point of HIV Testing",
+                    "value": {
+                        "uuid": "a8a359a2-1350-11df-a1f1-0026b9348838",
+                        "display": "PROVIDER INITIATED TESTING AND COUNSELING",
+                        "links": [
+                            {
+                                "uri": "NEED-TO-CONFIGURE/ws/rest/v1/concept/a8a359a2-1350-11df-a1f1-0026b9348838",
+                                "rel": "self"
+                            }
+                        ]
+                    },
+                    "size": 2
+                }
+            ];
+        };
+        
     function getMockPersonAttributesArray() {
       var testData = [{uuid:'f123244d-8f1d-4430-9191-98ce60f3723b',
             attributeType:'8d87236c-c2cc-11de-8d13-0010c6dffd0f',
@@ -1353,21 +1390,21 @@
           },
           "value": "Test person attribute 1"
         },
-        "personAttribute_1234": {
-          "attributeType": "12345",
-          "schemaQuestion": {
-            "type": "personAttribute",
-            "label": "First Person Attribute",
-            "id": "first_person_attribute",
-            "required": "true",
-            "default": "",
-            "questionOptions": {
-              "rendering": "location-attribute",
-              "attributeType": "12345"
-            }
-          },
-          "value": "Test person attribute 2"
-        },
+"personAttribute_8d87236cnc2ccn11den8d13n0010c6dffd0f": {
+      "attributeType": "8d87236c-c2cc-11de-8d13-0010c6dffd0f",
+      "schemaQuestion": {
+        "type": "personAttribute",
+        "label": "Person Attribute Health center",
+        "id": "first_person_attribute",
+        "required": "true",
+        "default": "",
+        "questionOptions": {
+          "rendering": "ui-select-extended",
+          "attributeType": "8d87236c-c2cc-11de-8d13-0010c6dffd0f"
+        }
+      },
+      "value": ""
+    },
         "obs1_1232": {
           "concept": "1232",
           "schemaQuestion": {

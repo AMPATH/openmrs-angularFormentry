@@ -74,6 +74,32 @@
 
         });
 
+
+           describe('addExistingPersonAttributesToForm Method unit Tests', function () {
+            var model = {};
+             var restPersonAttributes;
+            beforeEach(function () {
+                functionStub = sinon.spy(personAttributesService, 'addExistingPersonAttributesToForm');
+                model = mockData.getMockModel();
+                restPersonAttributes=mockData.getMockRestPersonAttributes();
+                personAttributesService.addExistingPersonAttributesToForm(restPersonAttributes,model);
+            });
+
+            it('should be called with parameters', function () {
+                 expect(functionStub).to.have.been.calledOnce;
+                 expect(model).to.be.an('object');
+                 expect(restPersonAttributes).to.be.an('array');
+            });
+
+             it('should update a formly person attribute field with existing data', function () {
+                var sampleSection = model['section_Section_Name'];
+                var sampleFormlyField = sampleSection['personAttribute_8d87236cnc2ccn11den8d13n0010c6dffd0f'];
+                    expect(sampleFormlyField.initialValue).to.equal('08feb6b0-1352-11df-a1f1-0026b9348838');
+            });
+
+
+        });
+
     });
 
 })();
