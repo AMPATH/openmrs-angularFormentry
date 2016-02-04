@@ -11,7 +11,7 @@ jscs:disable requirePaddingNewLinesBeforeLineComments, requireTrailingComma
         .factory('EncounterProcessorService', EncounterProcessor);
 
     EncounterProcessor.$inject = [
-        'UtilService',
+        'FormentryUtilService',
         'ObsProcessorService',
         '$log'
     ];

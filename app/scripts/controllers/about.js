@@ -16,12 +16,12 @@
         .controller('AboutCtrl', AboutCtrl);
 
   AboutCtrl.$inject = ['$log', '$location', '$scope','FormEntry', '$timeout', 
-    '$filter','TestService', 'UtilService', '$rootScope', 'configService',
+    '$filter','TestService', 'FormentryUtilService', '$rootScope', 'configService',
     'AuthService', 'SearchDataService'
   ];
 
     function AboutCtrl($log, $location, $scope, FormEntry,
-        $timeout, $filter, TestService, UtilService, $rootScope, configService, AuthService, SearchDataService) {
+        $timeout, $filter, TestService, FormentryUtilService, $rootScope, configService, AuthService, SearchDataService) {
         $scope.vm = {};
         $scope.vm.model = {};
         $scope.vm.questionMap = {};
@@ -55,7 +55,7 @@
             });
 
 
-        UtilService.getFormSchema(testSchema, function (data) {
+        FormentryUtilService.getFormSchema(testSchema, function (data) {
             schema = data;
             $log.info('Schema Controller', schema);
             var formObject = FormEntry.createForm(schema, $scope.vm.model);

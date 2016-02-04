@@ -8,12 +8,12 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
   'use strict';
 
   angular
-        .module('angularFormentry')
-        .factory('UtilService', UtilService);
+        .module('openmrs.angularFormentry')
+        .factory('FormentryUtilService', FormentryUtilService);
 
-  UtilService.$inject = ['$http', '$log', '$resource', '$filter'];
+  FormentryUtilService.$inject = ['$http', '$log', '$resource', '$filter'];
 
-  function UtilService($http, $log, $resource, $filter) {
+  function FormentryUtilService($http, $log, $resource, $filter) {
     var service = {
           formatDate: formatDate,
           getLocalTimezone: getLocalTimezone,

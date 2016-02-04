@@ -5,7 +5,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 (function(){
     'use strict';
     
-    var utilService;
+    var formentryUtilService;
     var zone;
     describe('Util Service tests', function() {
         beforeEach(function() {
@@ -14,8 +14,8 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
         });
         
         beforeEach(inject(function($injector){
-            utilService = $injector.get('UtilService');
-            zone = utilService.getLocalTimezone();
+            formentryUtilService = $injector.get('FormentryUtilService');
+            zone = formentryUtilService.getLocalTimezone();
         }));
       
         describe('getLocalTimezone tests', function() {
@@ -42,12 +42,12 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             it('should format date as expected', function() {
                 // default format 
                 var d = 'Thu Sep 09 2004 11:59:59 GMT+0300 (EAT)';
-                expect(utilService.formatDate(d,null,'+0300')).to.equal('2004-09-09 11:59:59');
+                expect(formentryUtilService.formatDate(d,null,'+0300')).to.equal('2004-09-09 11:59:59');
                 
-                expect(utilService.formatDate(d,'yyyy/MM/dd'))
+                expect(formentryUtilService.formatDate(d,'yyyy/MM/dd'))
                 .to.equal('2004/09/09');
                 
-                expect(utilService.formatDate(d,'MMM d, yyyy'))
+                expect(formentryUtilService.formatDate(d,'MMM d, yyyy'))
                 .to.equal('Sep 9, 2004');
             });
         });
