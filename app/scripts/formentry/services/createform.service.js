@@ -142,11 +142,17 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                     if (angular.isArray(field)) {
                         _.each(field, function (f) {
                             fields.push(f);
+                             if(f.templateOptions.historicalExpression) {
+                                fields.push(HistoricalFieldHelperService.
+                                    createHistoricalTextField(f, model, f.key));
+                             }
                         });
                     } else {
                         fields.push(field);
-                        fields.push(HistoricalFieldHelperService.
-                        createHistoricalTextField(field, model, field.key));
+                        if(field.templateOptions.historicalExpression) {
+                            fields.push(HistoricalFieldHelperService.
+                            createHistoricalTextField(field, model, field.key));
+                        }
                     }
 
                 } else if (question.type === 'obsGroup') {
@@ -223,8 +229,11 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 
                         model['obsRepeating' + '_' + groupId] = updateRepeatModel;
                         fields.push(obsField);
-                        fields.push(HistoricalFieldHelperService.
-                        createHistoricalTextField(obsField, model, obsField.key));
+                        if(obsField.templateOptions.historicalExpression) {
+                            fields.push(HistoricalFieldHelperService.
+                                createHistoricalTextField(obsField, model, obsField.key));
+                        }
+                        
                     }
 
                 } else if (question.type.startsWith('encounter')) {

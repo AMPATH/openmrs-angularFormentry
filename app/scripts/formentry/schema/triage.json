@@ -71,6 +71,7 @@
               "id":"q1",
               "required":"true",
               "default":"",
+              "historicalExpression": "'testing'",
               "questionOptions":{
                 "rendering":"text",
                 "concept":"1232"
@@ -261,6 +262,7 @@
             },
             {
               "label": "Were any of the following PWP services provided?",
+              "historicalExpression":"HD.getObject('prevEnc').getValue('9ce5dbf0-a141-4ad8-8c9d-cd2bf84fe72b')",
               "questionOptions":{
                 "rendering":"select",
                 "concept": "9ce5dbf0-a141-4ad8-8c9d-cd2bf84fe72b",
@@ -313,6 +315,7 @@
                     "showDate":"true"
                   },
                   "type": "obs",
+                  "historicalExpression":"HD.getObject('prevEnc').getValue('a8a65d5a-1350-11df-a1f1-0026b9348838')",
                   "validators": []
                 },
                 {
@@ -328,6 +331,7 @@
                 },
                 {
                   "label": "Pulse(Rate/Min):",
+                  "historicalExpression":"HD.getObject('prevEnc').getValue('a8a65f12-1350-11df-a1f1-0026b9348838')",
                   "questionOptions":{
                     "rendering":"number",
                     "concept": "a8a65f12-1350-11df-a1f1-0026b9348838",

@@ -24,7 +24,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
                 //incase we need link function
             },
 
-            controller: function ($scope, $log) {
+            controller: function ($scope, $log, HistoricalDataService) {
                 //functions
                 $scope.setValue = setValue;
                 $scope.getDisplayValue = getDisplayValue;
@@ -32,6 +32,9 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
                 //variables 
                 $scope.historicalDisplay = '';
                 $scope.historicalValue = null;
+                
+                //bring historical data alias into scope
+                var HD = HistoricalDataService;
                 
                 //used in one of the schema historical expressions
                 var sampleRepeatingGroupValue =
@@ -68,7 +71,11 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
                      
                     //evaluate expression and set historicalValue with the result
                     if(historicalExpression) {
-                        $scope.historicalValue = eval(historicalExpression);
+                        try {
+                            $scope.historicalValue = eval(historicalExpression);
+                        } catch (error) {
+                            $log.debug('Could not evaluate historical expression "'+ historicalExpression + '". Error: ', error);
+                        }
                     }
                      
                     //get display version of the value by calling the getdisplay function
