@@ -55,11 +55,11 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 
         function updateFormWithExistingObs(model, restObs) {
             formProcessorService.addExistingDataSetToObsForm(restObs, model);
+            formProcessorService.addExistingDataSetToEncounterForm(restObs, model);
         }
         
         function updateExistingPersonAttributeToForm(restDataset,model){
               return formProcessorService.addExistingPersonAttributesToForm(restDataset,model);
         }
-
     }
 })();

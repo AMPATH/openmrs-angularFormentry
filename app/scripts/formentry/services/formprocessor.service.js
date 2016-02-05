@@ -47,7 +47,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
         }
 
         function addExistingDataSetToEncounterForm(restDataset, model) {
-            //TODO: forgot to handle this
+            EncounterProcessorService.populateModel(model, restDataset);
         }
 
         function addExistingPersonAttributesToForm(restDataset, model) {
