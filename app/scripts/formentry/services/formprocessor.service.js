@@ -24,7 +24,8 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             encounterFormProcessor: encounterFormProcessor,
             personAttributeFormProccesor: personAttributeFormProccesor,
             addExistingDataSetToEncounterForm: addExistingDataSetToEncounterForm,
-            addExistingDataSetToObsForm: addExistingDataSetToObsForm
+            addExistingDataSetToObsForm: addExistingDataSetToObsForm,
+            addExistingPersonAttributesToForm:addExistingPersonAttributesToForm
         };
 
         return service;
@@ -49,8 +50,8 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             //TODO: forgot to handle this
         }
 
-        function addExistingDataSetToPersonAttribute(restDataset, model) {
-            //TODO: forgot to handle this
+        function addExistingPersonAttributesToForm(restDataset, model) {
+            return PersonAttributesProcessorService.addExistingPersonAttributesToForm(restDataset,model);
         }
     }
 })();

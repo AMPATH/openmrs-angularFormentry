@@ -22,7 +22,8 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
             registerCustomFieldHandler: registerCustomFieldHandler,
             getFormPayload: getFormPayload,
             updateFormWithExistingObs: updateFormWithExistingObs,
-            getPersonAttributesPayload: getPersonAttributesPayload
+            getPersonAttributesPayload: getPersonAttributesPayload,
+            updateExistingPersonAttributeToForm:updateExistingPersonAttributeToForm
         };
 
         return service;
@@ -54,6 +55,10 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 
         function updateFormWithExistingObs(model, restObs) {
             formProcessorService.addExistingDataSetToObsForm(restObs, model);
+        }
+        
+        function updateExistingPersonAttributeToForm(restDataset,model){
+              return formProcessorService.addExistingPersonAttributesToForm(restDataset,model);
         }
 
     }

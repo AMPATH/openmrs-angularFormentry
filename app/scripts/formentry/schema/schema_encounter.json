@@ -50,13 +50,13 @@
           "questions": [
             {
               "type":"personAttribute",
-              "label":"Person Attribute 1",
+              "label":"Person Attribute Health center",
               "id":"first_person_attribute",
               "required":"true",
               "default":"",
               "questionOptions":{
                 "rendering":"ui-select-extended",
-                "attributeType":"1232"
+                "attributeType":"8d87236c-c2cc-11de-8d13-0010c6dffd0f"
               }
             },
             {
