@@ -393,7 +393,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                 }
 
             } else if (_question.questionOptions.rendering === 'problem') {
-                obsField = _handleFieldUiSelect(obsField);
+                _handleFieldUiSelect(obsField);
                 obsField['templateOptions']['deferredFilterFunction'] = SearchDataService.findProblem;
                 obsField['templateOptions']['getSelectedObjectFunction'] = SearchDataService.getProblemByUuid;
 
@@ -402,7 +402,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                     HistoricalFieldHelperService.fillPrimitiveValue;
                 }
             } else if (_question.questionOptions.rendering === 'drug') {
-                obsField = _handleFieldUiSelect(obsField);
+                _handleFieldUiSelect(obsField);
                 obsField['templateOptions']['deferredFilterFunction'] = SearchDataService.findDrugConcepts;
                 obsField['templateOptions']['getSelectedObjectFunction'] = SearchDataService.getDrugConceptByUuid;
 
@@ -412,12 +412,12 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                 }
             } else if (_question.questionOptions.rendering === 'select-concept-answers') {
                 obsField['type'] = 'concept-search-select';
-                obsField['displayMember'] = 'label';
-                obsField['valueMember'] = 'concept';
-                obsField['questionConceptUuid'] = _question.questionOptions.concept;
+                obsField['templateOptions']['options'] = [];
+                obsField['templateOptions']['displayMember'] = 'label';
+                obsField['templateOptions']['valueMember'] = 'concept';
+                obsField['templateOptions']['questionConceptUuid'] = _question.questionOptions.concept;
                 obsField['templateOptions']['type'] = _question.questionOptions.rendering;
                 obsField['templateOptions']['fetchOptionsFunction'] = SearchDataService.getDrugConceptByUuid;
-
                 if (typeof obsField['templateOptions']['setFieldValue'] !== 'function') {
                     obsField['templateOptions']['setFieldValue'] =
                     HistoricalFieldHelperService.fillPrimitiveValue;
@@ -453,7 +453,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                     createModelForRegularField(parentModel, obsField.key,
                         _question, _question.questionOptions.concept, value);
             };
-            
+
             //finally, ensure all fields have getDisplayValue
             if (typeof obsField['templateOptions']['getDisplayValue'] !== 'function') {
                 obsField['templateOptions']['getDisplayValue'] =
