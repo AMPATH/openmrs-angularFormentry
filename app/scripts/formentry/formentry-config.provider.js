@@ -15,30 +15,30 @@ jscs:disable requirePaddingNewLinesBeforeLineComments, requireTrailingComma
     FormentryConfig.$inject = ['$log'];
 
     function FormentryConfig($log) {
-        
+
         var configObject = {
             fieldHandlers: {},
             openmrsBaseUrl: ''
         };
-        
+
         var service = {
             getConfigObject:getConfigObject,
-            
+
             //field handler methods
             getFieldHandler: getFieldHandler,
             registerFieldHandler: registerFieldHandler,
-            
+
             //Openmrs REST url configurations
             setOpenmrsBaseUrl: setOpenmrsBaseUrl,
             getOpenmrsBaseUrl: getOpenmrsBaseUrl
         };
-        
+
         return service;
-        
+
         function getConfigObject() {
             return configObject;
         }
-        
+
         function getFieldHandler(handlerName) {
             if (handlerName in configObject.fieldHandlers) {
                 $log.debug('Fetching ' + handlerName + ' handler');
@@ -53,14 +53,18 @@ jscs:disable requirePaddingNewLinesBeforeLineComments, requireTrailingComma
         function registerFieldHandler(handlerName, handlerMethod) {
             configObject.fieldHandlers[handlerName] = handlerMethod;
         }
-        
+
         function setOpenmrsBaseUrl(value) {
             $log.debug('Setting openmrs url to ' + value);
             configObject.openmrsBaseUrl = value;
         }
-        
+
         function getOpenmrsBaseUrl() {
+          if (typeof configObject.openmrsBaseUrl === 'function') {
+            return configObject.openmrsBaseUrl();
+          } else {
             return configObject.openmrsBaseUrl;
+          }            
         }
     }
 })();
