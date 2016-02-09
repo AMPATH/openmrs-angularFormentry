@@ -47,7 +47,7 @@
 
         }); 
        
-        //testing search connection
+        //testing search connections
         SearchDataService.findLocation('abu', function (success) {
             console.log(JSON.stringify(success));
         },
