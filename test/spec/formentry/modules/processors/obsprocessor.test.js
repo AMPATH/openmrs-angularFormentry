@@ -166,7 +166,7 @@
             expect(obsPayload[5].concept).to.equal(sampleGroup.groupConcept);
             expect(obsPayload[5].groupMembers[0].concept).to.equal(sampleField1.concept);
             expect(obsPayload[5].groupMembers[0].value).to.equal(sampleField1.value);
-            var value = filter('date')(new Date(sampleDateField1.value), 'yyyy-MM-dd HH:mm:ss');
+            var value = filter('date')(new Date(sampleDateField1.value), 'yyyy-MM-dd HH:mm:ss','+0300');
             expect(obsPayload[5].groupMembers[0].obsDatetime).to.equal(value);
 
           });
