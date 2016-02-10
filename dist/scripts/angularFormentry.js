@@ -74,7 +74,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
   function RestangularConfig(Restangular, FormentryConfig) {  // jshint ignore:line
     // Should of the form /ws/rest/v1 or https://host/ws/rest/v1
-    Restangular.setBaseUrl(FormentryConfig.getOpenmrsBaseUrl());
+    //Restangular.setBaseUrl(FormentryConfig.getOpenmrsBaseUrl());
   }
 })();
 
@@ -663,7 +663,8 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
             registerCustomFieldHandler: registerCustomFieldHandler,
             getFormPayload: getFormPayload,
             updateFormWithExistingObs: updateFormWithExistingObs,
-            getPersonAttributesPayload: getPersonAttributesPayload
+            getPersonAttributesPayload: getPersonAttributesPayload,
+            updateExistingPersonAttributeToForm:updateExistingPersonAttributeToForm
         };
 
         return service;
@@ -686,7 +687,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
         }
 
         function getFormPayload(model) {
-            return formProcessorService.obsFormProccesor(model);
+            return formProcessorService.encounterFormProcessor(model);
         }
 
         function getPersonAttributesPayload(model) {
@@ -695,8 +696,12 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 
         function updateFormWithExistingObs(model, restObs) {
             formProcessorService.addExistingDataSetToObsForm(restObs, model);
+            formProcessorService.addExistingDataSetToEncounterForm(restObs, model);
         }
-
+        
+        function updateExistingPersonAttributeToForm(restDataset,model){
+              return formProcessorService.addExistingPersonAttributesToForm(restDataset,model);
+        }
     }
 })();
 
@@ -844,11 +849,17 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                     if (angular.isArray(field)) {
                         _.each(field, function (f) {
                             fields.push(f);
+                             if(f.templateOptions.historicalExpression) {
+                                fields.push(HistoricalFieldHelperService.
+                                    createHistoricalTextField(f, model, f.key));
+                             }
                         });
                     } else {
                         fields.push(field);
-                        fields.push(HistoricalFieldHelperService.
-                        createHistoricalTextField(field, model, field.key));
+                        if(field.templateOptions.historicalExpression) {
+                            fields.push(HistoricalFieldHelperService.
+                            createHistoricalTextField(field, model, field.key));
+                        }
                     }
 
                 } else if (question.type === 'obsGroup') {
@@ -925,8 +936,11 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 
                         model['obsRepeating' + '_' + groupId] = updateRepeatModel;
                         fields.push(obsField);
-                        fields.push(HistoricalFieldHelperService.
-                        createHistoricalTextField(obsField, model, obsField.key));
+                        if(obsField.templateOptions.historicalExpression) {
+                            fields.push(HistoricalFieldHelperService.
+                                createHistoricalTextField(obsField, model, obsField.key));
+                        }
+                        
                     }
 
                 } else if (question.type.startsWith('encounter')) {
@@ -976,30 +990,30 @@ jscs:disable requirePaddingNewLinesBeforeLineComments, requireTrailingComma
     FormentryConfig.$inject = ['$log'];
 
     function FormentryConfig($log) {
-        
+
         var configObject = {
             fieldHandlers: {},
             openmrsBaseUrl: ''
         };
-        
+
         var service = {
             getConfigObject:getConfigObject,
-            
+
             //field handler methods
             getFieldHandler: getFieldHandler,
             registerFieldHandler: registerFieldHandler,
-            
+
             //Openmrs REST url configurations
             setOpenmrsBaseUrl: setOpenmrsBaseUrl,
             getOpenmrsBaseUrl: getOpenmrsBaseUrl
         };
-        
+
         return service;
-        
+
         function getConfigObject() {
             return configObject;
         }
-        
+
         function getFieldHandler(handlerName) {
             if (handlerName in configObject.fieldHandlers) {
                 $log.debug('Fetching ' + handlerName + ' handler');
@@ -1014,14 +1028,18 @@ jscs:disable requirePaddingNewLinesBeforeLineComments, requireTrailingComma
         function registerFieldHandler(handlerName, handlerMethod) {
             configObject.fieldHandlers[handlerName] = handlerMethod;
         }
-        
+
         function setOpenmrsBaseUrl(value) {
             $log.debug('Setting openmrs url to ' + value);
             configObject.openmrsBaseUrl = value;
         }
-        
+
         function getOpenmrsBaseUrl() {
+          if (typeof configObject.openmrsBaseUrl === 'function') {
+            return configObject.openmrsBaseUrl();
+          } else {
             return configObject.openmrsBaseUrl;
+          }            
         }
     }
 })();
@@ -1421,7 +1439,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                 }
 
             } else if (_question.questionOptions.rendering === 'problem') {
-                obsField = _handleFieldUiSelect(obsField);
+                _handleFieldUiSelect(obsField);
                 obsField['templateOptions']['deferredFilterFunction'] = SearchDataService.findProblem;
                 obsField['templateOptions']['getSelectedObjectFunction'] = SearchDataService.getProblemByUuid;
 
@@ -1430,7 +1448,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                     HistoricalFieldHelperService.fillPrimitiveValue;
                 }
             } else if (_question.questionOptions.rendering === 'drug') {
-                obsField = _handleFieldUiSelect(obsField);
+                _handleFieldUiSelect(obsField);
                 obsField['templateOptions']['deferredFilterFunction'] = SearchDataService.findDrugConcepts;
                 obsField['templateOptions']['getSelectedObjectFunction'] = SearchDataService.getDrugConceptByUuid;
 
@@ -1440,12 +1458,12 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                 }
             } else if (_question.questionOptions.rendering === 'select-concept-answers') {
                 obsField['type'] = 'concept-search-select';
-                obsField['displayMember'] = 'label';
-                obsField['valueMember'] = 'concept';
-                obsField['questionConceptUuid'] = _question.questionOptions.concept;
+                obsField['templateOptions']['options'] = [];
+                obsField['templateOptions']['displayMember'] = 'label';
+                obsField['templateOptions']['valueMember'] = 'concept';
+                obsField['templateOptions']['questionConceptUuid'] = _question.questionOptions.concept;
                 obsField['templateOptions']['type'] = _question.questionOptions.rendering;
                 obsField['templateOptions']['fetchOptionsFunction'] = SearchDataService.getDrugConceptByUuid;
-
                 if (typeof obsField['templateOptions']['setFieldValue'] !== 'function') {
                     obsField['templateOptions']['setFieldValue'] =
                     HistoricalFieldHelperService.fillPrimitiveValue;
@@ -1481,7 +1499,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                     createModelForRegularField(parentModel, obsField.key,
                         _question, _question.questionOptions.concept, value);
             };
-            
+
             //finally, ensure all fields have getDisplayValue
             if (typeof obsField['templateOptions']['getDisplayValue'] !== 'function') {
                 obsField['templateOptions']['getDisplayValue'] =
@@ -1535,7 +1553,8 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             encounterFormProcessor: encounterFormProcessor,
             personAttributeFormProccesor: personAttributeFormProccesor,
             addExistingDataSetToEncounterForm: addExistingDataSetToEncounterForm,
-            addExistingDataSetToObsForm: addExistingDataSetToObsForm
+            addExistingDataSetToObsForm: addExistingDataSetToObsForm,
+            addExistingPersonAttributesToForm:addExistingPersonAttributesToForm
         };
 
         return service;
@@ -1557,11 +1576,11 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
         }
 
         function addExistingDataSetToEncounterForm(restDataset, model) {
-            //TODO: forgot to handle this
+            EncounterProcessorService.populateModel(model, restDataset);
         }
 
-        function addExistingDataSetToPersonAttribute(restDataset, model) {
-            //TODO: forgot to handle this
+        function addExistingPersonAttributesToForm(restDataset, model) {
+            return PersonAttributesProcessorService.addExistingPersonAttributesToForm(restDataset,model);
         }
     }
 })();
@@ -2663,87 +2682,133 @@ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106, -W026
 /*
 jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 */
-(function() {
-  'use strict';
+(function () {
+    'use strict';
 
-  angular
-    .module('openmrs.angularFormentry')
-    .factory('PersonAttributesProcessorService', PersonAttributesProcessorService);
+    angular
+        .module('openmrs.angularFormentry')
+        .factory('PersonAttributesProcessorService', PersonAttributesProcessorService);
 
-  PersonAttributesProcessorService.$inject = ['$filter', '$log'];
+    PersonAttributesProcessorService.$inject = ['$filter', '$log'];
 
-  function PersonAttributesProcessorService($filter, $log) {
-    var service = {
-      generatePersonAttributesPayload: generatePersonAttributesPayload,
-      addExistingPersonAttributesToForm: addExistingPersonAttributesToForm
-    };
-
-    return service;
-
-    function generatePersonAttributesPayload(model) {
-      return _getSections(model);
-    }
-
-    function addExistingPersonAttributesToForm(model, restObs) {
-      // callback(_getSections(model));
-    }
-
-    function _getSections(model) {
-      var attributeRestPayload = [];
-
-      var sectionKeys = Object.keys(model);
-      // $log.debug('Section Keys', sectionKeys);
-      _.each(sectionKeys, function(section) {
-        var sectionModel = model[section];
-        _generateSectionPayLoad(sectionModel, attributeRestPayload);
-      });
-
-      return attributeRestPayload;
-    }
-
-    function _generateSectionPayLoad(sectionModel, personAttributeRestPayload) {
-      _.each(sectionModel, function(field) {
-        if (field.attributeType !== '' && !_.isNull(field.attributeType) && !_.isUndefined(field.attributeType)) {
-          _addFieldToPayload(field, personAttributeRestPayload);
-        }
-
-      });
-    }
-
-    function _setValue(field) {
-      var attribute = {};
-      var initialValue = field.initialValue;
-      var value = field.value;
-
-      if (_.isUndefined(initialValue) && (!_.isNull(value) && value !== '' && !_.isUndefined(value))) {
-
-        attribute = {
-          attributeType: field.attributeType,
-          value: value
+    function PersonAttributesProcessorService($filter, $log) {
+        var service = {
+            generatePersonAttributesPayload: generatePersonAttributesPayload,
+            addExistingPersonAttributesToForm: addExistingPersonAttributesToForm
         };
 
-      } else if (initialValue !== value && (!_.isNull(value) &&
-          value !== '' && !_.isUndefined(value))) {
-        attribute = {
-          uuid: field.initialUuid,
-          attributeType: field.attributeType,
-          value: value
-        };
-      }
+        return service;
 
-      return attribute;
-    }
-
-    function _addFieldToPayload(field, personAttributeRestPayload) {
-      var personAttribute = {};
-      if (angular.isDefined(field.attributeType)) {
-        personAttribute = _setValue(field);
-        if (Object.keys(personAttribute).length > 0) {
-          personAttributeRestPayload.push(personAttribute);
+        function generatePersonAttributesPayload(model) {
+            return _getSections(model);
         }
-      }
+
+
+        function _getSections(model) {
+            var attributeRestPayload = [];
+            var sectionKeys = Object.keys(model);
+            _.each(sectionKeys, function (section) {
+                var sectionModel = model[section];
+                _generateSectionPayLoad(sectionModel, attributeRestPayload);
+            });
+
+            return attributeRestPayload;
+        }
+
+        function _generateSectionPayLoad(sectionModel, personAttributeRestPayload) {
+            _.each(sectionModel, function (field) {
+                if (field.attributeType !== '' && !_.isNull(field.attributeType) && !_.isUndefined(field.attributeType)) {
+                    _addFieldToPayload(field, personAttributeRestPayload);
+                }
+
+            });
+        }
+
+        function _setValue(field) {
+            var attribute = {};
+            var initialValue = field.initialValue;
+            var value = field.value;
+
+            if (_.isUndefined(initialValue) && (!_.isNull(value) && value !== '' && !_.isUndefined(value))) {
+
+                attribute = {
+                    attributeType: field.attributeType,
+                    value: value
+                };
+
+            } else if (initialValue !== value && (!_.isNull(value) &&
+                value !== '' && !_.isUndefined(value))) {
+                attribute = {
+                    uuid: field.initialUuid,
+                    attributeType: field.attributeType,
+                    value: value
+                };
+            }
+
+            return attribute;
+        }
+
+        function _addFieldToPayload(field, personAttributeRestPayload) {
+            var personAttribute = {};
+            if (angular.isDefined(field.attributeType)) {
+                personAttribute = _setValue(field);
+                if (Object.keys(personAttribute).length > 0) {
+                    personAttributeRestPayload.push(personAttribute);
+                }
+            }
+        }
+
+        function addExistingPersonAttributesToForm(restDataSet, model) {
+            _addExistingPersonAttributesToSections(restDataSet, model);
+        }
+
+        function getPersonAttributeValue(personAttributes, formlyFieldkey) {
+            var attributeType = formlyFieldkey.split('_')[1].replace(/n/gi, '-');
+            var filteredPersonAttributes = _.filter(personAttributes, function (attribute_) {
+                if (personAttributes !== undefined && angular.isDefined(attribute_.attributeType)) {
+                    if (attribute_.attributeType === attributeType) {
+                        return attribute_.value;
+                    }
+                }
+            });
+
+            if (filteredPersonAttributes.length > 1) {
+                $log.debug('The person attribute ' + filteredPersonAttributes + 'has multiple values, one value is expected');
+            }
+
+            return filteredPersonAttributes;
+        }
+
+        function _addPersonAttributeToField(field, existingPersonAttribute) {
+            if (angular.isDefined(existingPersonAttribute) && existingPersonAttribute.length>0) {
+              field.initialValue = existingPersonAttribute[0].value.uuid;
+            }
+
+            return field;
+        }
+
+
+        function _addPersonAttributesToSection(restDataSet, sectionModel) {
+            var fieldKeys = Object.keys(sectionModel);
+            _.each(fieldKeys, function (fieldKey) {
+                if (fieldKey.startsWith('personAttribute')) {
+                    var field = sectionModel[fieldKey];
+                    var existingPersonAttribute = getPersonAttributeValue(restDataSet, fieldKey)
+                    _addPersonAttributeToField(field, existingPersonAttribute);
+                }
+            });
+        }
+
+        function _addExistingPersonAttributesToSections(restDataSet, model) {
+            var sectionKeys = Object.keys(model);
+            _.each(sectionKeys, function (section) {
+                var sectionModel = model[section];
+                _addPersonAttributesToSection(restDataSet, sectionModel);
+            });
+        }
+
+
     }
-  }
 })();
 
 /*
@@ -2940,52 +3005,52 @@ jscs:disable requirePaddingNewLinesBeforeLineComments, requireTrailingComma
         }
 
         function _getDisplayValueFunctionForRepeatingGroup(obsField, schemaQuestion) {
-            return function (values, callback) {
-                var displayTest = '';
+            return function (values, callback, skipDelimiters) {
+                var displayText = '';
                 _.each(values, function (value) {
-                    displayTest = displayTest + schemaQuestion.label + "[ ";
+                    
+                    if(skipDelimiters !== true)
+                        displayText = displayText+ "[ ";
+                        
                     _.each(obsField.templateOptions.fields, function (field) {
-                        displayTest = displayTest + "(";
                         _.each(field.fieldGroup, function (innerfield) {
                             if (innerfield.templateOptions &&
                                 typeof innerfield.templateOptions.getDisplayValue === 'function') {
                                 innerfield.templateOptions.getDisplayValue(
                                     value[innerfield.data.concept],
                                     function (display) {
-                                        displayTest = displayTest + display + ', ';
-                                    });
+                                        displayText = displayText + display + ', ';
+                                    }, true);
                             }
                         });
-
-                        displayTest = displayTest + " ) ";
                     });
-                    displayTest = displayTest + " ], ";
+                    displayText = displayText.trim();
+                    displayText = displayText.replace(/,(?=[^,]*$)/, '');
+                     if(skipDelimiters !== true)
+                        displayText = displayText + " ] ";
                 });
-                callback(displayTest);
+                callback(displayText);
             };
         }
 
         function _getDisplayValueFunctionForGroup(obsField, schemaQuestion) {
             return function (values, callback) {
-                var displayTest = '';
+                var displayText = '';
                 _.each(values, function (value) {
-                    displayTest = displayTest + obsField.label + "[ ";
-
                     _.each(obsField.fieldGroup, function (field) {
                         if (field.templateOptions &&
                             typeof field.templateOptions.getDisplayValue === 'function') {
                             field.templateOptions.getDisplayValue(
                                 value[field.data.concept],
                                 function (display) {
-                                    displayTest = displayTest + display + ', ';
+                                    displayText = displayText + display + ', ';
                                 });
                         }
                     });
-
-
-                    displayTest = displayTest + " ] ";
                 });
-                callback(displayTest);
+                displayText = displayText.trim();
+                displayText = displayText.replace(/,(?=[^,]*$)/, '');
+                callback(displayText);
             };
         }
 
@@ -3091,7 +3156,7 @@ jscs:disable requirePaddingNewLinesBeforeLineComments, requireTrailingComma
         }
 
         function getDisplayText(value, callback, fieldLabel) {
-            callback(fieldLabel + ': ' + value);
+            callback('"' + value + '"');
         }
 
         function getDisplayTextFromOptions(value, options, valueProperty,
@@ -3119,12 +3184,252 @@ jscs:disable requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 
                 });
             }
-            callback(fieldLabel + ': ' + displayText);
+            callback('"' + displayText + '"');
         }
         
         //#endregion
     }
 })();
+/*jshint -W026, -W030, -W106 */
+/*jscs:disable disallowMixedSpacesAndTabs, requireDotNotation*/
+/*jscs:disable requirePaddingNewLinesBeforeLineComments, requireTrailingComma*/
+(function () {
+    'use strict';
+
+    angular
+        .module('openmrs.angularFormentry')
+        .factory('EncounterDataService', EncounterDataService);
+
+    EncounterDataService.$inject = [
+        'HistoricalDataService',
+        '$log'
+    ];
+
+    function EncounterDataService(histData, $log) {
+        var service = {
+            registerPreviousEncounters: registerPreviousEncounters
+        };
+
+        return service;
+
+        function registerPreviousEncounters(name, openmrsEncounters) {
+            if (arguments.length < 2) {
+                throw new Error('ArgumentsException', 'Two arguments required,' +
+                    'name and openmrs rest representation of encounters or ' +
+                    'array of encounters');
+            }
+            // Create the backing object with necessary methods to access Data
+            var encStore = {
+                data: [],
+
+                getValue: function (key, index) {
+                    var index = index || 0;
+
+                    var pathArray = key.split('.');
+
+                    if (pathArray.length > 0) {
+                        return getFirstValue(pathArray, encStore.data[index]);
+                    }
+                    return encStore.data[index][key];
+                },
+
+                getAllObjects: function () {
+                    return encStore.data;
+                },
+
+
+
+                getSingleObject: function (index) {
+                    var index = index || 0;
+                    return encStore.data[index];
+                }
+            };
+
+            if (Array.isArray(openmrsEncounters)) {
+                var group = [];
+                _.each(openmrsEncounters, function (encounter) {
+                    group.push(__transformEncounter(encounter));
+                });
+                
+                // Sort them in reverse chronological order
+                encStore.data = _.sortBy(group, 'encounterDatetime').reverse();
+            } else {
+                // Assume a single openmrs rest encounter object.
+                encStore.data.push(__transformEncounter(openmrsEncounters));
+            }
+
+            histData.putObject(name, encStore);
+        }
+        
+        //region: navigation helpers
+        function getFirstValue(path, object) {
+            var answers = [];
+
+            getAllValues(path, object, answers);
+            console.log('foundans', answers);
+            if (answers.length > 0) {
+                return answers[0];
+            }
+
+        }
+
+        function getAllValues(path, object, answers) {
+
+            if (object === undefined || object === null) {
+                return;
+            }
+
+            if (path.length <= 1) {
+                if (object[path[0]] !== undefined && object[path[0]] !== null) {
+                    answers.push(object[path[0]]);
+                }
+                return;
+            }
+
+            var newpath = path.splice(1);
+            var key = path[0];
+
+            if (angular.isArray(object[key]) && object[key].length > 0) {
+                _.each(object[key], function (childObject) {
+                    getAllValues(newpath.slice(0), childObject, answers);
+                });
+            } else {
+                getAllValues(newpath.slice(0), object[key], answers);
+            }
+        }
+
+
+        function __transformEncounter(encounter) {
+            // Transform encounter Level details to key value pairs.
+            var prevEncounter = {
+                encounterDatetime: encounter.encounterDatetime,
+            };
+
+            if (encounter.location && encounter.location.uuid) {
+                prevEncounter.location = encounter.location.uuid;
+            }
+
+            if (encounter.patient && encounter.patient.uuid) {
+                prevEncounter.patient = encounter.patient.uuid;
+            }
+
+            if (encounter.form && encounter.form.uuid) {
+                prevEncounter.form = encounter.form.uuid;
+            }
+
+            if (encounter.encounterType && encounter.encounterType.uuid) {
+                prevEncounter.encounterType = encounter.encounterType.uuid;
+            }
+
+            var provider = encounter.provider;
+            var encProvider = encounter.encounterProviders;
+
+            var providerValue =
+                provider ? provider.uuid : encProvider[0].provider.uuid;
+
+            prevEncounter.provider = providerValue; 
+            
+            // Deal with obs.
+            if (encounter.obs) {
+                var processedObs = __transformObs(encounter.obs);
+                
+                // add in individual processed obs to prevEncounter
+                _.extend(prevEncounter, processedObs);
+            }
+
+            return prevEncounter;
+        }
+
+        function __transformObs(obs) {
+            if (!obs) return null;
+
+            var obsRep = {};
+            if (Array.isArray(obs)) {
+                _.each(obs, function (singleObs) {
+                    ___augumentObs(obsRep, __transformObs(singleObs));
+                });
+                return obsRep;
+            } else if (obs.groupMembers) {
+                var group = {};
+                _.each(obs.groupMembers, function (member) {
+                    _.extend(group, __transformObs(member));
+                });
+                
+                //Handle already existing data
+                if (obsRep[obs.concept.uuid] && Array.isArray(obsRep[obs.concept.uuid])) {
+                    obsRep[obs.concept.uuid].push(group);
+                } else {
+                    obsRep[obs.concept.uuid] = [group];
+                }
+                return obsRep;
+            } else {
+                if (typeof obs.value === 'object') {
+                    obsRep[obs.concept.uuid] = obs.value.uuid;
+                } else {
+                    obsRep[obs.concept.uuid] = obs.value;
+                }
+                return obsRep;
+            }
+
+            function ___augumentObs(existing, toAdd) {
+                for (var key in toAdd) {
+                    if (existing.hasOwnProperty(key)) {
+                        //check if not an array yet
+                        if (!Array.isArray(existing[key])) {
+                            var temp = existing[key];
+                            existing[key] = [temp];
+                        }
+                        
+                        // Check whether the incoming is array (for group members)
+                        if (Array.isArray(toAdd[key])) {
+                            Array.prototype.push.apply(existing[key], toAdd[key]);
+                        } else {
+                            existing[key].push(toAdd[key]);
+                        }
+                    } else {
+                        existing[key] = toAdd[key];
+                    }
+                }
+                return existing;
+            }
+        }
+    }
+})();
+
+/*jshint -W026, -W030, -W106 */
+/*jscs:disable disallowMixedSpacesAndTabs, requireDotNotation*/
+/*jscs:disable requirePaddingNewLinesBeforeLineComments, requireTrailingComma*/
+(function(){
+    'use strict';
+    
+    angular
+        .module('openmrs.angularFormentry')
+            .service('HistoricalDataService', HistoricalDataService);
+            
+    HistoricalDataService.$inject = [
+        '$log'
+    ];
+    
+    function HistoricalDataService($log) {
+        var store = {};
+        this.putObject = function(name, object) {
+            store[name] = object;
+        };
+        
+        this.getObject = function(name) {
+            if(!_.has(store, name)) {
+                $log.debug('No object stored under name ' + name);
+                return null;
+            }
+            return store[name];
+        };
+        
+        this.hasKey = function(name){
+            return _.has(store, name)? true: false;
+        };
+    }
+})();
+
 /*
 jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106, -W026
 */
@@ -3935,7 +4240,7 @@ jshint -W003,-W109, -W106, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W11
 
     function getResource() {
       return $resource(FormentryConfig.getOpenmrsBaseUrl().trim() +
-      '/location/:uuid',
+      'location/:uuid',
         { uuid: '@uuid' },
         { query: { method: 'GET', isArray: false } });
     }
@@ -3949,14 +4254,14 @@ jshint -W003,-W109, -W106, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W11
 
     function getListResource() {
       return $resource(FormentryConfig.getOpenmrsBaseUrl().trim() +
-      '/location?v=default',
+      'location?v=default',
         { uuid: '@uuid' },
         { query: { method: 'GET', isArray: false } });
     }
 
     function searchResource() {
       return $resource(FormentryConfig.getOpenmrsBaseUrl().trim() +
-      '/location?q=:search&v=default',
+      'location?q=:search&v=default',
         { search: '@search' },
         { query: { method: 'GET', isArray: false } });
     }
@@ -4017,136 +4322,6 @@ jshint -W003,-W109, -W106, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W11
     
      
   }               
-})();
-
-/*jshint -W003, -W117, -W098, -W026 */
-/*jscs:disable safeContextKeyword, requireDotNotation, requirePaddingNewLinesBeforeLineComments, requireTrailingComma*/
-(function() {
-  'use strict';
-
-  angular
-        .module('openmrs.RestServices')
-        .factory('AuthService', AuthService);
-
-  AuthService.$inject = ['$base64', '$http', 'SessionResService', '$state',
-  'SessionModel', '$rootScope'];
-
-  function AuthService(base64, $http, session, $state, SessionModel,
-    $rootScope) {
-    var service = {
-      isAuthenticated: isAuthenticated,
-      setCredentials: setCredentials,
-      logOut: logOut,
-      clearCredentials: clearCredentials,
-      authenticated: false
-    };
-
-    return service;
-
-    function isAuthenticated(CurrentUser, callback) {
-      //authenticate user
-      setCredentials(CurrentUser);
-      session.getSession(function(data) {
-        //console.log(data);
-        var session = new SessionModel.session(data.sessionId, data.authenticated);
-        service.authenticated = session.isAuthenticated();
-        if (service.authenticated)
-        {
-           console.log('authentication success');
-        } else {
-          console.log('authentication Failed');
-        }
-
-        $rootScope.$broadcast('onUserAuthenticationDetermined');
-        callback(data.authenticated); //return authentication status (true/false)
-
-        //console.log(service.authenticated);
-      },
-
-      function(error) {
-        console.log(error);
-        callback(error);
-      });
-
-    }
-
-    function logOut() {
-      session.deleteSession(function() {});
-
-      clearCredentials();
-      service.authenticated = false;
-      $rootScope.$broadcast('onUserLoggedOut');
-      $state.go('login');
-    }
-
-    function setCredentials(CurrentUser) {
-      //set user credentials
-      //console.log('set credentials base64 log');
-      //console.log(base64.encode(CurrentUser.username + ':' + CurrentUser.password));
-      $http.defaults.headers.common.Authorization = 'Basic ' + base64.encode(CurrentUser.username + ':' + CurrentUser.password);
-
-    }
-
-    function clearCredentials() {
-      //clear user credentials
-      $http.defaults.headers.common.Authorization = 'Basic';
-    }
-
-  }
-})();
-
-/*jshint -W003, -W098, -W117, -W026 */
-(function() {
-  'use strict';
-
-  angular
-        .module('openmrs.RestServices')
-        .service('SessionResService', SessionResService);
-
-  SessionResService.$inject = [ '$resource', 'configService'];
-
-  function SessionResService($resource, configService) {
-        var serviceDefinition;
-        var currentSession;
-        var restHost= configService.getSchema('restHostServer').schemaKey;
-        serviceDefinition = {
-          getResource:getResource,
-          getSession:getSession,
-          currentSession:currentSession,
-          deleteSession:deleteSession
-        };
-        return serviceDefinition;
-
-        function getResource() {
-          return $resource(restHost + 'session');
-        }
-
-        function getSession(successCallback, failedCallback) {
-          var resource = getResource();
-          return resource.get({}).$promise
-          .then(function(response) {
-            serviceDefinition.currentSession = response.sessionId;
-            successCallback(response);
-          })
-          .catch(function(error) {
-            serviceDefinition.currentSession = null;
-            failedCallback('Error processing request', error);
-            console.error(error);
-          });
-        }
-
-        function deleteSession(callback) {
-          var resource = getResource();
-          return resource.delete({}).$promise
-          .then(function(response) {
-            callback(response);
-          })
-          .catch(function(error) {
-            callback(error);
-            console.error(error);
-          });
-        }
-      }
 })();
 
 /*
@@ -4751,7 +4926,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
                 //incase we need link function
             },
 
-            controller: function ($scope, $log) {
+            controller: function ($scope, $log, HistoricalDataService) {
                 //functions
                 $scope.setValue = setValue;
                 $scope.getDisplayValue = getDisplayValue;
@@ -4759,6 +4934,9 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
                 //variables 
                 $scope.historicalDisplay = '';
                 $scope.historicalValue = null;
+                
+                //bring historical data alias into scope
+                var HD = HistoricalDataService;
                 
                 //used in one of the schema historical expressions
                 var sampleRepeatingGroupValue =
@@ -4795,7 +4973,11 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
                      
                     //evaluate expression and set historicalValue with the result
                     if(historicalExpression) {
-                        $scope.historicalValue = eval(historicalExpression);
+                        try {
+                            $scope.historicalValue = eval(historicalExpression);
+                        } catch (error) {
+                            $log.debug('Could not evaluate historical expression "'+ historicalExpression + '". Error: ', error);
+                        }
                     }
                      
                     //get display version of the value by calling the getdisplay function
