@@ -62,20 +62,12 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
   angular
         .module('openmrs.RestServices', [
-            'base64',
+            // 'base64',
             'ngResource',
-            'ngCookies',
-            'models',
-            'restangular',
-        ])
-        .run(RestangularConfig);
-
-  RestangularConfig.$inject = ['Restangular', 'FormentryConfig'];
-
-  function RestangularConfig(Restangular, FormentryConfig) {  // jshint ignore:line
-    // Should of the form /ws/rest/v1 or https://host/ws/rest/v1
-    //Restangular.setBaseUrl(FormentryConfig.getOpenmrsBaseUrl());
-  }
+            // 'ngCookies',
+            'models'
+            // 'restangular',
+        ]);
 })();
 
 (function() {
@@ -1930,9 +1922,13 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       if (field.schemaQuestion.questionOptions.showDate &&
         field.obsDatetime) {
         //This shld be an obs date for the previous field
-        var lastFieldPayload = obsRestPayload[obsRestPayload.length - 1];
-        $log.debug('last obs payload', lastFieldPayload);
-        lastFieldPayload.obsDatetime = _parseDate(field.value);
+        var lastFieldPayload;
+        if (obsRestPayload.length>0) {
+          lastFieldPayload = obsRestPayload[obsRestPayload.length - 1];
+          $log.debug('last obs payload', lastFieldPayload);
+          lastFieldPayload.obsDatetime = _parseDate(field.value);
+        }
+
       } else if (qRender === 'number' || qRender === 'text' || qRender === 'select' ||
         qRender === 'radio') {
         obs = _setValue(field);
@@ -2813,7 +2809,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
 /*
 jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106, -W026
-jscs:disable disallowMixedSpacesAndTabs, requireDotNotation 
+jscs:disable disallowMixedSpacesAndTabs, requireDotNotation
 jscs:disable requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 */
 (function () {
@@ -2854,13 +2850,10 @@ jscs:disable requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                 if (encDetails.encLocation !== null) {
                     payload.location = encDetails.encLocation.value;
                 }
-                
+
                 // Create encounterProviders (Assume one for now)
                 if (encDetails.encProvider !== null) {
-                    payload.encounterProviders = [{
-                        provider: encDetails.encProvider.value,
-                        encounterRole: UNKNOWN_ROLE_UUID
-                    }];
+                    payload.provider = encDetails.encProvider.value;
                 }
 
                 if (model.form_info) {
@@ -2877,7 +2870,7 @@ jscs:disable requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                 if (obsPayload !== null && !(_.isEmpty(obsPayload))) {
                     payload.obs = obsPayload;
                 }
-                
+
                 //Call the call back if provided
                 return payload;
             }
@@ -2902,7 +2895,7 @@ jscs:disable requirePaddingNewLinesBeforeLineComments, requireTrailingComma
             } else if (_.has(openmrsRestObj, 'provider') && details.encProvider) {
                 details.encProvider.value = openmrsRestObj['provider'].uuid;
             }
-            
+
             // Populate obs if any
             obsProcessor.addExistingObsSetToForm(model, openmrsRestObj);
         }

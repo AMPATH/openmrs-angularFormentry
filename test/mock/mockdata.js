@@ -168,7 +168,7 @@
               }]
       };
     }
-    
+
 function getMockRestPersonAttributes() {
             return [
                 {
@@ -205,7 +205,7 @@ function getMockRestPersonAttributes() {
                 }
             ];
         };
-        
+
     function getMockPersonAttributesArray() {
       var testData = [{uuid:'f123244d-8f1d-4430-9191-98ce60f3723b',
             attributeType:'8d87236c-c2cc-11de-8d13-0010c6dffd0f',
@@ -876,7 +876,7 @@ function getMockRestPersonAttributes() {
                 }
             ]
         };
-        
+
         var expected = {
           encounterDatetime: '2016-01-21T16:17:46.000+0300',
           location: '08feae7c-1352-11df-a1f1-0026b9348838',
@@ -891,7 +891,7 @@ function getMockRestPersonAttributes() {
           ],
           'a8afdb8c-1350-11df-a1f1-0026b9348838': [
             {
-                'a899e444-1350-11df-a1f1-0026b9348838': 'a8971c64-1350-11df-a1f1-0026b9348838',    
+                'a899e444-1350-11df-a1f1-0026b9348838': 'a8971c64-1350-11df-a1f1-0026b9348838',
                 'a8a0744e-1350-11df-a1f1-0026b9348838': 600
             },
             {
@@ -915,13 +915,13 @@ function getMockRestPersonAttributes() {
           'a89b7e12-1350-11df-a1f1-0026b9348838': 'a899e0ac-1350-11df-a1f1-0026b9348838',
           'a8afcc82-1350-11df-a1f1-0026b9348838': 'a899b35c-1350-11df-a1f1-0026b9348838'
         };
-        
+
         return {
             openmrsEncounter: openmrsRestRep,
             prevEncounterRepresentation: expected
         };
     }
-    
+
     function getTriageFormModel() {
       return {
         "section_Encounter_Details": {
@@ -1561,22 +1561,48 @@ function getMockRestPersonAttributes() {
               }
             }
           }
-          // ,
-          // {
-          //   "obs1_a8a07a48x1350x11dfxa1f1n0026b9348838": {
-          //     "value": "Stomach complications"
-          //   },
-          //   "obsGroup_Date of hospitalization": {
-          //     "obs1_madenupnconceptn5": {
-          //       "value": "2015-10-31T21:00:00.000Z"
-          //     },
-          //     "obs1_madenupnconceptn6": {
-          //       "value": "2015-11-24T21:00:00.000Z"
-          //     }
-          //   }
-          // }
         ]
-      }
+      },
+      "section_Vital_Signs": {
+  "obsGroup_test_group": {
+    "groupConcept": "a899e6d8-1350-11df-a1f1-0026b9348838",
+    "obs1_a8a65d5an1350n11dfna1f1n0026b9348838": {
+      "concept": "a8a65d5a-1350-11df-a1f1-0026b9348838",
+      "schemaQuestion": {
+        "label": "BP:Systolic:",
+        "questionOptions": {
+          "rendering": "number",
+          "concept": "a8a65d5a-1350-11df-a1f1-0026b9348838",
+          "max": "250",
+          "min": "0",
+          "showDate": "true"
+        },
+        "type": "obs",
+        "historicalExpression": "HD.getObject('prevEnc').getValue('a8a65d5a-1350-11df-a1f1-0026b9348838')",
+        "validators": []
+      },
+      "value": 120
+    },
+    "obsDate1_a8a65d5an1350n11dfna1f1n0026b9348838": {
+      "concept": "a8a65d5a-1350-11df-a1f1-0026b9348838",
+      "schemaQuestion": {
+        "label": "BP:Systolic:",
+        "questionOptions": {
+          "rendering": "number",
+          "concept": "a8a65d5a-1350-11df-a1f1-0026b9348838",
+          "max": "250",
+          "min": "0",
+          "showDate": "true"
+        },
+        "type": "obs",
+        "historicalExpression": "HD.getObject('prevEnc').getValue('a8a65d5a-1350-11df-a1f1-0026b9348838')",
+        "validators": []
+      },
+      "value": "2016-02-09T21:00:00.000Z",
+      "obsDatetime": "true"
+    }
+  }
+}
     };
   }
 

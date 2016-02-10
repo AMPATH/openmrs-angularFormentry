@@ -15,21 +15,21 @@
         .module('angularFormentry')
         .controller('AboutCtrl', AboutCtrl);
 
-  AboutCtrl.$inject = ['$log', '$location', '$scope','FormEntry', '$timeout', 
+  AboutCtrl.$inject = ['$log', '$location', '$scope','FormEntry', '$timeout',
     '$filter','TestService', 'FormentryUtilService', '$rootScope', 'configService',
-    'AuthService', 'SearchDataService', 'EncounterDataService'
+     'SearchDataService', 'EncounterDataService'
   ];
 
     function AboutCtrl($log, $location, $scope, FormEntry,
-        $timeout, $filter, TestService, FormentryUtilService, $rootScope, configService, 
-        AuthService, SearchDataService, EncounterDataService) {
+        $timeout, $filter, TestService, FormentryUtilService, $rootScope, configService,
+        SearchDataService, EncounterDataService) {
         $scope.vm = {};
         $scope.vm.model = {};
         $scope.vm.questionMap = {};
         $scope.vm.hasClickedSubmit = false;
         var schema;
         var newForm;
-        var testSchema = 'schema_encounter';
+        var testSchema = 'triage';
 
         //connect to database
         configService.addJsonSchema('hostServer', 'http://localhost:8080/amrs/ws/rest/v1/');
@@ -37,16 +37,16 @@
         //broad cast server connection
         $rootScope.$broadcast('hostServer', configService.getSchema('hostServer'));
         var user = { username: 'akwatuha', password: 'ttt' };
-        AuthService.isAuthenticated(user, function (authenticated) {
-            if (!authenticated) // check if user is authenticated
-            {
-                console.log('Invalid user name or password. Please try again');
-            } else {
-                console.log(authenticated);
-            }
+        // AuthService.isAuthenticated(user, function (authenticated) {
+        //     if (!authenticated) // check if user is authenticated
+        //     {
+        //         console.log('Invalid user name or password. Please try again');
+        //     } else {
+        //         console.log(authenticated);
+        //     }
+        //
+        // });
 
-        }); 
-       
         //testing search connections
         SearchDataService.findLocation('abu', function (success) {
             console.log(JSON.stringify(success));
@@ -58,10 +58,10 @@
 
         FormentryUtilService.getFormSchema(testSchema, function (data) {
             schema = data;
-            
+
             //set up historical data for triage form
             setUpHistoricalData();
-            
+
             $log.info('Schema Controller', schema);
             var formObject = FormEntry.createForm(schema, $scope.vm.model);
             newForm = formObject.formlyForm;
@@ -366,8 +366,8 @@
                 }
             ]
         };
-        
-        
+
+
         // UtilService.getTestEncounterData('xx', function(data) {
         //   restObs = data;
         // },
@@ -410,7 +410,7 @@
         function parseDate(value) {
             return $filter('date')(value || new Date(), 'yyyy-MM-dd HH:mm:ss', '+0300');
         }
-        
+
         function setUpHistoricalData() {
              EncounterDataService.registerPreviousEncounters('prevEnc', restObs);
         }
@@ -555,7 +555,7 @@
             // ];
 
         }
-        
+
         function getMockPersonAttribute() {
             return [
                 {
@@ -594,6 +594,6 @@
         }
     }
 
-    
+
 }
     )();

@@ -1,6 +1,6 @@
 /*
 jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106, -W026
-jscs:disable disallowMixedSpacesAndTabs, requireDotNotation 
+jscs:disable disallowMixedSpacesAndTabs, requireDotNotation
 jscs:disable requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 */
 (function () {
@@ -41,13 +41,10 @@ jscs:disable requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                 if (encDetails.encLocation !== null) {
                     payload.location = encDetails.encLocation.value;
                 }
-                
+
                 // Create encounterProviders (Assume one for now)
                 if (encDetails.encProvider !== null) {
-                    payload.encounterProviders = [{
-                        provider: encDetails.encProvider.value,
-                        encounterRole: UNKNOWN_ROLE_UUID
-                    }];
+                    payload.provider = encDetails.encProvider.value;
                 }
 
                 if (model.form_info) {
@@ -64,7 +61,7 @@ jscs:disable requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                 if (obsPayload !== null && !(_.isEmpty(obsPayload))) {
                     payload.obs = obsPayload;
                 }
-                
+
                 //Call the call back if provided
                 return payload;
             }
@@ -89,7 +86,7 @@ jscs:disable requirePaddingNewLinesBeforeLineComments, requireTrailingComma
             } else if (_.has(openmrsRestObj, 'provider') && details.encProvider) {
                 details.encProvider.value = openmrsRestObj['provider'].uuid;
             }
-            
+
             // Populate obs if any
             obsProcessor.addExistingObsSetToForm(model, openmrsRestObj);
         }

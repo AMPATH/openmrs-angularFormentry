@@ -343,9 +343,13 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       if (field.schemaQuestion.questionOptions.showDate &&
         field.obsDatetime) {
         //This shld be an obs date for the previous field
-        var lastFieldPayload = obsRestPayload[obsRestPayload.length - 1];
-        $log.debug('last obs payload', lastFieldPayload);
-        lastFieldPayload.obsDatetime = _parseDate(field.value);
+        var lastFieldPayload;
+        if (obsRestPayload.length>0) {
+          lastFieldPayload = obsRestPayload[obsRestPayload.length - 1];
+          $log.debug('last obs payload', lastFieldPayload);
+          lastFieldPayload.obsDatetime = _parseDate(field.value);
+        }
+
       } else if (qRender === 'number' || qRender === 'text' || qRender === 'select' ||
         qRender === 'radio') {
         obs = _setValue(field);
