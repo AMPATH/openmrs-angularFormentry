@@ -46,7 +46,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
         }
 
         function getFormPayload(model) {
-            return formProcessorService.obsFormProccesor(model);
+            return formProcessorService.encounterFormProcessor(model);
         }
 
         function getPersonAttributesPayload(model) {

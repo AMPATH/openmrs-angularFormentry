@@ -35,7 +35,7 @@ jshint -W003,-W109, -W106, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W11
 
     function getResource() {
       return $resource(FormentryConfig.getOpenmrsBaseUrl().trim() +
-      '/location/:uuid',
+      'location/:uuid',
         { uuid: '@uuid' },
         { query: { method: 'GET', isArray: false } });
     }
@@ -49,14 +49,14 @@ jshint -W003,-W109, -W106, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W11
 
     function getListResource() {
       return $resource(FormentryConfig.getOpenmrsBaseUrl().trim() +
-      '/location?v=default',
+      'location?v=default',
         { uuid: '@uuid' },
         { query: { method: 'GET', isArray: false } });
     }
 
     function searchResource() {
       return $resource(FormentryConfig.getOpenmrsBaseUrl().trim() +
-      '/location?q=:search&v=default',
+      'location?q=:search&v=default',
         { search: '@search' },
         { query: { method: 'GET', isArray: false } });
     }
