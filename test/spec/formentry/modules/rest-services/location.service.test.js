@@ -71,7 +71,7 @@
     it('should make an api call to the location resource' +
       'when getLocationByUuid is called with a uuid',
       function() {
-        httpBackend.expectGET('/location/passed-uuid').respond({});
+        httpBackend.expectGET('location/passed-uuid').respond({});
         locationService.getLocationByUuid('passed-uuid', function() {}, function() {});
 
         httpBackend.flush();
@@ -80,7 +80,7 @@
     it('should make an api call to the location resource when findLocation' +
       'is called with a search text',
       function() {
-        httpBackend.expectGET('/location?q=passed-text&v=default').respond({});
+        httpBackend.expectGET('location?q=passed-text&v=default').respond({});
         locationService.findLocation('passed-text', function() {}, function() {});
 
         httpBackend.flush();
@@ -90,7 +90,7 @@
       'called with refreshCache param being true',
       function() {
         httpBackend.expectGET(
-          '/location?v=default').respond({});
+          'location?v=default').respond({});
         locationService.getLocations(function() {}, function() {}, true);
 
         httpBackend.flush();
@@ -102,7 +102,7 @@
         locationService.cachedLocations = []; //clear cached locations
 
         httpBackend.expectGET(
-          '/location?v=default').respond({});
+          'location?v=default').respond({});
         locationService.getLocations(function() {}, function() {}, false);
 
         httpBackend.flush();
@@ -126,7 +126,7 @@
         locationService.cachedLocations = []; //reset cachedLocations
 
         httpBackend.expectGET(
-          '/location?v=default').respond({
+          'location?v=default').respond({
           results: testLocations
         });
         locationService.getLocations(function() {}, function() {}, true);
@@ -139,7 +139,7 @@
       'successfully returns',
       function() {
         httpBackend.expectGET(
-          '/location/passed-uuid').respond({});
+          'location/passed-uuid').respond({});
         locationService.getLocationByUuid('passed-uuid', callbacks.onSuccess, callbacks.onFailure);
         httpBackend.flush();
         expect(callbacks.onSuccessCalled).to.equal(true);
@@ -150,7 +150,7 @@
       'is not successfull',
       function() {
         httpBackend.expectGET(
-          '/location/passed-uuid').respond(500);
+          'location/passed-uuid').respond(500);
         locationService.getLocationByUuid('passed-uuid', callbacks.onSuccess, callbacks.onFailure);
         httpBackend.flush();
         expect(callbacks.onSuccessCalled).to.equal(false);
@@ -163,7 +163,7 @@
       'successfully returns',
       function() {
         httpBackend.expectGET(
-          '/location?q=passed-text&v=default').respond({});
+          'location?q=passed-text&v=default').respond({});
         locationService.findLocation('passed-text', callbacks.onSuccess, callbacks.onFailure);
         httpBackend.flush();
         expect(callbacks.onSuccessCalled).to.equal(true);
@@ -174,7 +174,7 @@
       'not successfull',
       function() {
         httpBackend.expectGET(
-          '/location?q=passed-text&v=default').respond(500);
+          'location?q=passed-text&v=default').respond(500);
         locationService.findLocation('passed-text', callbacks.onSuccess, callbacks.onFailure);
         httpBackend.flush();
         expect(callbacks.onSuccessCalled).to.equal(false);
@@ -187,7 +187,7 @@
       'successfully returns',
       function() {
         httpBackend.expectGET(
-          '/location?v=default').respond({});
+          'location?v=default').respond({});
         locationService.getLocations(callbacks.onSuccess, callbacks.onFailure, true);
         httpBackend.flush();
         expect(callbacks.onSuccessCalled).to.equal(true);
@@ -198,7 +198,7 @@
       'request is not successfull',
       function() {
         httpBackend.expectGET(
-          '/location?v=default').respond(500);
+          'location?v=default').respond(500);
         locationService.getLocations(callbacks.onSuccess, callbacks.onFailure, true);
         httpBackend.flush();
         expect(callbacks.onSuccessCalled).to.equal(false);
