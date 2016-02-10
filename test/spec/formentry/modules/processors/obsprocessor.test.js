@@ -146,6 +146,31 @@
                 expect(selectedField.value).to.equal(35).that.is.a('number');
             });
         });
+
+        describe('Should generate payload for fields with showDate property',
+        function(){
+          var model = {};
+          var obsPayload;
+          beforeEach(function () {
+              model = mockData.getMockModel();
+              obsPayload = opService.generateObsPayload(model);
+          });
+
+
+          it('should create payload for fields with showDate', function () {
+            var sampleSection = model['section_Vital_Signs'];
+            var sampleGroup = sampleSection['obsGroup_test_group'];
+            var sampleField1 = sampleGroup['obs1_a8a65d5an1350n11dfna1f1n0026b9348838'];
+            var sampleDateField1 = sampleGroup['obsDate1_a8a65d5an1350n11dfna1f1n0026b9348838'];
+            // console.log('vital signs model', obsPayload);
+            expect(obsPayload[5].concept).to.equal(sampleGroup.groupConcept);
+            expect(obsPayload[5].groupMembers[0].concept).to.equal(sampleField1.concept);
+            expect(obsPayload[5].groupMembers[0].value).to.equal(sampleField1.value);
+            var value = filter('date')(new Date(sampleDateField1.value), 'yyyy-MM-dd HH:mm:ss','+0300');
+            expect(obsPayload[5].groupMembers[0].obsDatetime).to.equal(value);
+
+          });
+        });
     });
 
 })();
