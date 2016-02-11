@@ -18,7 +18,8 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
           'ui.bootstrap.datetimepicker',
           'ui.select',
           'ngSanitize',
-          'angularMoment'
+          'angularMoment',
+          'kendo.directives'
         ])
 
         .run(function(formlyConfig, formlyValidationMessages, formlyApiCheck) {
@@ -50,7 +51,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
       formlyConfig.setWrapper({
           name: 'validation',
-          types: ['input', 'customInput','datepicker', 'select', 'section', 'multiCheckbox', 'select-concept-answers','ui-select-extended'],
+          types: ['input', 'customInput','datepicker', 'select', 'section', 'multiCheckbox', 'select-concept-answers'],
           templateUrl: 'error-messages.html'
         });
     });

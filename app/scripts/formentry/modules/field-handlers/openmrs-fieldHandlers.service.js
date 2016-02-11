@@ -336,6 +336,10 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                     type: 'text',
                     label: _question.label
                 }
+                // ,
+                // validation: {
+                //   show: true
+                // }
             };
 
             $log.debug('debug key field ...', field);
@@ -454,7 +458,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                 };
 
                 if (_question.questionOptions.rendering === 'multiCheckbox') {
-                    obsField['type'] = 'ui-select-multiple';
+                    obsField['type'] = 'kendo-select-multiple';
                 } else if (_question.questionOptions.rendering === 'select') {
                     obsField['type'] = 'ui-select-single';
                 } else {
