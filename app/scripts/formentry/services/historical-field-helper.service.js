@@ -14,21 +14,21 @@
             //field model blueprint functions
             createModelForRegularField: createModelForRegularField,
             createModelForGroupSection: createModelForGroupSection,
-            
+
             //field value setters
             fillPrimitiveValue: fillPrimitiveValue,
             fillArrayOfPrimitives: fillArrayOfPrimitives,
             fillGroups: fillGroups,
-            
+
             //get display text given a field value
             getDisplayText: getDisplayText,
             getDisplayTextFromOptions: getDisplayTextFromOptions,
-            
+
             //handle field properties for historical data
             handleHistoricalExpressionProperty: handleHistoricalExpressionProperty,
             handleModelBluePrintFunctionForGroupsProperty: handleModelBluePrintFunctionForGroupsProperty,
             handleGetDisplayValueFunctionForGroupsProperty: handleGetDisplayValueFunctionForGroupsProperty,
-            
+
             //historic display fields
             createHistoricalTextField: createHistoricalTextField
         };
@@ -69,10 +69,10 @@
             return function (values, callback, skipDelimiters) {
                 var displayText = '';
                 _.each(values, function (value) {
-                    
+
                     if(skipDelimiters !== true)
                         displayText = displayText+ "[ ";
-                        
+
                     _.each(obsField.templateOptions.fields, function (field) {
                         _.each(field.fieldGroup, function (innerfield) {
                             if (innerfield.templateOptions &&
@@ -136,7 +136,7 @@
                     if (field.templateOptions &&
                         typeof field.templateOptions.createModelBluePrint === 'function') {
                         field.templateOptions.createModelBluePrint(groupModel,
-                            value[0][field.data.concept]);
+                            value?value[0][field.data.concept]:null);
                     }
                 });
                 return groupModel;
@@ -167,10 +167,10 @@
                 return repeatingGroupModel;
             };
         }
-        
-        
+
+
         //#region Functions to create model chunks for a particular fields
-       
+
         function createModelForRegularField(parentModel, modelKey, schemaQuestion, concept, value) {
 
             var model = {
@@ -199,9 +199,9 @@
 
             return model;
         }
-        
-        //#endregion   
-    
+
+        //#endregion
+
         //#region Functions to handle setting of values and display
         function fillPrimitiveValue(field, newValue) {
             field.value(newValue);
@@ -229,7 +229,7 @@
                     _.each(options, function (option) {
                         if (option[valueProperty] === val) {
                             if(valueConverted === 0){
-                              displayText = displayText + option[displayProperty];  
+                              displayText = displayText + option[displayProperty];
                             } else {
                             displayText = displayText + ", " + option[displayProperty];
                             }
@@ -247,7 +247,7 @@
             }
             callback('"' + displayText + '"');
         }
-        
+
         //#endregion
     }
 })();

@@ -174,12 +174,12 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                 'templateOptions.onValueChanged': onFieldValueChanged
             };
         }
-        
+
         function _isBoolean(value) {
             if(typeof value === 'boolean') {
                 return true;
             }
-            
+
             if(value === 'true' || value === 'false') {
                 return true;
             }
@@ -261,6 +261,10 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
             field['templateOptions']['valueProp'] = 'uuId';
             field['templateOptions']['labelProp'] = 'display';
             field['templateOptions']['options'] = [];
+        }
+
+        function _handleCalcultedField(_field, question){
+
         }
 
         function _handlePersonAttributeField(_field) {

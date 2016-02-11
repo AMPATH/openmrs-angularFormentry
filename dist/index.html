@@ -7,8 +7,15 @@
     <meta name="description" content="">
     <meta name="viewport" content="width=device-width">
     <!-- Place favicon.ico and apple-touch-icon.png in the root directory -->
-    <link rel="stylesheet" href="styles/vendor.css">
+    <!-- build:css(.) styles/vendor.css -->
+    <!-- bower:css -->
+    <link rel="stylesheet" href="bower_components/bootstrap/dist/css/bootstrap.css" />
+    <link rel="stylesheet" href="bower_components/angular-ui-select/dist/select.css" />
+    <!-- endbower -->
+    <!-- endbuild -->
+    <!-- build:css(.tmp) styles/main.css -->
     <link rel="stylesheet" href="styles/main.css">
+    <!-- endbuild -->
 </head>
 
 <body ng-app="angularFormentry">
@@ -67,7 +74,32 @@
        ga('send', 'pageview');
     </script>
 
-    <script src="scripts/vendor.js"></script>
+    <!-- build:js(.) scripts/vendor.js -->
+    <!-- bower:js -->
+    <script src="bower_components/jquery/dist/jquery.js"></script>
+    <script src="bower_components/angular/angular.js"></script>
+    <script src="bower_components/angular-animate/angular-animate.js"></script>
+    <script src="bower_components/angular-messages/angular-messages.js"></script>
+    <script src="bower_components/angular-resource/angular-resource.js"></script>
+    <script src="bower_components/angular-sanitize/angular-sanitize.js"></script>
+    <script src="bower_components/angular-touch/angular-touch.js"></script>
+    <script src="bower_components/bootstrap/dist/js/bootstrap.js"></script>
+    <script src="bower_components/angular-ui-router/release/angular-ui-router.js"></script>
+    <script src="bower_components/api-check/dist/api-check.js"></script>
+    <script src="bower_components/angular-formly/dist/formly.js"></script>
+    <script src="bower_components/angular-formly-templates-bootstrap/dist/angular-formly-templates-bootstrap.js"></script>
+    <script src="bower_components/angular-ui-select/dist/select.js"></script>
+    <script src="bower_components/angular-bootstrap/ui-bootstrap-tpls.js"></script>
+    <script src="bower_components/bootstrap-ui-datetime-picker/dist/datetime-picker.min.js"></script>
+    <script src="bower_components/lodash/lodash.js"></script>
+    <script src="bower_components/angular-ui-ace/ui-ace.js"></script>
+    <script src="bower_components/restangular/dist/restangular.js"></script>
+    <script src="bower_components/angular-base64/angular-base64.js"></script>
+    <script src="bower_components/angular-cookies/angular-cookies.js"></script>
+    <script src="bower_components/moment/moment.js"></script>
+    <script src="bower_components/angular-moment/angular-moment.js"></script>
+    <!-- endbower -->
+    <!-- endbuild -->
 
     <script type="text/javascript" src="bower_components/ace-builds/src-min-noconflict/ace.js"></script>
 
@@ -82,7 +114,57 @@
     <script src="scripts/formentry/modules/rest-services/session.service.js"></script>
 
     <!-- Formentry Module files -->
-    <script src="scripts/angularFormentry.js"></script>
+    <!-- build:js({.tmp,app}) scripts/angularFormentry.js -->
+    <script src="scripts/formentry/formentry.module.js"></script>
+    <script src="scripts/formentry/modules/rest-services/rest-services.module.js"></script>
+    <script src="scripts/models/model.module.js"></script>
+    <!-- services -->
+    <script src="scripts/formentry/services/formentry.testservice.js"></script>
+    <script src="scripts/formentry/services/formentry.service.js"></script>
+    <script src="scripts/formentry/services/createform.service.js"></script>
+    <script src="scripts/formentry/services/createform.v2.service.js"></script>
+    <script src="scripts/formentry/formentry-config.provider.js"></script>
+    <script src="scripts/formentry/modules/field-handlers/openmrs-fieldHandlers.service.js"></script>
+    <script src="scripts/formentry/services/formprocessor.service.js"></script>
+    <script src="scripts/formentry/modules/processors/obsprocessor.service.js"></script>
+    <script src="scripts/formentry/services/current-loaded-form.service.js"></script>
+    <script src="scripts/formentry/services/form-validator.service.js"></script>
+    <script src="scripts/formentry/modules/processors/personattributesprocessor.service.js"></script>
+    <script src="scripts/formentry/modules/processors/encounter-processor.service.js"></script>
+    <script src="scripts/formentry/services/historical-field-helper.service.js"></script>
+    <script src="scripts/formentry/services/encounter-data.service.js"></script>
+    <script src="scripts/formentry/services/historical-data.service.js"></script>
+    <script src="scripts/services/util.service.js"></script>
+    <script src="scripts/services/config.service.js"></script>
+    <script src="scripts/services/url-settings.service.js"></script>
+    <script src="scripts/formentry/modules/rest-services/concept.service.js"></script>
+    <script src="scripts/formentry/modules/rest-services/drug.service.js"></script>
+    <script src="scripts/formentry/modules/rest-services/provider.service.js"></script>
+    <script src="scripts/formentry/modules/rest-services/search-data.service.js"></script>
+    <script src="scripts/formentry/modules/rest-services/location.service.js"></script>
+
+    <!-- Formly Custom Controls-->
+    <script src="scripts/formentry/custom-formly-controls/datepicker.formly.js"></script>
+    <script src="scripts/formentry/custom-formly-controls/datetimepicker.formly.js"></script>
+    <script src="scripts/formentry/custom-formly-controls/ui-select-extended.formly.js"></script>
+    <script src="scripts/formentry/custom-formly-controls/ui-select-custom.formly.js"></script>
+    <script src="scripts/formentry/custom-formly-controls/repeating-section.formly.js"></script>
+    <script src="scripts/formentry/custom-formly-controls/sections.formly.js"></script>
+    <script src="scripts/formentry/custom-formly-controls/concept-search-select.js"></script>
+    <script src="scripts/formentry/custom-formly-controls/historical-text.formly.js"></script>
+
+    <!--Directives-->
+    <script src="scripts/formentry/directives/formly-error-summary.directive.js"></script>
+    <script src="scripts/models/session.model.js"></script>
+    <script src="scripts/models/drug.model.js"></script>
+    <script src="scripts/models/location.model.js"></script>
+    <script src="scripts/models/person.model.js"></script>
+    <script src="scripts/models/name.model.js"></script>
+    <script src="scripts/models/provider.model.js"></script>
+    <script src="scripts/models/concept-class.model.js"></script>
+    <script src="scripts/models/concept-name.model.js"></script>
+    <script src="scripts/models/concept.model.js"></script>
+    <!-- endbuild -->
 
 </body>
 
