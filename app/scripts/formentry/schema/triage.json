@@ -42,7 +42,7 @@
               "questionOptions":{
                 "rendering":"ui-select-extended"
               }
-            },            
+            },
             {
               "type":"personAttribute",
               "label":"Transfer in from other AMPATH clinic (specify):",
@@ -354,6 +354,7 @@
                 },
                 {
                   "label": "Weight(Kg):",
+                  "id":"weight",
                   "questionOptions":{
                     "rendering":"number",
                     "concept": "a8a660ca-1350-11df-a1f1-0026b9348838",
@@ -365,6 +366,7 @@
                 },
                 {
                   "label": "Height(CM):",
+                  "id":"height",
                   "questionOptions":{
                     "rendering":"number",
                     "concept": "a8a6619c-1350-11df-a1f1-0026b9348838",
@@ -391,7 +393,10 @@
                     "rendering":"number",
                     "concept": "a89c60c0-1350-11df-a1f1-0026b9348838",
                     "max": "100",
-                    "min": "0"
+                    "min": "0",
+                    "calculate":{
+                      "calculateExpression":"calcBMI(height,weight)"
+                    }
                   },
                   "type": "obs",
                   "validators": []
