@@ -1202,8 +1202,8 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 
         function _handleExpressionProperties(_field, _required, _disabled, _listener) {
             var field = _field || {};
-            var required = typeof _required === 'boolean' ? _required : _required ? FormValidator.getConditionalRequiredExpressionFunction(_required) : 'false';
-            var disabled = typeof _disabled === 'boolean' ? _required : _disabled ? FormValidator.getHideDisableExpressionFunction_JS(_disabled) : 'false';
+            var required = _isBoolean(_required) ? _required : _required ? FormValidator.getConditionalRequiredExpressionFunction(_required) : 'false';
+            var disabled =_isBoolean(_disabled) ? _required : _disabled ? FormValidator.getHideDisableExpressionFunction_JS(_disabled) : 'false';
             var listener = _listener || '';
             field['expressionProperties'] = {
                 'templateOptions.required': required,
@@ -1211,6 +1211,17 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                 'templateOptions.hasListeners': listener,
                 'templateOptions.onValueChanged': onFieldValueChanged
             };
+        }
+        
+        function _isBoolean(value) {
+            if(typeof value === 'boolean') {
+                return true;
+            }
+            
+            if(value === 'true' || value === 'false') {
+                return true;
+            }
+            return false;
         }
 
         function _handleDefaultValue(_field, _defaultValue) {
@@ -1255,7 +1266,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 
         function _handleHide(_field, _hide) {
             var field = _field || {};
-            var hide = typeof _hide === 'boolean' ? _hide : _hide ? FormValidator.getHideDisableExpressionFunction_JS(_hide) : 'false';
+            var hide = _isBoolean(_hide) ? _hide : _hide ? FormValidator.getHideDisableExpressionFunction_JS(_hide) : 'false';
             field['hideExpression'] = hide;
         }
 

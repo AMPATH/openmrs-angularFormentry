@@ -50,20 +50,27 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
         function addNew() {
           $scope.model[$scope.options.key] = $scope.model[$scope.options.key] || [];
-          // $log.log('Repeat section');
-          // $log.log($scope.model);
+          $log.log('Repeat section');
+          // $log.log($scope);
+          // $log.log($scope.to.createModelBluePrint(null,[{}]));
           var repeatsection = $scope.model[$scope.options.key];
           // $log.log('Repeat section Val');
           // $log.log(repeatsection);
           var lastSection = repeatsection[repeatsection.length - 1];
-          var newsection = {};
+          // $log.log('Model blueprint');
+          // $log.log($scope.to.createModelBluePrint(null,[{}]));
+          var currentModel = $scope.to.createModelBluePrint(null,[{}])
+          var revisedModel = angular.copy(currentModel);
+          var newsection = revisedModel[0];
+          delete newsection['schemaQuestion']
           // if (lastSection) {
           //   newsection = angular.copy(lastSection);
           // }
         //   newsection.obs1_a894b1ccn1350n11dfna1f1n0026b9348838 = {
         //       value: 'a893516a-1350-11df-a1f1-0026b9348838'
         //   };
-
+        // $log.log('New Section blueprint');
+        // $log.log($scope.originalModel);
           repeatsection.push(newsection);
         }
       }
