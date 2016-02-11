@@ -42,7 +42,7 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
         function clearQuestionValueByKey(formlyModel, key) {
             var containingObject = getContainingObjectForQuestionKey(formlyModel, key);
             if (containingObject) {
-                if (containingObject[key].value) {
+                if (hasOwnProperty(containingObject[key], 'value')) {
                     if (Array.isArray(containingObject[key].value)) {
                         console.log('is array');
                         containingObject[key].value = [];
