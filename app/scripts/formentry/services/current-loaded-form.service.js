@@ -20,12 +20,13 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
             clearQuestionValueByKey: clearQuestionValueByKey,
             getAnswerByQuestionKey: getAnswerByQuestionKey,
             getContainingObjectForQuestionKey: getContainingObjectForQuestionKey,
-            getFieldKeyFromGlobalById: getFieldKeyById
+            getFieldKeyFromGlobalById: getFieldKeyFromGlobalById,
+            getFieldKeyById: getFieldKeyById
         };
 
         return service;
 
-        function getFieldKeyById(id) {
+        function getFieldKeyFromGlobalById(id) {
             var obj = service.questionMap[id];
             if (obj && !Array.isArray(obj)) {
                 return service.questionMap[id].key.split('.')[0];
@@ -38,11 +39,23 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
             }
             return null;
         }
+        
+        function getFieldKeyById(id_, searchFields) {
+            var result;
+            _.each(searchFields, function (cfield) {
+                if (cfield.data && cfield.data.id === id_) {
+                    result = cfield.key;
+                    return result;
+                }
+            });
+            return result;
+        }
+
 
         function clearQuestionValueByKey(formlyModel, key) {
             var containingObject = getContainingObjectForQuestionKey(formlyModel, key);
             if (containingObject) {
-                if (containingObject[key].value) {
+                if (hasOwnProperty(containingObject[key], 'value')) {
                     if (Array.isArray(containingObject[key].value)) {
                         console.log('is array');
                         containingObject[key].value = [];

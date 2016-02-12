@@ -45,7 +45,8 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
             defaultFieldHandler);
 
         var service = {
-            getFieldHandler: FormentryConfig.getFieldHandler
+            getFieldHandler: FormentryConfig.getFieldHandler,
+            createAnchorField: createAnchorField
         };
 
         return service;
@@ -165,7 +166,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
         function _handleExpressionProperties(_field, _required, _disabled, _listener, _calculated) {
             var field = _field || {};
             var required = _isBoolean(_required) ? _required : _required ? FormValidator.getConditionalRequiredExpressionFunction(_required) : 'false';
-            var disabled =_isBoolean(_disabled) ? _required : _disabled ? FormValidator.getHideDisableExpressionFunction_JS(_disabled) : 'false';
+            var disabled = _isBoolean(_disabled) ? _required : _disabled ? FormValidator.getHideDisableExpressionFunction_JS(_disabled) : 'false';
             var listener = _listener || '';
             var calculated = _calculated? FormValidator.getCalculateExpressionFunction_JS(_calculated) : '';
             field['expressionProperties'] = {
@@ -178,7 +179,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
         }
 
         function _isBoolean(value) {
-            if(typeof value === 'boolean') {
+            if (typeof value === 'boolean') {
                 return true;
             }
 
@@ -490,6 +491,16 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
             } else {
                 return obsField;
             }
+        }
+
+        function createAnchorField(ownerKey) {
+            return {
+                type: 'anchor',
+                data: { id: 'anchor' },
+                templateOptions: {
+                    ownerKey: ownerKey
+                }
+            };
         }
     }
 })();

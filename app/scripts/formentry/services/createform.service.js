@@ -141,17 +141,19 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                     // $log.debug('Field Created', field);
                     if (angular.isArray(field)) {
                         _.each(field, function (f) {
+                            fields.push(OpenmrsFieldHandler.createAnchorField(f.key));
                             fields.push(f);
-                             if(f.templateOptions.historicalExpression) {
+                            if (f.templateOptions.historicalExpression) {
                                 fields.push(HistoricalFieldHelperService.
                                     createHistoricalTextField(f, model, f.key));
-                             }
+                            }
                         });
                     } else {
+                        fields.push(OpenmrsFieldHandler.createAnchorField(field.key));
                         fields.push(field);
-                        if(field.templateOptions.historicalExpression) {
+                        if (field.templateOptions.historicalExpression) {
                             fields.push(HistoricalFieldHelperService.
-                            createHistoricalTextField(field, model, field.key));
+                                createHistoricalTextField(field, model, field.key));
                         }
                     }
 
@@ -187,6 +189,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                         HistoricalFieldHelperService.
                             handleGetDisplayValueFunctionForGroupsProperty(obsField, question);
 
+                        fields.push(OpenmrsFieldHandler.createAnchorField(obsField.key));
                         fields.push(obsField);
                     } else if (question.questionOptions.rendering === 'repeating') {
                         model['obsRepeating' + '_' + groupId] = [];
@@ -213,7 +216,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                         HistoricalFieldHelperService.handleHistoricalExpressionProperty(obsField, question);
 
                         if (typeof obsField['templateOptions']['setFieldValue'] !== 'function') {
-                            obsField['templateOptions']['setFieldValue'] = 
+                            obsField['templateOptions']['setFieldValue'] =
                             HistoricalFieldHelperService.fillGroups;
                         }
 
@@ -228,22 +231,25 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                         updateRepeatModel.push(groupModel);
 
                         model['obsRepeating' + '_' + groupId] = updateRepeatModel;
+                        fields.push(OpenmrsFieldHandler.createAnchorField(obsField.key));
                         fields.push(obsField);
-                        if(obsField.templateOptions.historicalExpression) {
+                        if (obsField.templateOptions.historicalExpression) {
                             fields.push(HistoricalFieldHelperService.
                                 createHistoricalTextField(obsField, model, obsField.key));
                         }
-                        
+
                     }
 
                 } else if (question.type.startsWith('encounter')) {
                     handlerMethod = OpenmrsFieldHandler.getFieldHandler(question.type + 'FieldHandler');
                     var field = handlerMethod(question, model, questionMap);
+                    fields.push(OpenmrsFieldHandler.createAnchorField(field.key));
                     fields.push(field);
 
                 } else if (question.type.startsWith('personAttribute')) {
                     handlerMethod = OpenmrsFieldHandler.getFieldHandler('personAttributeFieldHandler');
                     var field = handlerMethod(question, model, questionMap);
+                    fields.push(OpenmrsFieldHandler.createAnchorField(field.key));
                     fields.push(field);
 
                 } else {
@@ -252,9 +258,11 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 
                     if (angular.isArray(field)) {
                         _.each(field, function (f) {
+                            fields.push(OpenmrsFieldHandler.createAnchorField(f.key));
                             fields.push(f);
                         });
                     } else {
+                        fields.push(OpenmrsFieldHandler.createAnchorField(field.key));
                         fields.push(field);
                     }
                 }
