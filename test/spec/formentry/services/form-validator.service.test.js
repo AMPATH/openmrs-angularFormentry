@@ -96,7 +96,7 @@
 		it('should replace question placeholders with value when extractQuestionIds is invoked', function () {
 			var replaced = service.replaceQuestionsPlaceholdersWithValue(validationExpression, formIds);
 			expect(replaced).to.equal('(12 === null) || ("stringVal" in ["val1", "val2", "val3"])');
-      
+
 			//example2
 			replaced = service.replaceQuestionsPlaceholdersWithValue(validationExpression2, formIds);
 			expect(replaced).to.equal('(12 === null) || ([12, "stringVal", "val3"].indexOf("stringVal") !== -1)');
@@ -128,8 +128,8 @@
 			expression = '(arrayContains(["val", "val2", "val3"], "val4"))';
 			result = service.evaluateExpression(expression);
 			expect(result).to.equal(false);
-      
-      
+
+
 			//array parameter
 			expression = '(arrayContains(["val", "val2", "val3"], ["val","val3"]))';
 			result = service.evaluateExpression(expression);
@@ -149,8 +149,8 @@
 			expression = '(arrayContainsAny(["val", "val2", "val3"], "val4"))';
 			result = service.evaluateExpression(expression);
 			expect(result).to.equal(false);
-      
-      
+
+
 			//array parameter
 			expression = '(arrayContainsAny(["val2", "val3"], ["val","val3"]))';
 			result = service.evaluateExpression(expression);
@@ -159,6 +159,19 @@
 			expression = '(arrayContainsAny(["val2", "val3"], ["val","val4"]))';
 			result = service.evaluateExpression(expression);
 			expect(result).to.equal(false);
+		});
+
+		it('should invoke calcBMI function when evaluateExpression is invoked with an ' +
+		' expression containing calcBMI', function () {
+			//non-array parameter
+			var expression = '(calcBMI(158, 75))';
+			var result = service.evaluateExpression(expression);
+			expect(result).to.equal(30);
+
+			expression = '(calcBMI(169, 75))';
+			result = service.evaluateExpression(expression);
+			expect(result).to.equal(26.3);
+
 		});
 
 	});
@@ -195,7 +208,7 @@
 				key1: 'a89ff816-1350-11df-a1f1-0026b9348838',
 				key2: 'a899b35c-1350-11df-a1f1-0026b9348838'
 			};
-			
+
 
 			currentLoadedFormService.questionMap = {
 				q7a: [{
@@ -212,7 +225,7 @@
 
 			var isValid = validator.expression(undefined, undefined, {});
 			console.log(isValid);
-      
+
 			//failed case
 			expect(isValid).to.equal(false);
 
@@ -220,7 +233,7 @@
 			console.log(isValid);
 			//passed case
 			expect(isValid).to.equal(true);
-      
+
 			//sampe two
 			var params2 = {
 				'type': 'js_expression',
@@ -229,11 +242,11 @@
 			};
 
 			validator = service.getJsExpressionValidatorObject(params2);
-      
+
 			//case valid
 			isValid = validator.expression('not empty', undefined, {});
 			expect(isValid).to.equal(true);
-      
+
 			//case invalid
 			isValid = validator.expression(undefined, undefined, {});
 			expect(isValid).to.equal(false);
@@ -252,7 +265,7 @@
 		});
 
 		it('should return correct value to validate when getFieldValueToValidate is invoked with multi-select field scope', function () {
-      
+
 			//case: no new value being added
 			var multiSelectFormlyScope = {
 				$parent: {
@@ -270,16 +283,16 @@
 				}
 			};
 
-			var returnVal = service.getFieldValueToValidate(false, undefined, multiSelectFormlyScope); //this will usually have true or false being the value 
+			var returnVal = service.getFieldValueToValidate(false, undefined, multiSelectFormlyScope); //this will usually have true or false being the value
 
 			expect(returnVal).to.have.members(['val1']);
 			expect(['val1']).to.have.members(returnVal);
-      
-			//case: new value being added 
+
+			//case: new value being added
 			returnVal = service.getFieldValueToValidate(true, undefined, multiSelectFormlyScope);
 			expect(returnVal).to.have.members(['val1', 'val2']);
 			expect(['val1', 'val2']).to.have.members(returnVal);
-      
+
 			//case: existing value being removed
 			multiSelectFormlyScope = {
 				$parent: {
@@ -303,7 +316,7 @@
 		});
 
 		it('should return a function that when invoked conditionally sets a field to required when getConditionalRequiredExpressionFunction is invoked', function () {
-      
+
 			//case reference question has the required answers to make this question a required question
 			var params = {
 				'type': 'conditionalRequired',
@@ -329,7 +342,7 @@
 			};
 
 			currentLoadedFormService.formModel = currentModel;
-      
+
 
 			var isRequiredExpressionFunction = service.getConditionalRequiredExpressionFunction(params);
 
@@ -340,7 +353,7 @@
 			var isRequired = isRequiredExpressionFunction(undefined, undefined, fieldScope, undefined);
 
 			expect(isRequired).to.equal(true);
-      
+
 			//case reference question does not have the required answer to make this question a required question
 			currentModel = {
 				key1: 'unrequired asnwer',
@@ -358,7 +371,7 @@
 		});
 
 		it('should return a validator that when invoked return correct validation result when getConditionalAnsweredValidatorObject is invoked', function () {
-      
+
 			//case reference question has the required answers to allow this question to be answered
 			var params = {
 				'type': 'conditionalAnswered',
@@ -383,7 +396,7 @@
 			};
 
 			currentLoadedFormService.formModel = currentModel;
-      
+
 			var validator = service.getConditionalAnsweredValidatorObject(params);
 
 			var fieldScope = {
@@ -393,7 +406,7 @@
 			var isValid = validator.expression(undefined, undefined, fieldScope, {});
 
 			expect(isValid).to.equal(true);
-      
+
 			//case reference question does not have the required answers to allow this question to be answered
 			currentModel = {
 				key1: 'unrequired asnwer',
@@ -422,13 +435,13 @@
 			var isValid = validator.expression(value, undefined);
 
 			expect(isValid).to.equal(true);
-      
+
 			//case past
 			value = new Date('2014-05-05');
 			isValid = validator.expression(value, undefined);
 
 			expect(isValid).to.equal(true);
-      
+
 			//case future
 			value = new Date('2016-05-05');
 			isValid = validator.expression(value, undefined);

@@ -50,7 +50,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
       formlyConfig.setWrapper({
           name: 'validation',
-          types: ['input', 'customInput','datepicker', 'select', 'section', 'multiCheckbox', 'select-concept-answers'],
+          types: ['input', 'customInput','datepicker', 'select', 'section', 'multiCheckbox', 'select-concept-answers','ui-select-extended'],
           templateUrl: 'error-messages.html'
         });
     });

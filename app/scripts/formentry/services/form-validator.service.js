@@ -29,7 +29,8 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
             getJsExpressionValidatorObject: getJsExpressionValidatorObject,
             getHideDisableExpressionFunction_JS: getHideDisableExpressionFunction_JS,
             addToListenersMetadata: addToListenersMetadata,
-            updateListeners: updateListeners
+            updateListeners: updateListeners,
+            getCalculateExpressionFunction_JS:getCalculateExpressionFunction_JS
         };
 
         return service;
@@ -122,15 +123,15 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
 
                     var val = getFieldValueToValidate(viewValue, modelValue, elementScope);
 
-                    if (elementScope.options && elementScope.options.data 
+                    if (elementScope.options && elementScope.options.data
                     && elementScope.options.data.id) {
-                        var fields = 
+                        var fields =
                         service.extractQuestionIds(schemaValidatorObject.failsWhenExpression,
                             CurrentLoadedFormService.questionMap);
                         addToListenersMetadata(elementScope.options.data.id, fields);
                     }
 
-                    var referencedQuestions = 
+                    var referencedQuestions =
                     service.extractQuestionIds(schemaValidatorObject.failsWhenExpression,
                         CurrentLoadedFormService.questionMap);
 
@@ -138,7 +139,7 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
 
                     _.each(referencedQuestions, function (qId) {
                         if (keyValue[qId] === undefined) {
-                            var referenceQuestionkey = 
+                            var referenceQuestionkey =
                             CurrentLoadedFormService.getFieldKeyFromGlobalById(qId);
                             var referenceQuestionCurrentValue =
                                 CurrentLoadedFormService.
@@ -150,10 +151,10 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
 
                     var expressionToEvaluate =
                         service.
-                        replaceQuestionsPlaceholdersWithValue(schemaValidatorObject.failsWhenExpression, 
+                        replaceQuestionsPlaceholdersWithValue(schemaValidatorObject.failsWhenExpression,
                         keyValue);
 
-                    expressionToEvaluate = 
+                    expressionToEvaluate =
                     service.replaceMyValuePlaceholdersWithActualValue(expressionToEvaluate, val);
                     console.log('Evaluates val', val);
                     console.log('Evaluates model', elementScope);
@@ -176,7 +177,7 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
             //special case for multicheck box
             if (elementScope.$parent && elementScope.$parent.multiCheckbox) {
                 console.log('validating multicheck box..', elementScope.$parent.multiCheckbox);
-                var selectedOptions = 
+                var selectedOptions =
                 elementScope.$parent.model[elementScope.$parent.options.key];
                 var mergedOptions = selectedOptions ? [].concat(selectedOptions) : [];
 
@@ -203,7 +204,7 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
                 function (viewValue, modelValue, elementScope) {
                     var val = modelValue || viewValue;
 
-                    if (elementScope.options && elementScope.options.data 
+                    if (elementScope.options && elementScope.options.data
                     && elementScope.options.data.id) {
                         var fields = [schemaValidatorObject.referenceQuestionId];
                         addToListenersMetadata(elementScope.options.data.id, fields);
@@ -217,8 +218,8 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
                         modelOptions = elementScope.$parent.model[elementScope.$parent.options.key];
                     }
 
-                    var modelIsNonEmptyArray = 
-                    (modelOptions !== undefined && Array.isArray(modelOptions) && 
+                    var modelIsNonEmptyArray =
+                    (modelOptions !== undefined && Array.isArray(modelOptions) &&
                     modelOptions.length !== 0);
 
                     var hasValue = modelIsNonEmptyArray ||
@@ -229,17 +230,17 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
                     }
 
                     //question was asnwered, therefore establish that the reference questions have the required answers
-                    var referenceQuestionkey = 
+                    var referenceQuestionkey =
                     CurrentLoadedFormService.
                     getFieldKeyFromGlobalById(schemaValidatorObject.referenceQuestionId);
-                    var referenceQuestionCurrentValue = 
+                    var referenceQuestionCurrentValue =
                     CurrentLoadedFormService.
-                    getAnswerByQuestionKey(CurrentLoadedFormService.formModel, 
+                    getAnswerByQuestionKey(CurrentLoadedFormService.formModel,
                     referenceQuestionkey);
 
 
 
-                    var answersThatPermitThisQuestionAnswered = 
+                    var answersThatPermitThisQuestionAnswered =
                     schemaValidatorObject.referenceQuestionAnswers;
 
                     var isValid = false;
@@ -300,41 +301,41 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
                 var val = getFieldValueToValidate($viewValue, $modelValue, scope);
 
                 if (scope.options && scope.options.data && scope.options.data.id) {
-                    var fields = 
-                    service.extractQuestionIds(schemaValidatorObject.disableWhenExpression || 
-                    schemaValidatorObject.hideWhenExpression, 
+                    var fields =
+                    service.extractQuestionIds(schemaValidatorObject.disableWhenExpression ||
+                    schemaValidatorObject.hideWhenExpression,
                     CurrentLoadedFormService.questionMap);
-                    
+
                     addToListenersMetadata(scope.options.data.id, fields);
                 }
 
-                var referencedQuestions = 
-                service.extractQuestionIds(schemaValidatorObject.disableWhenExpression || 
-                schemaValidatorObject.hideWhenExpression, 
+                var referencedQuestions =
+                service.extractQuestionIds(schemaValidatorObject.disableWhenExpression ||
+                schemaValidatorObject.hideWhenExpression,
                 CurrentLoadedFormService.questionMap);
 
                 var keyValue = {};
 
                 _.each(referencedQuestions, function (qId) {
                     if (keyValue[qId] === undefined) {
-                        var referenceQuestionkey = 
+                        var referenceQuestionkey =
                         CurrentLoadedFormService.getFieldKeyFromGlobalById(qId);
-                        
-                        var referenceQuestionCurrentValue = 
+
+                        var referenceQuestionCurrentValue =
                         CurrentLoadedFormService.
-                        getAnswerByQuestionKey(CurrentLoadedFormService.formModel, 
+                        getAnswerByQuestionKey(CurrentLoadedFormService.formModel,
                         referenceQuestionkey);
-                        
+
                         keyValue[qId] = referenceQuestionCurrentValue;
                     }
                 });
 
-                var expressionToEvaluate = 
+                var expressionToEvaluate =
                 service.
-                replaceQuestionsPlaceholdersWithValue(schemaValidatorObject.disableWhenExpression || 
+                replaceQuestionsPlaceholdersWithValue(schemaValidatorObject.disableWhenExpression ||
                 schemaValidatorObject.hideWhenExpression, keyValue);
 
-                expressionToEvaluate = 
+                expressionToEvaluate =
                 service.replaceMyValuePlaceholdersWithActualValue(expressionToEvaluate, val);
                 console.log('Evaluates val', val);
                 console.log('Evaluates model', scope);
@@ -347,17 +348,68 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
                 if (isDisabled === true) {
                     if (element) {
                         //case hide
-                        CurrentLoadedFormService.clearQuestionValueByKey(scope.model, 
+                        CurrentLoadedFormService.clearQuestionValueByKey(scope.model,
                         element.options.key.split('.')[0]);
                     }
                     else {
                         //case disable
-                        CurrentLoadedFormService.clearQuestionValueByKey(scope.model, 
+                        CurrentLoadedFormService.clearQuestionValueByKey(scope.model,
                         scope.options.key.split('.')[0]);
                     }
                 }
 
                 return isDisabled;
+            };
+        }
+
+        function getCalculateExpressionFunction_JS(schemaValidatorObject) {
+            return function ($viewValue, $modelValue, scope, element) {
+                var val = getFieldValueToValidate($viewValue, $modelValue, scope);
+
+                if (scope.options && scope.options.data && scope.options.data.id) {
+                    var fields =
+                    service.extractQuestionIds(schemaValidatorObject.calculateExpression ||
+                    schemaValidatorObject.hideWhenExpression,
+                    CurrentLoadedFormService.questionMap);
+
+                    addToListenersMetadata(scope.options.data.id, fields);
+                }
+
+                var referencedQuestions =
+                service.extractQuestionIds(schemaValidatorObject.calculateExpression ||
+                schemaValidatorObject.hideWhenExpression,
+                CurrentLoadedFormService.questionMap);
+
+                var keyValue = {};
+
+                _.each(referencedQuestions, function (qId) {
+                    if (keyValue[qId] === undefined) {
+                        var referenceQuestionkey =
+                        CurrentLoadedFormService.getFieldKeyFromGlobalById(qId);
+
+                        var referenceQuestionCurrentValue =
+                        CurrentLoadedFormService.
+                        getAnswerByQuestionKey(CurrentLoadedFormService.formModel,
+                        referenceQuestionkey);
+
+                        keyValue[qId] = referenceQuestionCurrentValue;
+                    }
+                });
+
+                var expressionToEvaluate =
+                service.
+                replaceQuestionsPlaceholdersWithValue(schemaValidatorObject.calculateExpression ||
+                schemaValidatorObject.hideWhenExpression, keyValue);
+
+                expressionToEvaluate =
+                service.replaceMyValuePlaceholdersWithActualValue(expressionToEvaluate, val);
+                console.log('Evaluates val', val);
+                console.log('Evaluates model', scope);
+                console.log('expressionToEvaluate', expressionToEvaluate);
+
+                var result = service.evaluateExpression(expressionToEvaluate);
+                console.log('Evaluates Results', result);
+                scope.options.value(result);
             };
         }
 
@@ -483,9 +535,17 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
             return converted;
         }
 
+        function calcBMI(height, weight) {
+          var r;
+          if (height && weight){
+            r = (weight/(height/100*height/100)).toFixed(1);
+          }
+          return height && weight? parseFloat(r): null
+        }
+
         function isEmpty(val) {
 
-            if (val === undefined || val === null || val === '' || val === 'null' 
+            if (val === undefined || val === null || val === '' || val === 'null'
             || val === 'undefined') {
                 return true;
             }

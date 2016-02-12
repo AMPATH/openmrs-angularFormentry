@@ -162,16 +162,18 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
             return key;
         }
 
-        function _handleExpressionProperties(_field, _required, _disabled, _listener) {
+        function _handleExpressionProperties(_field, _required, _disabled, _listener, _calculated) {
             var field = _field || {};
             var required = _isBoolean(_required) ? _required : _required ? FormValidator.getConditionalRequiredExpressionFunction(_required) : 'false';
             var disabled =_isBoolean(_disabled) ? _required : _disabled ? FormValidator.getHideDisableExpressionFunction_JS(_disabled) : 'false';
             var listener = _listener || '';
+            var calculated = _calculated? FormValidator.getCalculateExpressionFunction_JS(_calculated) : '';
             field['expressionProperties'] = {
                 'templateOptions.required': required,
                 'templateOptions.disabled': disabled,
                 'templateOptions.hasListeners': listener,
-                'templateOptions.onValueChanged': onFieldValueChanged
+                'templateOptions.onValueChanged': onFieldValueChanged,
+                'templateOptions.calculate': calculated
             };
         }
 
@@ -263,10 +265,6 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
             field['templateOptions']['options'] = [];
         }
 
-        function _handleCalcultedField(_field, question){
-
-        }
-
         function _handlePersonAttributeField(_field) {
             var field = _field || {};
             field['type'] = 'ui-select-extended';
@@ -340,7 +338,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
             };
 
             $log.debug('debug key field ...', field);
-            _handleExpressionProperties(field, _question.required, _question.disable, undefined);
+            _handleExpressionProperties(field, _question.required, _question.disable, undefined, _question.questionOptions.calculate);
             _handleDefaultValue(field, _question.default);
             _handleHide(field, _question.hide);
             _handleValidators(field, _question.validators, questionMap);

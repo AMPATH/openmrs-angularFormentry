@@ -1200,24 +1200,26 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
             return key;
         }
 
-        function _handleExpressionProperties(_field, _required, _disabled, _listener) {
+        function _handleExpressionProperties(_field, _required, _disabled, _listener, _calculated) {
             var field = _field || {};
             var required = _isBoolean(_required) ? _required : _required ? FormValidator.getConditionalRequiredExpressionFunction(_required) : 'false';
             var disabled =_isBoolean(_disabled) ? _required : _disabled ? FormValidator.getHideDisableExpressionFunction_JS(_disabled) : 'false';
             var listener = _listener || '';
+            var calculated = _calculated? FormValidator.getCalculateExpressionFunction_JS(_calculated) : '';
             field['expressionProperties'] = {
                 'templateOptions.required': required,
                 'templateOptions.disabled': disabled,
                 'templateOptions.hasListeners': listener,
-                'templateOptions.onValueChanged': onFieldValueChanged
+                'templateOptions.onValueChanged': onFieldValueChanged,
+                'templateOptions.calculate': calculated
             };
         }
-        
+
         function _isBoolean(value) {
             if(typeof value === 'boolean') {
                 return true;
             }
-            
+
             if(value === 'true' || value === 'false') {
                 return true;
             }
@@ -1374,7 +1376,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
             };
 
             $log.debug('debug key field ...', field);
-            _handleExpressionProperties(field, _question.required, _question.disable, undefined);
+            _handleExpressionProperties(field, _question.required, _question.disable, undefined, _question.questionOptions.calculate);
             _handleDefaultValue(field, _question.default);
             _handleHide(field, _question.hide);
             _handleValidators(field, _question.validators, questionMap);
@@ -2164,7 +2166,8 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
             getJsExpressionValidatorObject: getJsExpressionValidatorObject,
             getHideDisableExpressionFunction_JS: getHideDisableExpressionFunction_JS,
             addToListenersMetadata: addToListenersMetadata,
-            updateListeners: updateListeners
+            updateListeners: updateListeners,
+            getCalculateExpressionFunction_JS:getCalculateExpressionFunction_JS
         };
 
         return service;
@@ -2257,15 +2260,15 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
 
                     var val = getFieldValueToValidate(viewValue, modelValue, elementScope);
 
-                    if (elementScope.options && elementScope.options.data 
+                    if (elementScope.options && elementScope.options.data
                     && elementScope.options.data.id) {
-                        var fields = 
+                        var fields =
                         service.extractQuestionIds(schemaValidatorObject.failsWhenExpression,
                             CurrentLoadedFormService.questionMap);
                         addToListenersMetadata(elementScope.options.data.id, fields);
                     }
 
-                    var referencedQuestions = 
+                    var referencedQuestions =
                     service.extractQuestionIds(schemaValidatorObject.failsWhenExpression,
                         CurrentLoadedFormService.questionMap);
 
@@ -2273,7 +2276,7 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
 
                     _.each(referencedQuestions, function (qId) {
                         if (keyValue[qId] === undefined) {
-                            var referenceQuestionkey = 
+                            var referenceQuestionkey =
                             CurrentLoadedFormService.getFieldKeyFromGlobalById(qId);
                             var referenceQuestionCurrentValue =
                                 CurrentLoadedFormService.
@@ -2285,10 +2288,10 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
 
                     var expressionToEvaluate =
                         service.
-                        replaceQuestionsPlaceholdersWithValue(schemaValidatorObject.failsWhenExpression, 
+                        replaceQuestionsPlaceholdersWithValue(schemaValidatorObject.failsWhenExpression,
                         keyValue);
 
-                    expressionToEvaluate = 
+                    expressionToEvaluate =
                     service.replaceMyValuePlaceholdersWithActualValue(expressionToEvaluate, val);
                     console.log('Evaluates val', val);
                     console.log('Evaluates model', elementScope);
@@ -2311,7 +2314,7 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
             //special case for multicheck box
             if (elementScope.$parent && elementScope.$parent.multiCheckbox) {
                 console.log('validating multicheck box..', elementScope.$parent.multiCheckbox);
-                var selectedOptions = 
+                var selectedOptions =
                 elementScope.$parent.model[elementScope.$parent.options.key];
                 var mergedOptions = selectedOptions ? [].concat(selectedOptions) : [];
 
@@ -2338,7 +2341,7 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
                 function (viewValue, modelValue, elementScope) {
                     var val = modelValue || viewValue;
 
-                    if (elementScope.options && elementScope.options.data 
+                    if (elementScope.options && elementScope.options.data
                     && elementScope.options.data.id) {
                         var fields = [schemaValidatorObject.referenceQuestionId];
                         addToListenersMetadata(elementScope.options.data.id, fields);
@@ -2352,8 +2355,8 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
                         modelOptions = elementScope.$parent.model[elementScope.$parent.options.key];
                     }
 
-                    var modelIsNonEmptyArray = 
-                    (modelOptions !== undefined && Array.isArray(modelOptions) && 
+                    var modelIsNonEmptyArray =
+                    (modelOptions !== undefined && Array.isArray(modelOptions) &&
                     modelOptions.length !== 0);
 
                     var hasValue = modelIsNonEmptyArray ||
@@ -2364,17 +2367,17 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
                     }
 
                     //question was asnwered, therefore establish that the reference questions have the required answers
-                    var referenceQuestionkey = 
+                    var referenceQuestionkey =
                     CurrentLoadedFormService.
                     getFieldKeyFromGlobalById(schemaValidatorObject.referenceQuestionId);
-                    var referenceQuestionCurrentValue = 
+                    var referenceQuestionCurrentValue =
                     CurrentLoadedFormService.
-                    getAnswerByQuestionKey(CurrentLoadedFormService.formModel, 
+                    getAnswerByQuestionKey(CurrentLoadedFormService.formModel,
                     referenceQuestionkey);
 
 
 
-                    var answersThatPermitThisQuestionAnswered = 
+                    var answersThatPermitThisQuestionAnswered =
                     schemaValidatorObject.referenceQuestionAnswers;
 
                     var isValid = false;
@@ -2435,41 +2438,41 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
                 var val = getFieldValueToValidate($viewValue, $modelValue, scope);
 
                 if (scope.options && scope.options.data && scope.options.data.id) {
-                    var fields = 
-                    service.extractQuestionIds(schemaValidatorObject.disableWhenExpression || 
-                    schemaValidatorObject.hideWhenExpression, 
+                    var fields =
+                    service.extractQuestionIds(schemaValidatorObject.disableWhenExpression ||
+                    schemaValidatorObject.hideWhenExpression,
                     CurrentLoadedFormService.questionMap);
-                    
+
                     addToListenersMetadata(scope.options.data.id, fields);
                 }
 
-                var referencedQuestions = 
-                service.extractQuestionIds(schemaValidatorObject.disableWhenExpression || 
-                schemaValidatorObject.hideWhenExpression, 
+                var referencedQuestions =
+                service.extractQuestionIds(schemaValidatorObject.disableWhenExpression ||
+                schemaValidatorObject.hideWhenExpression,
                 CurrentLoadedFormService.questionMap);
 
                 var keyValue = {};
 
                 _.each(referencedQuestions, function (qId) {
                     if (keyValue[qId] === undefined) {
-                        var referenceQuestionkey = 
+                        var referenceQuestionkey =
                         CurrentLoadedFormService.getFieldKeyFromGlobalById(qId);
-                        
-                        var referenceQuestionCurrentValue = 
+
+                        var referenceQuestionCurrentValue =
                         CurrentLoadedFormService.
-                        getAnswerByQuestionKey(CurrentLoadedFormService.formModel, 
+                        getAnswerByQuestionKey(CurrentLoadedFormService.formModel,
                         referenceQuestionkey);
-                        
+
                         keyValue[qId] = referenceQuestionCurrentValue;
                     }
                 });
 
-                var expressionToEvaluate = 
+                var expressionToEvaluate =
                 service.
-                replaceQuestionsPlaceholdersWithValue(schemaValidatorObject.disableWhenExpression || 
+                replaceQuestionsPlaceholdersWithValue(schemaValidatorObject.disableWhenExpression ||
                 schemaValidatorObject.hideWhenExpression, keyValue);
 
-                expressionToEvaluate = 
+                expressionToEvaluate =
                 service.replaceMyValuePlaceholdersWithActualValue(expressionToEvaluate, val);
                 console.log('Evaluates val', val);
                 console.log('Evaluates model', scope);
@@ -2482,17 +2485,68 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
                 if (isDisabled === true) {
                     if (element) {
                         //case hide
-                        CurrentLoadedFormService.clearQuestionValueByKey(scope.model, 
+                        CurrentLoadedFormService.clearQuestionValueByKey(scope.model,
                         element.options.key.split('.')[0]);
                     }
                     else {
                         //case disable
-                        CurrentLoadedFormService.clearQuestionValueByKey(scope.model, 
+                        CurrentLoadedFormService.clearQuestionValueByKey(scope.model,
                         scope.options.key.split('.')[0]);
                     }
                 }
 
                 return isDisabled;
+            };
+        }
+
+        function getCalculateExpressionFunction_JS(schemaValidatorObject) {
+            return function ($viewValue, $modelValue, scope, element) {
+                var val = getFieldValueToValidate($viewValue, $modelValue, scope);
+
+                if (scope.options && scope.options.data && scope.options.data.id) {
+                    var fields =
+                    service.extractQuestionIds(schemaValidatorObject.calculateExpression ||
+                    schemaValidatorObject.hideWhenExpression,
+                    CurrentLoadedFormService.questionMap);
+
+                    addToListenersMetadata(scope.options.data.id, fields);
+                }
+
+                var referencedQuestions =
+                service.extractQuestionIds(schemaValidatorObject.calculateExpression ||
+                schemaValidatorObject.hideWhenExpression,
+                CurrentLoadedFormService.questionMap);
+
+                var keyValue = {};
+
+                _.each(referencedQuestions, function (qId) {
+                    if (keyValue[qId] === undefined) {
+                        var referenceQuestionkey =
+                        CurrentLoadedFormService.getFieldKeyFromGlobalById(qId);
+
+                        var referenceQuestionCurrentValue =
+                        CurrentLoadedFormService.
+                        getAnswerByQuestionKey(CurrentLoadedFormService.formModel,
+                        referenceQuestionkey);
+
+                        keyValue[qId] = referenceQuestionCurrentValue;
+                    }
+                });
+
+                var expressionToEvaluate =
+                service.
+                replaceQuestionsPlaceholdersWithValue(schemaValidatorObject.calculateExpression ||
+                schemaValidatorObject.hideWhenExpression, keyValue);
+
+                expressionToEvaluate =
+                service.replaceMyValuePlaceholdersWithActualValue(expressionToEvaluate, val);
+                console.log('Evaluates val', val);
+                console.log('Evaluates model', scope);
+                console.log('expressionToEvaluate', expressionToEvaluate);
+
+                var result = service.evaluateExpression(expressionToEvaluate);
+                console.log('Evaluates Results', result);
+                scope.options.value(result);
             };
         }
 
@@ -2618,9 +2672,17 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
             return converted;
         }
 
+        function calcBMI(height, weight) {
+          var r;
+          if (height && weight){
+            r = (weight/(height/100*height/100)).toFixed(1);
+          }
+          return height && weight? parseFloat(r): null
+        }
+
         function isEmpty(val) {
 
-            if (val === undefined || val === null || val === '' || val === 'null' 
+            if (val === undefined || val === null || val === '' || val === 'null'
             || val === 'undefined') {
                 return true;
             }
@@ -2957,21 +3019,21 @@ jscs:disable requirePaddingNewLinesBeforeLineComments, requireTrailingComma
             //field model blueprint functions
             createModelForRegularField: createModelForRegularField,
             createModelForGroupSection: createModelForGroupSection,
-            
+
             //field value setters
             fillPrimitiveValue: fillPrimitiveValue,
             fillArrayOfPrimitives: fillArrayOfPrimitives,
             fillGroups: fillGroups,
-            
+
             //get display text given a field value
             getDisplayText: getDisplayText,
             getDisplayTextFromOptions: getDisplayTextFromOptions,
-            
+
             //handle field properties for historical data
             handleHistoricalExpressionProperty: handleHistoricalExpressionProperty,
             handleModelBluePrintFunctionForGroupsProperty: handleModelBluePrintFunctionForGroupsProperty,
             handleGetDisplayValueFunctionForGroupsProperty: handleGetDisplayValueFunctionForGroupsProperty,
-            
+
             //historic display fields
             createHistoricalTextField: createHistoricalTextField
         };
@@ -3012,10 +3074,10 @@ jscs:disable requirePaddingNewLinesBeforeLineComments, requireTrailingComma
             return function (values, callback, skipDelimiters) {
                 var displayText = '';
                 _.each(values, function (value) {
-                    
+
                     if(skipDelimiters !== true)
                         displayText = displayText+ "[ ";
-                        
+
                     _.each(obsField.templateOptions.fields, function (field) {
                         _.each(field.fieldGroup, function (innerfield) {
                             if (innerfield.templateOptions &&
@@ -3079,7 +3141,7 @@ jscs:disable requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                     if (field.templateOptions &&
                         typeof field.templateOptions.createModelBluePrint === 'function') {
                         field.templateOptions.createModelBluePrint(groupModel,
-                            value[0][field.data.concept]);
+                            value?value[0][field.data.concept]:null);
                     }
                 });
                 return groupModel;
@@ -3110,10 +3172,10 @@ jscs:disable requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                 return repeatingGroupModel;
             };
         }
-        
-        
+
+
         //#region Functions to create model chunks for a particular fields
-       
+
         function createModelForRegularField(parentModel, modelKey, schemaQuestion, concept, value) {
 
             var model = {
@@ -3142,9 +3204,9 @@ jscs:disable requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 
             return model;
         }
-        
-        //#endregion   
-    
+
+        //#endregion
+
         //#region Functions to handle setting of values and display
         function fillPrimitiveValue(field, newValue) {
             field.value(newValue);
@@ -3172,7 +3234,7 @@ jscs:disable requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                     _.each(options, function (option) {
                         if (option[valueProperty] === val) {
                             if(valueConverted === 0){
-                              displayText = displayText + option[displayProperty];  
+                              displayText = displayText + option[displayProperty];
                             } else {
                             displayText = displayText + ", " + option[displayProperty];
                             }
@@ -3190,10 +3252,11 @@ jscs:disable requirePaddingNewLinesBeforeLineComments, requireTrailingComma
             }
             callback('"' + displayText + '"');
         }
-        
+
         //#endregion
     }
 })();
+
 /*jshint -W026, -W030, -W106 */
 /*jscs:disable disallowMixedSpacesAndTabs, requireDotNotation*/
 /*jscs:disable requirePaddingNewLinesBeforeLineComments, requireTrailingComma*/
@@ -4750,20 +4813,27 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
         function addNew() {
           $scope.model[$scope.options.key] = $scope.model[$scope.options.key] || [];
-          // $log.log('Repeat section');
-          // $log.log($scope.model);
+          $log.log('Repeat section');
+          // $log.log($scope);
+          // $log.log($scope.to.createModelBluePrint(null,[{}]));
           var repeatsection = $scope.model[$scope.options.key];
           // $log.log('Repeat section Val');
           // $log.log(repeatsection);
           var lastSection = repeatsection[repeatsection.length - 1];
-          var newsection = {};
+          // $log.log('Model blueprint');
+          // $log.log($scope.to.createModelBluePrint(null,[{}]));
+          var currentModel = $scope.to.createModelBluePrint(null,[{}])
+          var revisedModel = angular.copy(currentModel);
+          var newsection = revisedModel[0];
+          delete newsection['schemaQuestion']
           // if (lastSection) {
           //   newsection = angular.copy(lastSection);
           // }
         //   newsection.obs1_a894b1ccn1350n11dfna1f1n0026b9348838 = {
         //       value: 'a893516a-1350-11df-a1f1-0026b9348838'
         //   };
-
+        // $log.log('New Section blueprint');
+        // $log.log($scope.originalModel);
           repeatsection.push(newsection);
         }
       }
