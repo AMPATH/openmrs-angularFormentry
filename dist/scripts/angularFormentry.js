@@ -18,7 +18,8 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
           'ui.bootstrap.datetimepicker',
           'ui.select',
           'ngSanitize',
-          'angularMoment'
+          'angularMoment',
+          'kendo.directives'
         ])
 
         .run(function(formlyConfig, formlyValidationMessages, formlyApiCheck) {
@@ -50,7 +51,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
       formlyConfig.setWrapper({
           name: 'validation',
-          types: ['input', 'customInput','datepicker', 'select', 'section', 'multiCheckbox', 'select-concept-answers','ui-select-extended'],
+          types: ['input', 'customInput','datepicker', 'select', 'section', 'multiCheckbox', 'select-concept-answers'],
           templateUrl: 'error-messages.html'
         });
     });
@@ -809,7 +810,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 
             return fields;
         }
-    
+
         //Add form information to Model
         function __addFormInfoToModel(schema, model) {
             model.form_info = {
@@ -833,7 +834,14 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                 var handlerMethod;
                 var modelType = question.type;
 
-                if (question.type === 'obs') {
+                if (question.type === undefined)
+                {
+                  //Apperently during tests there is a function that is being
+                  // added to the list of questions in a section.
+                  // This will also nsute that questions without type are skipped
+                  $log.error('question Missing Question Type:', question);
+                  console.log('question Missing Question Type:', question);
+                } else if (question.type === 'obs') {
                     handlerMethod = OpenmrsFieldHandler.getFieldHandler('obsFieldHandler');
                     // $log.debug('about to create: ', question);
                     var field = handlerMethod(question, model, questionMap);
@@ -924,7 +932,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 
                         HistoricalFieldHelperService.
                             handleGetDisplayValueFunctionForGroupsProperty(obsField, question);
-                        
+
                         //convert to array
                         var updateRepeatModel = [];
                         updateRepeatModel.push(groupModel);
@@ -1382,6 +1390,10 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                     type: 'text',
                     label: _question.label
                 }
+                // ,
+                // validation: {
+                //   show: true
+                // }
             };
 
             $log.debug('debug key field ...', field);
@@ -1500,7 +1512,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                 };
 
                 if (_question.questionOptions.rendering === 'multiCheckbox') {
-                    obsField['type'] = 'ui-select-multiple';
+                    obsField['type'] = 'kendo-select-multiple';
                 } else if (_question.questionOptions.rendering === 'select') {
                     obsField['type'] = 'ui-select-single';
                 } else {
@@ -2461,6 +2473,9 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
                     i = i + 1;
                 });
                 console.log('isRequired', isRequired);
+                // if(scope.to.required === undefined){
+                //   scope.to.required = isRequired;
+                // }
                 return isRequired;
             };
 
@@ -2579,7 +2594,9 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
                             scope.options.key.split('.')[0]);
                     }
                 }
-
+                // if(scope.to !== undefined){
+                //   scope.to.disabled = isDisabled;
+                // }
                 return isDisabled;
             };
         }
@@ -4711,6 +4728,17 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
         controller: function($scope, $log) {
           var vm = this;
+          $scope.to.required = $scope.options.expressionProperties['templateOptions.required']
+          $scope.to.disabled = $scope.options.expressionProperties['templateOptions.disabled']
+
+          // $scope.isRequired = function() {
+          //   return $scope.to.required || $scope.options.expressionProperties['templateOptions.required']
+          // };
+          //
+          // $scope.isDisabled = function() {
+          //   return $scope.to.disabled || $scope.options.expressionProperties['templateOptions.disabled']
+          // };
+
           $scope.itemSource = [];
           $scope.refreshItemSource = refreshItemSource;
           $scope.evaluateFunction = evaluateFunction;
@@ -4824,9 +4852,10 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
     // Configure custom types
     formlyConfig.setType({
       name: 'ui-select-single',
+      // extends:"select",
       wrapper: ['bootstrapLabel', 'bootstrapHasError', 'validation'],
-      template: '<ui-select ng-model="model[options.key]" theme="bootstrap" ' +
-      'ng-required="{{to.required}}" ng-disabled="{{to.disabled}}" ' +
+      template: '<div><ui-select ng-model="model[options.key]" theme="bootstrap" ' +
+      'ng-required="to.required" ng-disabled="to.disabled" ' +
       'reset-search-input="false"> ' +
       '<ui-select-match placeholder="{{to.placeholder}}" data-allow-clear="true"> ' +
       '{{$select.selected[to.labelProp || \'name\']}} </ui-select-match> ' +
@@ -4834,22 +4863,38 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       'repeat="option[to.valueProp || \'value\'] ' +
       'as option in to.options | filter: $select.search"> ' +
       '<div ng-bind-html="option[to.labelProp || \'name\'] | highlight: $select.search"> ' +
-      '</div> </ui-select-choices> </ui-select>'
+      '</div> </ui-select-choices> </ui-select></div>',
+        controller: function($scope, $log, $timeout) {
+          // $scope.to.required = $scope.options.expressionProperties['templateOptions.required']
+          // $scope.to.disabled = $scope.options.expressionProperties['templateOptions.disabled']
+          // $scope.isRequired = function() {
+          //   return $scope.to.required || $scope.options.expressionProperties['templateOptions.required']
+          // };
+          //
+          // // $scope.isDisabled = false;
+          // // $timeout(function () {
+          // //   $scope.isDisabled = true;
+          // // }, 10000);
+          // $scope.isDisabled = function() {
+          //   return $scope.to.disabled || $scope.options.expressionProperties['templateOptions.disabled']
+          // };
+        }
     });
 
     formlyConfig.setType({
       name: 'ui-select-multiple',
+      // extends:"select",
       wrapper: ['bootstrapLabel', 'bootstrapHasError', 'validation'],
       template: '<ui-select multiple ng-model="model[options.key]" theme="bootstrap" ' +
-      'ng-required="{{to.required}}" ng-disabled="{{to.disabled}}" ' +
-      'reset-search-input="false"> ' +
-      '<ui-select-match placeholder="{{to.placeholder}}"> ' +
-      '{{$item[to.labelProp || \'name\']}} </ui-select-match> ' +
-      '<ui-select-choices group-by="to.groupBy" ' +
-      'repeat="option[to.valueProp || \'value\'] ' +
-      'as option in to.options | filter: $select.search"> ' +
-      '<div ng-bind-html="option[to.labelProp || \'name\'] | highlight: $select.search"> ' +
-      '</div> </ui-select-choices> </ui-select>'
+     'ui-select-required="{{to.required}}" ng-disabled="{{to.disabled}}" ' +
+     'reset-search-input="false"> ' +
+     '<ui-select-match placeholder="{{to.placeholder}}"> ' +
+     '{{$item[to.labelProp || \'name\']}} </ui-select-match> ' +
+     '<ui-select-choices group-by="to.groupBy" ' +
+     'repeat="option[to.valueProp || \'value\'] ' +
+     'as option in to.options | filter: $select.search"> ' +
+     '<div ng-bind-html="option[to.labelProp || \'name\'] | highlight: $select.search"> ' +
+     '</div> </ui-select-choices> </ui-select>'
     });
   });
 
@@ -5187,6 +5232,58 @@ jshint -W106, -W098, -W109, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
     });
 
 })();
+/*
+jshint -W106, -W098, -W109, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W069, -W026
+*/
+/*
+jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLinesBeforeLineComments, requireTrailingComma
+*/
+(function() {
+
+  'use strict';
+
+  var mod =
+        angular
+            .module('openmrs.angularFormentry');
+
+  mod.run(function(formlyConfig) {
+    // Configure custom types
+    formlyConfig.setType({
+      name: 'kendo-select-multiple',
+      // extends:"select",
+      wrapper: ['bootstrapLabel', 'bootstrapHasError', 'validation'],
+      template:'<div> ' +
+        '<select multiple="multiple"  kendo-multi-select k-options="selectOptions" ' +
+        'ng-model="$scope.model[$scope.options.key]" ></select> ' +
+        '</div> ',
+
+        controller: function($scope, $log, $timeout) {
+          var x = $scope.model[$scope.options.key.split('.')[0]]
+          //can be used when using getterSetter provided by model options     
+          $scope.selectModel = function(val){
+            if(angular.isDefined(val)) {
+              x.value = val;
+            } else {
+              return x.value;
+            }
+          };//$scope.model[$scope.options.key];
+
+
+          $scope.selectOptions = {
+           dataTextField: 'name',
+           dataValueField: 'value',
+           valuePrimitive:true,
+           dataSource: $scope.to.options
+       };
+    }
+    });
+
+  })
+
+
+
+})();
+
 /*
 jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069
 */
