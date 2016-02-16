@@ -67,8 +67,9 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
           }
 
           function getSelectedObject() {
-            var selectedValue = typeof $scope.model[$scope.options.key] === 'function' ?
-            $scope.model[$scope.options.key]() : $scope.model[$scope.options.key];
+            var selectedValue = $scope.model[getKey($scope.options.key)]? 
+            (typeof $scope.model[getKey($scope.options.key)].value === 'function' ?
+            $scope.model[getKey($scope.options.key)].value() : $scope.model[getKey($scope.options.key)].value) : undefined;
             if (selectedValue !== undefined && selectedValue !== null && selectedValue !== '')
              $scope.to.getSelectedObjectFunction(selectedValue, function(object) {
                $scope.itemSource = [object];
@@ -102,6 +103,14 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             if (str === null || str.length === 0 || str === ' ') return true;
             return false;
 
+          }
+          
+          function getKey(key) {
+              if(key === null || key === undefined) {
+                  return key;
+              }
+              
+              return key.split('.')[0];
           }
 
           function validateTemplateOptions() {
