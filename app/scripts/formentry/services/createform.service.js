@@ -10,9 +10,11 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
         .module('openmrs.angularFormentry')
         .factory('CreateFormService', CreateFormService);
 
-    CreateFormService.$inject = ['$log', 'OpenmrsFieldHandlerService', 'HistoricalFieldHelperService'];
+    CreateFormService.$inject = ['$log', 'OpenmrsFieldHandlerService',
+    'HistoricalFieldHelperService', 'schemaValidatorService'];
 
-    function CreateFormService($log, OpenmrsFieldHandler, HistoricalFieldHelperService) {
+    function CreateFormService($log, OpenmrsFieldHandler,
+      HistoricalFieldHelperService, schemaValidatorService) {
         var service = {
             createForm: createForm
         };
@@ -21,13 +23,19 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 
         function createForm(schema, model) {
             var form;
+            var _errors = schemaValidatorService.validateSchema(schema);
+
+            if (_errors.pass === false) {
+              $log.error('Your form Schema has errors');
+            }
             form = _createFormlyForm(schema);
             $log.debug('inspect compiled', form);
             var formlyForm = _createModel(form, model);
             form.questionMap.model = model;
             return {
                 formlyForm: formlyForm,
-                questionMap: form.questionMap
+                questionMap: form.questionMap,
+                error:_errors.errors
             };
         }
 

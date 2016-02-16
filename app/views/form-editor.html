@@ -1,9 +1,15 @@
 <div class="panel panel-info" style="padding:4px;">
   <link href="bower_components/bootstrap/dist/css/bootstrap.css" rel="stylesheet">
   <link rel="stylesheet" href="bower_components/angular-bootstrap/ui-bootstrap-csp.css">
+  <div class="panel panel-danger" data-ng-show="vm.errors.length>0">
+    <div><h3 style="margin-left:4px; margin-top: 0px" class="text-danger">LIST OF FIELDS WITH ERRORS</h3></div>
+    <div style="margin-left:4px; margin-top: 0px" data-ng-repeat="e in vm.errors" data-ng-show="vm.errors.length>0">
+      {{e.id}} ({{e.error}})
+    </div>
+  </div>
   <form name="vm.form" novalidate>
     <div class="breadcrumb">
-      <h3>TEST DEMO FORM</h3>
+      <h3>FORM EDITOR</h3>
     </div>
        <tabset>
          <tab ng-repeat="tab in vm.tabs"
@@ -15,7 +21,7 @@
            </formly-form>
          </tab>
        </tabset>
-       <button type="submit" class="btn btn-primary submit-button" ng-click="vm.onSubmit()">{{vm.submitLabel}}</button>
+       <button type="submit" class="btn btn-primary submit-button" ng-click="vm.onSubmit()">Save</button>
        <button type="button" class="btn btn-default" ng-click="vm.resetAllForms()">Cancel</button>
 
      </form>
@@ -25,9 +31,9 @@
   <div ui-ace="{mode:'javascript'}" ng-model="schema"></div>
   <button type="button" class="btn btn-sm btn-danger" ng-click="renderForm()">Render Schema</button>
 
-  <hr>
+  <!-- <hr>
   <div ui-ace="{mode:'json'}" ng-model="payload"></div>
-  <button type="button" class="btn btn-sm btn-danger" ng-click="renderForm()">Update Payload</button>
+  <button type="button" class="btn btn-sm btn-danger" ng-click="renderForm()">Update Payload</button> -->
 
 
 
