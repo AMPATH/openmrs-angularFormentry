@@ -34,6 +34,17 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
         controller: function($scope, $log) {
           var vm = this;
+          $scope.to.required = $scope.options.expressionProperties['templateOptions.required']
+          $scope.to.disabled = $scope.options.expressionProperties['templateOptions.disabled']
+
+          // $scope.isRequired = function() {
+          //   return $scope.to.required || $scope.options.expressionProperties['templateOptions.required']
+          // };
+          //
+          // $scope.isDisabled = function() {
+          //   return $scope.to.disabled || $scope.options.expressionProperties['templateOptions.disabled']
+          // };
+
           $scope.itemSource = [];
           $scope.refreshItemSource = refreshItemSource;
           $scope.evaluateFunction = evaluateFunction;

@@ -161,6 +161,7 @@
           "questions": [
             {
               "label": "Civil Status:",
+              "required": "true",
               "questionOptions":{
                 "rendering":"select",
                 "concept": "a899a9f2-1350-11df-a1f1-0026b9348838",

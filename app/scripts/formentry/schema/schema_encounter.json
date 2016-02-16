@@ -31,6 +31,9 @@
               "questionOptions": {
                 "rendering": "ui-select-extended"
               },
+              "disable": {
+                "disableWhenExpression": "q1 === 'disq6'"
+              },
               "validators": []
             },
             {
@@ -176,6 +179,7 @@
               "label": "Family Planning",
               "id": "onFamilyPlanning",
               "type": "obs",
+              "required": "true",
               "historicalExpression":"'a899b35c-1350-11df-a1f1-0026b9348838'",
               "questionOptions": {
                 "rendering": "select",
@@ -191,6 +195,9 @@
                   }
                 ]
               },
+              "disable": {
+                "disableWhenExpression": "q1 === 'disfp'"
+              },
               "validators": []
             },
             {
@@ -205,6 +212,7 @@
                   "label": "Family Planning Method:",
                   "id": "q12e",
                   "type": "obs",
+                  "required":"true",
                   "questionOptions": {
                     "rendering": "select",
                     "concept": "a894b1cc-1350-11df-a1f1-0026b9348838",
@@ -253,12 +261,16 @@
                   }
                 }
               ],
+              "disable": {
+                "disableWhenExpression": "q1 === 'disfp'"
+              },
               "validators": []
             },
             {
               "label": "Family Planning Method:",
               "id": "q12e",
               "type": "obs",
+              "required":"true",
               "questionOptions": {
                 "rendering": "multiCheckbox",
                 "concept": "a894b1cc-1350-11df-a1f1-0026b9348838",
@@ -304,6 +316,9 @@
                     "label": "Other"
                   }
                 ]
+              },
+              "disable": {
+                "disableWhenExpression": "q1 === 'disfp'"
               },
               "validators": [
                 {

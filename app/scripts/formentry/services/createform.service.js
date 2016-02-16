@@ -110,7 +110,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 
             return fields;
         }
-    
+
         //Add form information to Model
         function __addFormInfoToModel(schema, model) {
             model.form_info = {
@@ -134,7 +134,14 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                 var handlerMethod;
                 var modelType = question.type;
 
-                if (question.type === 'obs') {
+                if (question.type === undefined)
+                {
+                  //Apperently during tests there is a function that is being
+                  // added to the list of questions in a section.
+                  // This will also nsute that questions without type are skipped
+                  $log.error('question Missing Question Type:', question);
+                  console.log('question Missing Question Type:', question);
+                } else if (question.type === 'obs') {
                     handlerMethod = OpenmrsFieldHandler.getFieldHandler('obsFieldHandler');
                     // $log.debug('about to create: ', question);
                     var field = handlerMethod(question, model, questionMap);
@@ -225,7 +232,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 
                         HistoricalFieldHelperService.
                             handleGetDisplayValueFunctionForGroupsProperty(obsField, question);
-                        
+
                         //convert to array
                         var updateRepeatModel = [];
                         updateRepeatModel.push(groupModel);

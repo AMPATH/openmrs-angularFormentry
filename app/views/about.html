@@ -1,7 +1,7 @@
 <div class="panel panel-info" style="padding:4px;">
   <link href="bower_components/bootstrap/dist/css/bootstrap.css" rel="stylesheet">
   <link rel="stylesheet" href="bower_components/angular-bootstrap/ui-bootstrap-csp.css">
-  
+
   <div id="error-summary-container" class="panel panel-danger" data-ng-show="(vm.form.$valid === false && vm.hasClickedSubmit)">
     <div><h3 style="margin-left:4px; margin-top: 0px" class="text-danger">.</h3></div>
     <div style="margin-left:4px; margin-top: 0px" data-ng-repeat="tab in vm.tabs" data-ng-show="(vm.form.$valid === false && vm.hasClickedSubmit)">
@@ -9,7 +9,7 @@
       <formly-error-summary form="vm.form" fields="tab.form.fields" page-fields="tab.currentFields" tab-title="tab.title"></formly-error-summary>
     </div>
   </div>
-  
+
   <form name="vm.form" novalidate>
     <div class="breadcrumb">
       <h4>TEST CUSTOM FORM</h4>
