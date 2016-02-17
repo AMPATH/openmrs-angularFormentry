@@ -4454,7 +4454,8 @@ jshint -W003,-W109, -W106, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W11
           successCallback(response);
         })
         .catch(function(error) {
-          console.error(error);
+          console.error('Error gettong location by uuid', error);
+          failedCallback(error);
         });
     }
 
