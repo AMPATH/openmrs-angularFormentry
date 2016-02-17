@@ -41,7 +41,7 @@ jshint -W003,-W109, -W106, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W11
     }
 
     function getResourceFromEtl() {
-      return $resource(FormentryConfig.getOpenmrsBaseUrl().trim() +
+      return $resource(FormentryConfig.getEtlBaseUrl().trim() +
       '/custom_data/location/uuid/:uuid',
         { uuid: '@uuid' },
         { query: { method: 'GET', isArray: false } });
