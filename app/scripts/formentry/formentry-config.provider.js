@@ -18,7 +18,8 @@ jscs:disable requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 
         var configObject = {
             fieldHandlers: {},
-            openmrsBaseUrl: ''
+            openmrsBaseUrl: '',
+            etlBaseUrl: ''
         };
 
         var service = {
@@ -30,7 +31,11 @@ jscs:disable requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 
             //Openmrs REST url configurations
             setOpenmrsBaseUrl: setOpenmrsBaseUrl,
-            getOpenmrsBaseUrl: getOpenmrsBaseUrl
+            getOpenmrsBaseUrl: getOpenmrsBaseUrl,
+            
+            //Openmrs REST url configurations
+            setEtlBaseUrl: setEtlBaseUrl,
+            getEtlBaseUrl: getEtlBaseUrl
         };
 
         return service;
@@ -64,6 +69,19 @@ jscs:disable requirePaddingNewLinesBeforeLineComments, requireTrailingComma
             return configObject.openmrsBaseUrl();
           } else {
             return configObject.openmrsBaseUrl;
+          }            
+        }
+        
+        function setEtlBaseUrl(value) {
+            $log.debug('Setting etl url to ' + value);
+            configObject.etlBaseUrl = value;
+        }
+
+        function getEtlBaseUrl() {
+          if (typeof configObject.etlBaseUrl === 'function') {
+            return configObject.etlBaseUrl();
+          } else {
+            return configObject.etlBaseUrl;
           }            
         }
     }
