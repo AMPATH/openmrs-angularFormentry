@@ -37,8 +37,8 @@ angular
         })
         .state('recursive-test', {
           url: '/recursive-test',
-          templateUrl: 'views/recursive-test.html',
-          controller: 'RecursiveTestCtrl'
+          templateUrl: 'views/form-editor.html',
+          controller: 'EditorCtrl'
         });
 
   });
