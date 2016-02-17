@@ -4,7 +4,11 @@
   <div class="panel panel-danger" data-ng-show="vm.errors.length>0">
     <div><h3 style="margin-left:4px; margin-top: 0px" class="text-danger">LIST OF FIELDS WITH ERRORS</h3></div>
     <div style="margin-left:4px; margin-top: 0px" data-ng-repeat="e in vm.errors" data-ng-show="vm.errors.length>0">
-      {{e.id}} ({{e.error}})
+      <span class="text-primary"><i class="glyphicon glyphicon-zoom-in"></i> {{e.id}} </span>
+        <br/>
+        <span >
+          {{e.error}}
+        </span>
     </div>
   </div>
   <form name="vm.form" novalidate>
