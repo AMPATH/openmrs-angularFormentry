@@ -1517,7 +1517,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                 obsField['templateOptions']['valueMember'] = 'concept';
                 obsField['templateOptions']['questionConceptUuid'] = _question.questionOptions.concept;
                 obsField['templateOptions']['type'] = _question.questionOptions.rendering;
-                obsField['templateOptions']['fetchOptionsFunction'] = SearchDataService.getDrugConceptByUuid;
+                obsField['templateOptions']['fetchOptionsFunction'] = SearchDataService.getConceptAnswers;
                 if (typeof obsField['templateOptions']['setFieldValue'] !== 'function') {
                     obsField['templateOptions']['setFieldValue'] =
                     HistoricalFieldHelperService.fillPrimitiveValue;
