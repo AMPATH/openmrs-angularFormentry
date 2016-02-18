@@ -149,8 +149,10 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
         function createFieldKey(_question, _id) {
             var key;
             var fKey;
-            var id = _id + 1;
+            var id;
             if (_question.type === 'obs') {
+              id = _id + 1;
+              obsId = id;
                 fKey = _question.questionOptions.concept;
                 key = 'obs' + id + '_' + fKey.replace(/-/gi, 'n'); // $$ Inserts a "$".
             } else if (_question.type === 'personAttribute') {
@@ -460,7 +462,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                 if (_question.questionOptions.rendering === 'multiCheckbox') {
                     obsField['type'] = 'kendo-select-multiple';
                 } else if (_question.questionOptions.rendering === 'select') {
-                    obsField['type'] = 'ui-select-single';
+                    obsField['type'] = 'kendo-select';
                 } else {
                     obsField['type'] = 'radio';
                 }
