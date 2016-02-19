@@ -103,7 +103,7 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
                     console.log('date Value ++', value);
                     if (value !== undefined && value !== null && value !== '') {
                         console.log('date Value ++', value);
-                        dateValue = Date.parse(value, 'd-MMM-yyyy').clearTime();
+                        dateValue = Date.parse(value, 'd-MMM-yyyy');
                     }
                     if (dateValue !== undefined || dateValue !== null || value !== '') {
                         return true;

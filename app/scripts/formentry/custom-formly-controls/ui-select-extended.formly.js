@@ -23,7 +23,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
                   '{{evaluateFunction($select.selected[to.labelProp || \'name\'])}} ' +
                   '</ui-select-match> ' +
                   '<ui-select-choices refresh="refreshItemSource($select.search)" ' +
-                  'group-by="to.groupBy" ' +
+                  'group-by="to.groupBy" refresh-delay="1000"' +
                   'repeat="(evaluateFunction(option[to.valueProp || \'value\'])) ' +
                   'as option in itemSource" > ' +
                   '<div ng-bind-html="evaluateFunction(option[to.labelProp || \'name\']) | ' +

@@ -123,6 +123,9 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
       var format = format || 'yyyy-MM-dd HH:mm:ss';
       var timezone = timezone || getLocalTimezone();
+      
+      console.log('timezone', timezone);
+       console.log('date', date);
 
       return $filter('date')(date, format, timezone);
     }

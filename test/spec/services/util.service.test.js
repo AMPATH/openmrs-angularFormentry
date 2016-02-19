@@ -44,10 +44,10 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
                 var d = 'Thu Sep 09 2004 11:59:59 GMT+0300 (EAT)';
                 expect(formentryUtilService.formatDate(d,null,'+0300')).to.equal('2004-09-09 11:59:59');
                 
-                expect(formentryUtilService.formatDate(d,'yyyy/MM/dd'))
+                expect(formentryUtilService.formatDate(d,'yyyy/MM/dd', '+0300'))
                 .to.equal('2004/09/09');
                 
-                expect(formentryUtilService.formatDate(d,'MMM d, yyyy'))
+                expect(formentryUtilService.formatDate(d,'MMM d, yyyy', '+0300'))
                 .to.equal('Sep 9, 2004');
             });
         });
