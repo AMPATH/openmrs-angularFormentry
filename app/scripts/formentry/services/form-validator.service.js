@@ -321,7 +321,7 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
                 else {
                     fkey = CurrentLoadedFormService.getFieldKeyById(params.field, scope.fields);
                 }
-                
+
                 fkey = fkey.split('.')[0];
 
                 _.each(params.value, function (val) {
@@ -528,6 +528,10 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
                     toReplace = '"' + toReplace + '"';
                 }
 
+                if (Object.prototype.toString.call(keyValuObject[key]) === '[object Date]') {
+                    toReplace = '"' + toReplace.toISOString() + '"';
+                }
+
                 if (Array.isArray(keyValuObject[key])) {
                     toReplace = convertArrayToString(toReplace);
                 }
@@ -553,6 +557,11 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
             if (Array.isArray(toReplace)) {
                 toReplace = convertArrayToString(toReplace);
             }
+
+            if (Object.prototype.toString.call(toReplace) === '[object Date]') {
+                toReplace = '"' + toReplace.toISOString() + '"';
+            }
+
 
             var beforeReplaced = replaced;
             replaced = replaced.replace('myValue', toReplace);
