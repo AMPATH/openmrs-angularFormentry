@@ -1420,6 +1420,9 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                 templateOptions: {
                     type: 'text',
                     label: _question.label
+                },
+                modelOptions: {
+                    debounce:1000
                 }
                 // ,
                 // validation: {
@@ -2030,7 +2033,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
                   });
                 }
               }
-              
+
               if (found === false) {
                 sectionFields.push(_sectionFields);
               }
@@ -2076,6 +2079,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       if (field.schemaQuestion.questionOptions.rendering === 'date') {
         if (_.isDate(value)) {
           value = _parseDate(field.value);
+          initialValue = _parseDate(field.initialValue);
         }
       }
 
@@ -2129,6 +2133,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
         }
       } else if (_.isArray(field.value)) {
         var initialValue = field.initialValue;
+        var initialUuid = field.initialUuid;
         var value = field.value;
         if (initialValue === undefined && (!_.isNull(value) &&
             value !== '' && !_.isUndefined(value))) {
@@ -2153,11 +2158,13 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
           var obsToVoid = [];
           var i = 0;
           _.each(initialValue, function(val) {
-            if (!(val in value)) {
+            if (!(_.contains(value, val))) {
+              $log.debug('Check box values to void', val);
               obs = {
                 concept: field.concept,
                 value: val,
-                uuid: initialUuid[i]
+                uuid: initialUuid[i],
+                voided:true
               };
               obsToVoid.push(val);
               obsRestPayload.push(obs);
@@ -2435,7 +2442,7 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
                     console.log('date Value ++', value);
                     if (value !== undefined && value !== null && value !== '') {
                         console.log('date Value ++', value);
-                        dateValue = Date.parse(value, 'd-MMM-yyyy').clearTime();
+                        dateValue = Date.parse(value, 'd-MMM-yyyy');
                     }
                     if (dateValue !== undefined || dateValue !== null || value !== '') {
                         return true;
@@ -2653,7 +2660,7 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
                 else {
                     fkey = CurrentLoadedFormService.getFieldKeyById(params.field, scope.fields);
                 }
-                
+
                 fkey = fkey.split('.')[0];
 
                 _.each(params.value, function (val) {
@@ -2860,6 +2867,10 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
                     toReplace = '"' + toReplace + '"';
                 }
 
+                if (Object.prototype.toString.call(keyValuObject[key]) === '[object Date]') {
+                    toReplace = '"' + toReplace.toISOString() + '"';
+                }
+
                 if (Array.isArray(keyValuObject[key])) {
                     toReplace = convertArrayToString(toReplace);
                 }
@@ -2885,6 +2896,11 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
             if (Array.isArray(toReplace)) {
                 toReplace = convertArrayToString(toReplace);
             }
+
+            if (Object.prototype.toString.call(toReplace) === '[object Date]') {
+                toReplace = '"' + toReplace.toISOString() + '"';
+            }
+
 
             var beforeReplaced = replaced;
             replaced = replaced.replace('myValue', toReplace);
@@ -3875,6 +3891,9 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
       var format = format || 'yyyy-MM-dd HH:mm:ss';
       var timezone = timezone || getLocalTimezone();
+      
+      console.log('timezone', timezone);
+       console.log('date', date);
 
       return $filter('date')(date, format, timezone);
     }
@@ -5130,7 +5149,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
                   '{{evaluateFunction($select.selected[to.labelProp || \'name\'])}} ' +
                   '</ui-select-match> ' +
                   '<ui-select-choices refresh="refreshItemSource($select.search)" ' +
-                  'group-by="to.groupBy" ' +
+                  'group-by="to.groupBy" refresh-delay="1000"' +
                   'repeat="(evaluateFunction(option[to.valueProp || \'value\'])) ' +
                   'as option in itemSource" > ' +
                   '<div ng-bind-html="evaluateFunction(option[to.labelProp || \'name\']) | ' +
@@ -5855,7 +5874,8 @@ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069
                     } else if (error === 'min') {
                         msg = 'The minimum value allowed is ' + field.templateOptions.min;
                     } else {
-                        msg = field.validation.messages[error]();
+                        msg = typeof field.validation.messages[error] === 'function'? 
+                        field.validation.messages[error](): 'Unknown error';
                     }
 
                     return msg;
