@@ -1699,7 +1699,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
           }
         }
       }
-      $log.error('Repeating model', repeatingFieldsModel);
+      // $log.error('Repeating model', repeatingFieldsModel);
       return repeatingFieldsModel;
     }
 
@@ -1921,7 +1921,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
               //get if concept is available in the group members
               for(var gm=0; gm<thisObs.groupMembers.length; gm++){
                 if(_.contains(concepLists,thisObs.groupMembers[gm].concept.uuid)) {
-                  $log.error('Repeating Values ++  ', thisObs.groupMembers);
+                  // $log.error('Repeating Values ++  ', thisObs.groupMembers);
                   if(!_.contains(fieldRestObs, thisObs)) {
                     fieldRestObs.push(thisObs) ;
                   }
@@ -1993,8 +1993,8 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
           }
 
           if (sectionFields.length === 0) {
-            $log.debug('Repeating section', sectionKeys);
-            $log.debug('Repeating fields', sectionFields);
+            // $log.debug('Repeating section', sectionKeys);
+            // $log.debug('Repeating fields', sectionFields);
             //if the current model has no values
             //take the original model but set the value property to null
             _.each(originalModel, function(_sectionFields) {
@@ -2071,21 +2071,20 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
     }
 
     function _setValue(field) {
-      $log.debug('Field b4 payload', field);
-      $log.debug('Field b4 payload  value', field.value);
       var obs = {};
       var initialValue = field.initialValue;
       var value = field.value;
       if (field.schemaQuestion.questionOptions.rendering === 'date') {
         if (_.isDate(value)) {
           value = _parseDate(field.value);
+        }
+        if (_.isDate(initialValue)) {
           initialValue = _parseDate(field.initialValue);
         }
       }
 
       if (_.isUndefined(initialValue) && (!_.isNull(value) &&
           value !== '' && !_.isUndefined(value))) {
-            $log.debug('set value ++1', value);
         obs = {
           concept: field.concept,
           value: value
@@ -2093,7 +2092,6 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
       } else if (initialValue !== value && (!_.isNull(value) &&
           value !== '' && !_.isUndefined(value))) {
-            $log.debug('set value ++2', value);
         obs = {
           uuid: field.initialUuid,
           concept: field.concept,
@@ -2101,7 +2099,6 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
         };
       } else if (initialValue !== value && (!_.isNull(value) &&
           value === '' && !_.isUndefined(value) && !_.isUndefined(initialValue))) {
-            $log.debug('set value ++3', value);
         obs = {
           uuid: field.initialUuid,
           concept: field.concept,
@@ -2159,7 +2156,6 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
           var i = 0;
           _.each(initialValue, function(val) {
             if (!(_.contains(value, val))) {
-              $log.debug('Check box values to void', val);
               obs = {
                 concept: field.concept,
                 value: val,
