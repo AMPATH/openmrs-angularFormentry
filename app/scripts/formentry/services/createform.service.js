@@ -15,6 +15,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 
     function CreateFormService($log, OpenmrsFieldHandler,
       HistoricalFieldHelperService, schemaValidatorService) {
+        var gId = 0;
         var service = {
             createForm: createForm
         };
@@ -40,7 +41,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
         }
 
         function _createSectionId(seectionName) {
-            return seectionName.replace(/ /gi, '_');
+            return seectionName.replace(/ /gi, '_') ;
         }
 
         function _createFormlyForm(schema) {
@@ -207,12 +208,14 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                         fields.push(OpenmrsFieldHandler.createAnchorField(obsField.key));
                         fields.push(obsField);
                     } else if (question.questionOptions.rendering === 'repeating') {
-                        model['obsRepeating' + '_' + groupId] = [];
+                        gId = gId + 1;
+                        var repeatingId = 'obsRepeating' + gId + '_' + groupId
+                        model[repeatingId] = [];
                         groupModel = {};
                         groupModel.groupConcept = question.questionOptions.concept;
                         obsField = {
                             type: 'repeatSection',
-                            key: 'obsRepeating' + '_' + groupId,
+                            key: repeatingId,
                             data: {
                                 concept: question.questionOptions.concept
                             },
@@ -245,7 +248,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                         var updateRepeatModel = [];
                         updateRepeatModel.push(groupModel);
 
-                        model['obsRepeating' + '_' + groupId] = updateRepeatModel;
+                        model[repeatingId] = updateRepeatModel;
                         fields.push(OpenmrsFieldHandler.createAnchorField(obsField.key));
                         fields.push(obsField);
                         if (obsField.templateOptions.historicalExpression) {

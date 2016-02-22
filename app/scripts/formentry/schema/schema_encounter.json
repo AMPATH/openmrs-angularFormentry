@@ -26,7 +26,7 @@
               "type": "encounterProvider",
               "label": "Provider",
               "id": "provider",
-              "required": "true",
+              "required": "false",
               "default": "",
               "questionOptions": {
                 "rendering": "ui-select-extended"
@@ -40,7 +40,7 @@
               "type": "encounterLocation",
               "label": "Facility name (site/satellite clinic required):",
               "id": "location",
-              "required": "true",
+              "required": "false",
               "questionOptions": {
                 "rendering": "ui-select-extended"
               },
@@ -55,7 +55,7 @@
               "type":"personAttribute",
               "label":"Person Attribute Health center",
               "id":"first_person_attribute",
-              "required":"true",
+              "required":"false",
               "default":"",
               "questionOptions":{
                 "rendering":"ui-select-extended",
@@ -66,7 +66,7 @@
               "type":"obs",
               "label":"question1",
               "id":"q1",
-              "required":"true",
+              "required":"false",
               "default":"",
               "historicalExpression":"'previous test'",
               "questionOptions":{
@@ -148,7 +148,7 @@
               "type": "obs",
               "label": "question2",
               "id": "q2",
-              "required": "true",
+              "required": "false",
               "default": "",
               "questionOptions": {
                 "rendering": "date",
@@ -179,7 +179,7 @@
               "label": "Family Planning",
               "id": "onFamilyPlanning",
               "type": "obs",
-              "required": "true",
+              "required": "false",
               "historicalExpression":"'a899b35c-1350-11df-a1f1-0026b9348838'",
               "questionOptions": {
                 "rendering": "select",
@@ -212,7 +212,7 @@
                   "label": "Family Planning Method:",
                   "id": "q12e",
                   "type": "obs",
-                  "required":"true",
+                  "required":"false",
                   "questionOptions": {
                     "rendering": "select",
                     "concept": "a894b1cc-1350-11df-a1f1-0026b9348838",
@@ -270,7 +270,7 @@
               "label": "Family Planning Method:",
               "id": "q12e",
               "type": "obs",
-              "required":"true",
+              "required":"false",
               "questionOptions": {
                 "rendering": "multiCheckbox",
                 "concept": "a894b1cc-1350-11df-a1f1-0026b9348838",

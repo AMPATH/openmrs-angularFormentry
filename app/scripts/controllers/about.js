@@ -29,8 +29,8 @@
         $scope.vm.hasClickedSubmit = false;
         var schema;
         var newForm;
-        //  var testSchema = 'schema_encounter';
-        var testSchema = 'adult';
+        var testSchema = 'schema_encounter';
+        // var testSchema = 'adult';
 
         //connect to database
         configService.addJsonSchema('hostServer', 'http://localhost:8080/amrs/ws/rest/v1/');
@@ -70,6 +70,7 @@
             $scope.vm.tabs = newForm;
             $scope.vm.questionMap = formObject.questionMap;
             console.log('final question map', $scope.vm.questionMap);
+            FormEntry.updateFormWithExistingObs($scope.vm.model,restObs);
         });
 
 
@@ -118,7 +119,7 @@
                     groupMembers: null
                 },
                 {
-                    uuid: "655fb051-499f-4240-9a1d-0dff5f8b5730",
+                    uuid: "655fb051-499f-4240-9a1d-0dff5f8b5731",
                     obsDatetime: "2015-11-30T14:44:38.000+0300",
                     concept: {
                         uuid: "a894b1cc-1350-11df-a1f1-0026b9348838"
@@ -369,14 +370,14 @@
         };
 
 
-        // UtilService.getTestEncounterData('xx', function(data) {
-        //   restObs = data;
-        // },
-        //
-        // function(error) {
-        //   $log.error(error);
-        // }
-        // );
+        FormentryUtilService.getTestEncounterData('xx', function(data) {
+          restObs = data;
+        },
+
+        function(error) {
+          $log.error(error);
+        }
+        );
 
         $scope.vm.anyFieldsInError = function (fields) {
             if (fields && fields.length !== 0) {
