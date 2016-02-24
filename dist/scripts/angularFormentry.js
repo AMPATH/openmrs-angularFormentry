@@ -3115,9 +3115,11 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
         function _addPersonAttributeToField(field, existingPersonAttribute) {
             if (angular.isDefined(existingPersonAttribute) && existingPersonAttribute.length>0) {
-              field.initialValue = existingPersonAttribute[0].value.uuid;
+               field.initialValue = existingPersonAttribute[0].value.uuid;
+               field.value = existingPersonAttribute[0].value.uuid;
+               field.initialUuid = existingPersonAttribute.uuid;
             }
-
+                    
             return field;
         }
 
@@ -4843,7 +4845,7 @@ jshint -W003,-W109, -W106, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W11
 
     function getResourceFromEtl() {
       return $resource(FormentryConfig.getEtlBaseUrl().trim() +
-      '/custom_data/location/uuid/:uuid',
+      'custom_data/location/uuid/:uuid',
         { uuid: '@uuid' },
         { query: { method: 'GET', isArray: false } });
     }
