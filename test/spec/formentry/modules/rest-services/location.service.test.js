@@ -209,7 +209,7 @@
 
     it('should make an api call to the  is called with a uuid', function() {
       httpBackend.expectGET(
-        '/custom_data/location/uuid/passed-uuid').respond(mockData.getMockEtlLocations());
+        'custom_data/location/uuid/passed-uuid').respond(mockData.getMockEtlLocations());
       locationService.getLocationByUuidFromEtl('passed-uuid', function(data) {
         expect(data.result[0].uuid).to.equal('passed-uuid');
         expect(data.result[0].locationId).to.equal(1);
