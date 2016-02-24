@@ -92,7 +92,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
           field.initialUuid = o.uuid;
           field.value = new Date(o.value);
         } else if (field.schemaQuestion.questionOptions.rendering === 'multiCheckbox') {
-          if (!(_.isUndefined(o.value.uuid))) {
+          if (!(_.isEmpty(o.value) || _.isUndefined(o.value.uuid))) {
             opts.push(o.value.uuid);
             optsUuid.push(o.uuid);
           } else {
@@ -104,7 +104,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
           field.initialUuid = optsUuid;
           field.value = opts;
         } else {
-          if (!(_.isUndefined(o.value.uuid))) {
+          if (!(_.isEmpty(o.value) || _.isUndefined(o.value.uuid))) {
             field.initialValue = o.value.uuid;
             field.initialUuid = o.uuid;
             field.value = o.value.uuid;
