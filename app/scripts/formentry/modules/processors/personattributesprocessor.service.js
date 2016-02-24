@@ -103,9 +103,11 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
         function _addPersonAttributeToField(field, existingPersonAttribute) {
             if (angular.isDefined(existingPersonAttribute) && existingPersonAttribute.length>0) {
-              field.initialValue = existingPersonAttribute[0].value.uuid;
+               field.initialValue = existingPersonAttribute[0].value.uuid;
+               field.value = existingPersonAttribute[0].value.uuid;
+               field.initialUuid = existingPersonAttribute.uuid;
             }
-
+                    
             return field;
         }
 
