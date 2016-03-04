@@ -1799,7 +1799,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
     }
 
     function _addObsToSection(sectionModel, openmrsRestObj) {
-      var fieldKeys = Object.keys(sectionModel);
+      var fieldKeys =typeof sectionModel === 'object'? Object.keys(sectionModel):'';
       //geting obs data without obs groups
       var obsData = _.filter(openmrsRestObj.obs, function(obs) {
         if (_.isNull(obs.groupMembers)) {
@@ -1961,7 +1961,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
     function _generateSectionPayLoad(sectionModel, obsRestPayload) {
       var repeatingFieldsModel = _getRepeatingFieldsModel();
-      var fieldKeys = Object.keys(sectionModel);
+      var fieldKeys = typeof sectionModel === 'object'? Object.keys(sectionModel):[];
       // $log.debug('fieldKeys', fieldKeys);
       _.each(fieldKeys, function(fieldKey) {
         if (fieldKey.startsWith('obsGroup')) {
@@ -3125,11 +3125,11 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
 
         function _addPersonAttributesToSection(restDataSet, sectionModel) {
-            var fieldKeys = Object.keys(sectionModel);
+            var fieldKeys = typeof sectionModel === 'object'? Object.keys(sectionModel):'';
             _.each(fieldKeys, function (fieldKey) {
                 if (fieldKey.startsWith('personAttribute')) {
                     var field = sectionModel[fieldKey];
-                    var existingPersonAttribute = getPersonAttributeValue(restDataSet, fieldKey)
+                    var existingPersonAttribute = getPersonAttributeValue(restDataSet, fieldKey);
                     _addPersonAttributeToField(field, existingPersonAttribute);
                 }
             });
