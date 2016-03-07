@@ -49,6 +49,9 @@ module.exports = function(config) {
       'bower_components/moment/moment.js',
       'bower_components/angular-moment/angular-moment.js',
       'bower_components/kendo-ui/js/kendo.ui.core.min.js',
+      'bower_components/underscore/underscore.js',
+      'bower_components/underscore.string/dist/underscore.string.js',
+      'bower_components/openmrs-ngresource/dist/scripts/openmrsNgresource.js',
       'bower_components/angular-mocks/angular-mocks.js',
       'bower_components/chai/chai.js',
       // endbower
