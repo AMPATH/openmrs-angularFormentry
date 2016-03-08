@@ -1,5 +1,5 @@
 {
-  "name": "AMPATH Triage Encounter Form 1.0.0",
+  "name": "triage",
   "uuid": "xxxx",
   "processor": "EncounterFormProcessor",
   "pages": [

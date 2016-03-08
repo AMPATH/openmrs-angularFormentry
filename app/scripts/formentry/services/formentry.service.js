@@ -3,7 +3,7 @@ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106, -W026
 jscs:disable disallowMixedSpacesAndTabs, requireDotNotation 
 jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 */
-(function () {
+(function() {
     'use strict';
 
     angular
@@ -11,11 +11,13 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
         .factory('FormEntry', FormEntry);
 
     FormEntry.$inject = ['CreateFormService', '$log', 'FormentryConfig',
-        'FormProcessorService', 'CurrentLoadedFormService', 'moment'
+        'FormProcessorService', 'CurrentLoadedFormService', 'moment',
+        'FormSchemaCompilerService'
     ];
 
     function FormEntry(createFormService, $log, FormentryConfig,
-        formProcessorService, CurrentLoadedFormService, moment) {
+        formProcessorService, CurrentLoadedFormService, moment,
+        FormSchemaCompilerService) {
 
         var service = {
             createForm: createForm,
@@ -23,7 +25,8 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
             getFormPayload: getFormPayload,
             updateFormWithExistingObs: updateFormWithExistingObs,
             getPersonAttributesPayload: getPersonAttributesPayload,
-            updateExistingPersonAttributeToForm:updateExistingPersonAttributeToForm
+            updateExistingPersonAttributeToForm: updateExistingPersonAttributeToForm,
+            compileFormSchema: compileFormSchema
         };
 
         return service;
@@ -57,9 +60,14 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
             formProcessorService.addExistingDataSetToObsForm(restObs, model);
             formProcessorService.addExistingDataSetToEncounterForm(restObs, model);
         }
-        
-        function updateExistingPersonAttributeToForm(restDataset,model){
-              return formProcessorService.addExistingPersonAttributesToForm(restDataset,model);
+
+        function updateExistingPersonAttributeToForm(restDataset, model) {
+            return formProcessorService.addExistingPersonAttributesToForm(restDataset, model);
+        }
+
+        function compileFormSchema(formSchema, referencedForms) {
+            FormSchemaCompilerService.
+                fillAllPlaceholderObjectsInForm(formSchema, referencedForms);
         }
     }
 })();

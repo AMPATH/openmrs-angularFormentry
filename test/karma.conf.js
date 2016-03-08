@@ -54,13 +54,15 @@ module.exports = function(config) {
       'bower_components/openmrs-ngresource/dist/scripts/openmrsNgresource.js',
       'bower_components/angular-mocks/angular-mocks.js',
       'bower_components/chai/chai.js',
+      'bower_components/karma-read-json/karma-read-json.js',
       // endbower
       'app/scripts/**/*.module.js',
       'app/scripts/**/*.js',
       'test/mock/**/*.module.mock.js',
       'test/mock/**/*.js',
-      'test/spec/**/*.js'
-    //'test/spec/formentry/services/encounter-processor.service.test.js'
+      'test/spec/**/*.js',
+        // fixtures
+        {pattern: 'test/mock/**/*.json', watched: true, served: true, included: false}
     ],
 
     // list of files / patterns to exclude

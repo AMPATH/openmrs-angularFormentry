@@ -1,467 +1,485 @@
 {
-  "name": "test version 2",
-  "version": "1.0.0",
-  "encounterType": "uuid",
-  "form": "uuid",
-  "processor": "EncounterFormProcessor",
-  "pages": [
-    {
-      "label": "Page Name 1",
-      "sections": [
+    "name": "test version 2",
+    "version": "1.0.0",
+    "encounterType": "uuid",
+    "form": "uuid",
+    "processor": "EncounterFormProcessor",
+    "referencedForms": [
         {
-          "label": "Encounter Details",
-          "questions": [
-            {
-              "label": "Visit Date",
-              "type": "encounterDatetime",
-              "required": "true",
-              "default": "",
-              "id": "encDate",
-              "questionOptions": {
-                "rendering": "date"
-              },
-              "validators": []
-            },
-            {
-              "type": "encounterProvider",
-              "label": "Provider",
-              "id": "provider",
-              "required": "false",
-              "default": "",
-              "questionOptions": {
-                "rendering": "ui-select-extended"
-              },
-              "disable": {
-                "disableWhenExpression": "q1 === 'disq6'"
-              },
-              "validators": []
-            },
-            {
-              "type": "encounterLocation",
-              "label": "Facility name (site/satellite clinic required):",
-              "id": "location",
-              "required": "false",
-              "questionOptions": {
-                "rendering": "ui-select-extended"
-              },
-              "validators": []
-            }
-          ]
+            "formName": "triage",
+            "alias": "triage"
+        }
+    ],
+    "pages": [
+        {
+            "label": "Page Name 1",
+            "sections": [
+                {
+                    "label": "Encounter Details",
+                    "questions": [
+                        {
+                            "label": "Visit Date",
+                            "type": "encounterDatetime",
+                            "required": "true",
+                            "default": "",
+                            "id": "encDate",
+                            "questionOptions": {
+                                "rendering": "date"
+                            },
+                            "validators": []
+                        },
+                        {
+                            "type": "encounterProvider",
+                            "label": "Provider",
+                            "id": "provider",
+                            "required": "false",
+                            "default": "",
+                            "questionOptions": {
+                                "rendering": "ui-select-extended"
+                            },
+                            "disable": {
+                                "disableWhenExpression": "q1 === 'disq6'"
+                            },
+                            "validators": []
+                        },
+                        {
+                            "label": "Facility: (Referenced Question)",
+                            "reference": {
+                                "questionId": "location",
+                                "form": "triage"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "label": "Section Name",
+                    "questions": [
+                        {
+                            "type": "personAttribute",
+                            "label": "Person Attribute Health center",
+                            "id": "first_person_attribute",
+                            "required": "false",
+                            "default": "",
+                            "questionOptions": {
+                                "rendering": "ui-select-extended",
+                                "attributeType": "8d87236c-c2cc-11de-8d13-0010c6dffd0f"
+                            }
+                        },
+                        {
+                            "type": "obs",
+                            "label": "question1",
+                            "id": "q1",
+                            "required": "false",
+                            "default": "",
+                            "historicalExpression": "'previous test'",
+                            "questionOptions": {
+                                "rendering": "text",
+                                "concept": "1232"
+                            }
+                        },
+                        {
+                            "type": "obs",
+                            "label": "question4",
+                            "id": "q4",
+                            "required": {
+                                "type": "conditionalRequired",
+                                "message": "When q1 is requiredanswer, this is required",
+                                "referenceQuestionId": "q1",
+                                "referenceQuestionAnswers": [
+                                    "requiredanswer"
+                                ]
+                            },
+                            "default": "",
+                            "questionOptions": {
+                                "rendering": "text",
+                                "concept": "12324"
+                            },
+                            "validators": []
+                        },
+                        {
+                            "type": "obs",
+                            "label": "question5",
+                            "id": "q5",
+                            "required": "false",
+                            "default": "",
+                            "questionOptions": {
+                                "rendering": "text",
+                                "concept": "123266"
+                            },
+                            "validators": [
+                                {
+                                    "type": "conditionalAnswered",
+                                    "message": "Only answer when q1 is answerQ5",
+                                    "referenceQuestionId": "q1",
+                                    "referenceQuestionAnswers": [
+                                        "answerQ5"
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            "type": "obs",
+                            "label": "question6",
+                            "id": "q6",
+                            "required": "false",
+                            "default": "",
+                            "disable": {
+                                "disableWhenExpression": "q1 === 'disableq-6'"
+                            },
+                            "questionOptions": {
+                                "rendering": "text",
+                                "concept": "123267"
+                            },
+                            "validators": []
+                        },
+                        {
+                            "type": "obs",
+                            "label": "question7",
+                            "id": "q7",
+                            "required": "false",
+                            "default": "",
+                            "hide": {
+                                "hideWhenExpression": "q1 === 'hideq-7'"
+                            },
+                            "questionOptions": {
+                                "rendering": "text",
+                                "concept": "1203267"
+                            },
+                            "validators": []
+                        },
+                        {
+                            "type": "obs",
+                            "label": "question2",
+                            "id": "q2",
+                            "required": "false",
+                            "default": "",
+                            "questionOptions": {
+                                "rendering": "date",
+                                "concept": "1234"
+                            },
+                            "validators": []
+                        },
+                        {
+                            "type": "obs",
+                            "label": "question3",
+                            "id": "q3",
+                            "required": "false",
+                            "default": "",
+                            "historicalExpression": "120",
+                            "questionOptions": {
+                                "rendering": "number",
+                                "concept": "1233"
+                            },
+                            "validators": [
+                                {
+                                    "type": "js_expression",
+                                    "failsWhenExpression": "isEmpty(myValue) && !isEmpty(q1) && q1 === 'fail'",
+                                    "message": "Patient previously marked as on ART. Please provide the treatment category."
+                                }
+                            ]
+                        },
+                        {
+                            "label": "Family Planning",
+                            "id": "onFamilyPlanning",
+                            "type": "obs",
+                            "required": "false",
+                            "historicalExpression": "'a899b35c-1350-11df-a1f1-0026b9348838'",
+                            "questionOptions": {
+                                "rendering": "select",
+                                "concept": "774961c6-232f-4332-8a9f-f5c55ebe86d0",
+                                "answers": [
+                                    {
+                                        "concept": "a899b35c-1350-11df-a1f1-0026b9348838",
+                                        "label": "Yes"
+                                    },
+                                    {
+                                        "concept": "a899b42e-1350-11df-a1f1-0026b9348838",
+                                        "label": "No"
+                                    }
+                                ]
+                            },
+                            "disable": {
+                                "disableWhenExpression": "q1 === 'disfp'"
+                            },
+                            "validators": []
+                        },
+                        {
+                            "label": "Family Planning Method",
+                            "id": "q12e",
+                            "type": "obsGroup",
+                            "questionOptions": {
+                                "rendering": "repeating"
+                            },
+                            "questions": [
+                                {
+                                    "label": "Family Planning Method:",
+                                    "id": "q12e",
+                                    "type": "obs",
+                                    "required": "false",
+                                    "questionOptions": {
+                                        "rendering": "select",
+                                        "concept": "a894b1cc-1350-11df-a1f1-0026b9348838",
+                                        "answers": [
+                                            {
+                                                "concept": "a893516a-1350-11df-a1f1-0026b9348838",
+                                                "label": "Condoms"
+                                            },
+                                            {
+                                                "concept": "b75702a6-908d-491b-9399-6495712c81cc",
+                                                "label": "Emergency OCP"
+                                            },
+                                            {
+                                                "concept": "a8aff356-1350-11df-a1f1-0026b9348838",
+                                                "label": "Implant"
+                                            },
+                                            {
+                                                "concept": "a8a71330-1350-11df-a1f1-0026b9348838",
+                                                "label": "Injectable Hormones"
+                                            },
+                                            {
+                                                "concept": "a8a71650-1350-11df-a1f1-0026b9348838",
+                                                "label": "IUD"
+                                            },
+                                            {
+                                                "concept": "4a740e33-fee5-4a2b-b679-1904722e3d9e",
+                                                "label": "Lactation Method"
+                                            },
+                                            {
+                                                "concept": "a897dbd6-1350-11df-a1f1-0026b9348838",
+                                                "label": "OCP"
+                                            },
+                                            {
+                                                "concept": "a8a714c0-1350-11df-a1f1-0026b9348838",
+                                                "label": "Rhythm Method"
+                                            },
+                                            {
+                                                "concept": "a8a713f8-1350-11df-a1f1-0026b9348838",
+                                                "label": "Sterilization"
+                                            },
+                                            {
+                                                "concept": "a8aaf3e2-1350-11df-a1f1-0026b9348838",
+                                                "label": "Other"
+                                            }
+                                        ]
+                                    }
+                                }
+                            ],
+                            "disable": {
+                                "disableWhenExpression": "q1 === 'disfp'"
+                            },
+                            "validators": []
+                        },
+                        {
+                            "label": "Family Planning Method:",
+                            "id": "q12e",
+                            "type": "obs",
+                            "required": "false",
+                            "questionOptions": {
+                                "rendering": "multiCheckbox",
+                                "concept": "a894b1cc-1350-11df-a1f1-0026b9348838",
+                                "answers": [
+                                    {
+                                        "concept": "a893516a-1350-11df-a1f1-0026b9348838",
+                                        "label": "Condoms"
+                                    },
+                                    {
+                                        "concept": "b75702a6-908d-491b-9399-6495712c81cc",
+                                        "label": "Emergency OCP"
+                                    },
+                                    {
+                                        "concept": "a8aff356-1350-11df-a1f1-0026b9348838",
+                                        "label": "Implant"
+                                    },
+                                    {
+                                        "concept": "a8a71330-1350-11df-a1f1-0026b9348838",
+                                        "label": "Injectable Hormones"
+                                    },
+                                    {
+                                        "concept": "a8a71650-1350-11df-a1f1-0026b9348838",
+                                        "label": "IUD"
+                                    },
+                                    {
+                                        "concept": "4a740e33-fee5-4a2b-b679-1904722e3d9e",
+                                        "label": "Lactation Method"
+                                    },
+                                    {
+                                        "concept": "a897dbd6-1350-11df-a1f1-0026b9348838",
+                                        "label": "OCP"
+                                    },
+                                    {
+                                        "concept": "a8a714c0-1350-11df-a1f1-0026b9348838",
+                                        "label": "Rhythm Method"
+                                    },
+                                    {
+                                        "concept": "a8a713f8-1350-11df-a1f1-0026b9348838",
+                                        "label": "Sterilization"
+                                    },
+                                    {
+                                        "concept": "a8aaf3e2-1350-11df-a1f1-0026b9348838",
+                                        "label": "Other"
+                                    }
+                                ]
+                            },
+                            "disable": {
+                                "disableWhenExpression": "q1 === 'disfp'"
+                            },
+                            "validators": [
+                                {
+                                    "type": "js_expression",
+                                    "failsWhenExpression": "arrayContains(myValue, 'a8aaf3e2-1350-11df-a1f1-0026b9348838') && isEmpty(q1)",
+                                    "message": "Patient previously marked as on ART. Please provide the treatment category."
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
         },
         {
-          "label": "Section Name",
-          "questions": [
-            {
-              "type":"personAttribute",
-              "label":"Person Attribute Health center",
-              "id":"first_person_attribute",
-              "required":"false",
-              "default":"",
-              "questionOptions":{
-                "rendering":"ui-select-extended",
-                "attributeType":"8d87236c-c2cc-11de-8d13-0010c6dffd0f"
-              }
-            },
-            {
-              "type":"obs",
-              "label":"question1",
-              "id":"q1",
-              "required":"false",
-              "default":"",
-              "historicalExpression":"'previous test'",
-              "questionOptions":{
-                "rendering":"text",
-                "concept":"1232"
-              }
-            },
-            {
-              "type": "obs",
-              "label": "question4",
-              "id": "q4",
-              "required": {
-                "type": "conditionalRequired",
-                "message": "When q1 is requiredanswer, this is required",
-                "referenceQuestionId": "q1",
-                "referenceQuestionAnswers": [
-                  "requiredanswer"
-                ]
-              },
-              "default": "",
-              "questionOptions": {
-                "rendering": "text",
-                "concept": "12324"
-              },
-              "validators": []
-            },
-            {
-              "type": "obs",
-              "label": "question5",
-              "id": "q5",
-              "required": "false",
-              "default": "",
-              "questionOptions": {
-                "rendering": "text",
-                "concept": "123266"
-              },
-              "validators": [
+            "label": "Page Name 2",
+            "sections": [
                 {
-                  "type": "conditionalAnswered",
-                  "message": "Only answer when q1 is answerQ5",
-                  "referenceQuestionId": "q1",
-                  "referenceQuestionAnswers": [
-                    "answerQ5"
-                  ]
-                }
-              ]
-            },
-            {
-              "type": "obs",
-              "label": "question6",
-              "id": "q6",
-              "required": "false",
-              "default": "",
-              "disable": {
-                "disableWhenExpression": "q1 === 'disableq-6'"
-              },
-              "questionOptions": {
-                "rendering": "text",
-                "concept": "123267"
-              },
-              "validators": []
-            },
-            {
-              "type": "obs",
-              "label": "question7",
-              "id": "q7",
-              "required": "false",
-              "default": "",
-              "hide": {
-                "hideWhenExpression": "q1 === 'hideq-7'"
-              },
-              "questionOptions": {
-                "rendering": "text",
-                "concept": "1203267"
-              },
-              "validators": []
-            },
-            {
-              "type": "obs",
-              "label": "question2",
-              "id": "q2",
-              "required": "false",
-              "default": "",
-              "questionOptions": {
-                "rendering": "date",
-                "concept": "1234"
-              },
-              "validators": []
-            },
-            {
-              "type": "obs",
-              "label": "question3",
-              "id": "q3",
-              "required": "false",
-              "default": "",
-              "historicalExpression":"120",
-              "questionOptions": {
-                "rendering": "number",
-                "concept": "1233"
-              },
-              "validators": [
-                {
-                  "type": "js_expression",
-                  "failsWhenExpression": "isEmpty(myValue) && !isEmpty(q1) && q1 === 'fail'",
-                  "message": "Patient previously marked as on ART. Please provide the treatment category."
-                }
-              ]
-            },
-            {
-              "label": "Family Planning",
-              "id": "onFamilyPlanning",
-              "type": "obs",
-              "required": "false",
-              "historicalExpression":"'a899b35c-1350-11df-a1f1-0026b9348838'",
-              "questionOptions": {
-                "rendering": "select",
-                "concept": "774961c6-232f-4332-8a9f-f5c55ebe86d0",
-                "answers": [
-                  {
-                    "concept": "a899b35c-1350-11df-a1f1-0026b9348838",
-                    "label": "Yes"
-                  },
-                  {
-                    "concept": "a899b42e-1350-11df-a1f1-0026b9348838",
-                    "label": "No"
-                  }
-                ]
-              },
-              "disable": {
-                "disableWhenExpression": "q1 === 'disfp'"
-              },
-              "validators": []
-            },
-            {
-              "label": "Family Planning Method",
-              "id": "q12e",
-              "type": "obsGroup",
-              "questionOptions": {
-                "rendering": "repeating"
-              },
-              "questions": [
-                {
-                  "label": "Family Planning Method:",
-                  "id": "q12e",
-                  "type": "obs",
-                  "required":"false",
-                  "questionOptions": {
-                    "rendering": "select",
-                    "concept": "a894b1cc-1350-11df-a1f1-0026b9348838",
-                    "answers": [
-                      {
-                        "concept": "a893516a-1350-11df-a1f1-0026b9348838",
-                        "label": "Condoms"
-                      },
-                      {
-                        "concept": "b75702a6-908d-491b-9399-6495712c81cc",
-                        "label": "Emergency OCP"
-                      },
-                      {
-                        "concept": "a8aff356-1350-11df-a1f1-0026b9348838",
-                        "label": "Implant"
-                      },
-                      {
-                        "concept": "a8a71330-1350-11df-a1f1-0026b9348838",
-                        "label": "Injectable Hormones"
-                      },
-                      {
-                        "concept": "a8a71650-1350-11df-a1f1-0026b9348838",
-                        "label": "IUD"
-                      },
-                      {
-                        "concept": "4a740e33-fee5-4a2b-b679-1904722e3d9e",
-                        "label": "Lactation Method"
-                      },
-                      {
-                        "concept": "a897dbd6-1350-11df-a1f1-0026b9348838",
-                        "label": "OCP"
-                      },
-                      {
-                        "concept": "a8a714c0-1350-11df-a1f1-0026b9348838",
-                        "label": "Rhythm Method"
-                      },
-                      {
-                        "concept": "a8a713f8-1350-11df-a1f1-0026b9348838",
-                        "label": "Sterilization"
-                      },
-                      {
-                        "concept": "a8aaf3e2-1350-11df-a1f1-0026b9348838",
-                        "label": "Other"
-                      }
+                    "label": "test Groups",
+                    "questions": [
+                        {
+                            "type": "obsGroup",
+                            "label": "Was patient hospitalized",
+                            "questionOptions": {
+                                "rendering": "group",
+                                "concept": "a8a003a6-1350-11df-a1f1-0026b9348838"
+                            },
+                            "questions": [
+                                {
+                                    "label": "Reason for hospitalization",
+                                    "type": "obs",
+                                    "questionOptions": {
+                                        "rendering": "text",
+                                        "concept": "a8a07a48-1350-11df-a1f1-0026b9348838"
+                                    },
+                                    "id": "hospitalizationReason",
+                                    "validators": [
+                                        {
+                                            "type": "conditionalAnswered",
+                                            "message": "Providing diagnosis but didn't answer that patient was hospitalized in question 11a",
+                                            "referenceQuestionId": "wasHospitalized",
+                                            "referenceQuestionAnswers": [
+                                                "a899b35c-1350-11df-a1f1-0026b9348838"
+                                            ]
+                                        }
+                                    ]
+                                },
+                                {
+                                    "label": "Date of hospitalization",
+                                    "type": "obsGroup",
+                                    "questionOptions": {
+                                        "rendering": "group",
+                                        "concept": "made-up-concept"
+                                    },
+                                    "questions": [
+                                        {
+                                            "type": "obs",
+                                            "label": "Start Date",
+                                            "questionOptions": {
+                                                "rendering": "date",
+                                                "concept": "made-up-concept-2"
+                                            }
+                                        },
+                                        {
+                                            "type": "obs",
+                                            "label": "End Date",
+                                            "questionOptions": {
+                                                "rendering": "date",
+                                                "concept": "made-up-concept-3"
+                                            }
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
                     ]
-                  }
-                }
-              ],
-              "disable": {
-                "disableWhenExpression": "q1 === 'disfp'"
-              },
-              "validators": []
-            },
-            {
-              "label": "Family Planning Method:",
-              "id": "q12e",
-              "type": "obs",
-              "required":"false",
-              "questionOptions": {
-                "rendering": "multiCheckbox",
-                "concept": "a894b1cc-1350-11df-a1f1-0026b9348838",
-                "answers": [
-                  {
-                    "concept": "a893516a-1350-11df-a1f1-0026b9348838",
-                    "label": "Condoms"
-                  },
-                  {
-                    "concept": "b75702a6-908d-491b-9399-6495712c81cc",
-                    "label": "Emergency OCP"
-                  },
-                  {
-                    "concept": "a8aff356-1350-11df-a1f1-0026b9348838",
-                    "label": "Implant"
-                  },
-                  {
-                    "concept": "a8a71330-1350-11df-a1f1-0026b9348838",
-                    "label": "Injectable Hormones"
-                  },
-                  {
-                    "concept": "a8a71650-1350-11df-a1f1-0026b9348838",
-                    "label": "IUD"
-                  },
-                  {
-                    "concept": "4a740e33-fee5-4a2b-b679-1904722e3d9e",
-                    "label": "Lactation Method"
-                  },
-                  {
-                    "concept": "a897dbd6-1350-11df-a1f1-0026b9348838",
-                    "label": "OCP"
-                  },
-                  {
-                    "concept": "a8a714c0-1350-11df-a1f1-0026b9348838",
-                    "label": "Rhythm Method"
-                  },
-                  {
-                    "concept": "a8a713f8-1350-11df-a1f1-0026b9348838",
-                    "label": "Sterilization"
-                  },
-                  {
-                    "concept": "a8aaf3e2-1350-11df-a1f1-0026b9348838",
-                    "label": "Other"
-                  }
-                ]
-              },
-              "disable": {
-                "disableWhenExpression": "q1 === 'disfp'"
-              },
-              "validators": [
-                {
-                  "type": "js_expression",
-                  "failsWhenExpression": "arrayContains(myValue, 'a8aaf3e2-1350-11df-a1f1-0026b9348838') && isEmpty(q1)",
-                  "message": "Patient previously marked as on ART. Please provide the treatment category."
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "label": "Page Name 2",
-      "sections": [
-        {
-          "label": "test Groups",
-          "questions": [
-            {
-              "type": "obsGroup",
-              "label": "Was patient hospitalized",
-              "questionOptions": {
-                "rendering": "group",
-                "concept": "a8a003a6-1350-11df-a1f1-0026b9348838"
-              },
-              "questions": [
-                {
-                  "label": "Reason for hospitalization",
-                  "type": "obs",
-                  "questionOptions": {
-                    "rendering": "text",
-                    "concept": "a8a07a48-1350-11df-a1f1-0026b9348838"
-                  },
-                  "id": "hospitalizationReason",
-                  "validators": [
-                    {
-                      "type": "conditionalAnswered",
-                      "message": "Providing diagnosis but didn't answer that patient was hospitalized in question 11a",
-                      "referenceQuestionId": "wasHospitalized",
-                      "referenceQuestionAnswers": [
-                        "a899b35c-1350-11df-a1f1-0026b9348838"
-                      ]
-                    }
-                  ]
                 },
                 {
-                  "label": "Date of hospitalization",
-                  "type": "obsGroup",
-                  "questionOptions": {
-                    "rendering": "group",
-                    "concept": "made-up-concept"
-                  },
-                  "questions": [
-                    {
-                      "type": "obs",
-                      "label": "Start Date",
-                      "questionOptions": {
-                        "rendering": "date",
-                        "concept": "made-up-concept-2"
-                      }
-                    },
-                    {
-                      "type": "obs",
-                      "label": "End Date",
-                      "questionOptions": {
-                        "rendering": "date",
-                        "concept": "made-up-concept-3"
-                      }
+                    "label": "Referenced Sections",
+                    "reference": {
+                        "page": "Page 1",
+                        "section": "PWPs",
+                        "form": "triage"
                     }
-                  ]
                 }
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "label": "Page Name 3",
-      "sections": [
+            ]
+        },
         {
-          "label": "test Group Repeating",
-          "questions": [
-            {
-              "type": "obsGroup",
-              "label": "Was patient hospitalized",
-              "historicalExpression": "sampleRepeatingGroupValue",
-              "questionOptions": {
-                "rendering": "repeating",
-                "concept": "a8a003a6y1350y11dfya1f1y0026b9348838"
-              },
-              "questions": [
-                {
-                  "label": "Reason for hospitalization",
-                  "type": "obs",
-                  "questionOptions": {
-                    "rendering": "text",
-                    "concept": "a8a07a48x1350x11dfxa1f1-0026b9348838"
-                  },
-                  "id": "hospitalizationReason",
-                  "validators": [
-                    {
-                      "type": "conditionalAnswered",
-                      "message": "Providing diagnosis but didn't answer that patient was hospitalized in question 11a",
-                      "referenceQuestionId": "wasHospitalized",
-                      "referenceQuestionAnswers": [
-                        "a899b35c-1350-11df-a1f1-0026b9348838"
-                      ]
-                    }
-                  ]
-                },
-                {
-                  "label": "Date of hospitalization",
-                  "type": "obsGroup",
-                  "questionOptions": {
-                    "rendering": "group",
-                    "concept": "made-up-concept-4"
-                  },
-                  "questions": [
-                    {
-                      "type": "obs",
-                      "label": "Start Date",
-                      "questionOptions": {
-                        "rendering": "date",
-                        "concept": "made-up-concept-5"
-                      }
-                    },
-                    {
-                      "type": "obs",
-                      "label": "End Date",
-                      "questionOptions": {
-                        "rendering": "date",
-                        "concept": "made-up-concept-6"
-                      }
-                    }
-                  ]
-                }
-              ]
+            "label": "Referenced Page",
+            "reference": {
+                "page": "Page 1",
+                "form": "triage"
             }
-          ]
+        },
+        {
+            "label": "Page Name 3",
+            "sections": [
+                {
+                    "label": "test Group Repeating",
+                    "questions": [
+                        {
+                            "type": "obsGroup",
+                            "label": "Was patient hospitalized",
+                            "historicalExpression": "sampleRepeatingGroupValue",
+                            "questionOptions": {
+                                "rendering": "repeating",
+                                "concept": "a8a003a6y1350y11dfya1f1y0026b9348838"
+                            },
+                            "questions": [
+                                {
+                                    "label": "Reason for hospitalization",
+                                    "type": "obs",
+                                    "questionOptions": {
+                                        "rendering": "text",
+                                        "concept": "a8a07a48x1350x11dfxa1f1-0026b9348838"
+                                    },
+                                    "id": "hospitalizationReason",
+                                    "validators": [
+                                        {
+                                            "type": "conditionalAnswered",
+                                            "message": "Providing diagnosis but didn't answer that patient was hospitalized in question 11a",
+                                            "referenceQuestionId": "wasHospitalized",
+                                            "referenceQuestionAnswers": [
+                                                "a899b35c-1350-11df-a1f1-0026b9348838"
+                                            ]
+                                        }
+                                    ]
+                                },
+                                {
+                                    "label": "Date of hospitalization",
+                                    "type": "obsGroup",
+                                    "questionOptions": {
+                                        "rendering": "group",
+                                        "concept": "made-up-concept-4"
+                                    },
+                                    "questions": [
+                                        {
+                                            "type": "obs",
+                                            "label": "Start Date",
+                                            "questionOptions": {
+                                                "rendering": "date",
+                                                "concept": "made-up-concept-5"
+                                            }
+                                        },
+                                        {
+                                            "type": "obs",
+                                            "label": "End Date",
+                                            "questionOptions": {
+                                                "rendering": "date",
+                                                "concept": "made-up-concept-6"
+                                            }
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
         }
-      ]
-    }
-  ]
+    ]
 }
