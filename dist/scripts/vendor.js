@@ -82919,3 +82919,6149 @@ Error(i);l.layouts={},l.viewContainer=new r.ViewContainer(l.container),l.viewCon
 !this.pagerOverlay&&n.length&&(t-=n.outerHeight(!0))),this.element.css("height",t),this.pageElements.css("height",t)),i.updateDimension(),this._paged||(this.page=D(i.offset()/o)),this.scrollTo(this.page,!0),this.pageCount=x(i.total()/o),this.minSnap=-(this.pageCount-1)*o,this.maxSnap=0},_getPages:function(){this.pageElements=this.element.find(c.roleSelector("page")),this._paged=this.pageElements.length>0}}),c.mobile.ui.ScrollViewContent=a,s=c.Observable.extend({init:function(e,t,n){var i=this;c.Observable.fn.init.call(this),i.element=e,i.pane=t,i.options=n,i._templates(),i.page=n.page||0,i.pages=[],i._initPages(),i.resizeTo(i.pane.size()),i.pane.dimension.forceEnabled()},setDataSource:function(e){this.dataSource=_.create(e),this._buffer(),this._pendingPageRefresh=!1,this._pendingWidgetRefresh=!1},_viewShow:function(){var e=this;e._pendingWidgetRefresh&&(setTimeout(function(){e._resetPages()},0),e._pendingWidgetRefresh=!1)},_buffer:function(){var e=this.options.itemsPerPage;this.buffer&&this.buffer.destroy(),this.buffer=e>1?new w(this.dataSource,e):new b(this.dataSource,3*e),this._resizeProxy=h(this,"_onResize"),this._resetProxy=h(this,"_onReset"),this._endReachedProxy=h(this,"_onEndReached"),this.buffer.bind({resize:this._resizeProxy,reset:this._resetProxy,endreached:this._endReachedProxy})},_templates:function(){var e=this.options.template,t=this.options.emptyTemplate,n={},i={};typeof e===M&&(n.template=e,e="#=this.template(data)#"),this.template=h(c.template(e),n),typeof t===M&&(i.emptyTemplate=t,t="#=this.emptyTemplate(data)#"),this.emptyTemplate=h(c.template(t),i)},_initPages:function(){var e,t,n=this.pages,i=this.element;for(t=0;z>t;t++)e=new l(i),n.push(e);this.pane.updateDimension()},resizeTo:function(e){var t,n,i,o=this.pages,r=this.pane;for(t=0;o.length>t;t++)o[t].setWidth(e.width);"auto"===this.options.contentHeight?this.element.css("height",this.pages[1].element.height()):"100%"===this.options.contentHeight&&(n=this.element.parent().height(),this.options.enablePager===!0&&(i=this.element.parent().find("ol.km-pages"),!this.options.pagerOverlay&&i.length&&(n-=i.outerHeight(!0))),this.element.css("height",n),o[0].element.css("height",n),o[1].element.css("height",n),o[2].element.css("height",n)),r.updateDimension(),this._repositionPages(),this.width=e.width},scrollTo:function(e){var t,n=this.buffer;n.syncDataSource(),t=n.at(e),t&&(this._updatePagesContent(e),this.page=e)},paneMoved:function(e,t,n,i){var o,r=this,a=r.pane,s=a.size().width,l=a.offset(),u=Math.abs(l)>=s/3,d=t?c.effects.Transition.easeOutBack:c.effects.Transition.easeOutExpo,p=r.page+2>r.buffer.total(),h=0;e===W?0!==r.page&&(h=-1):e!==R||p?l>0&&u&&!p?h=1:0>l&&u&&0!==r.page&&(h=-1):h=1,o=r.page,h&&(o=h>0?o+1:o-1),n&&n({currentPage:r.page,nextPage:o})&&(h=0),0===h?r._cancelMove(d,i):-1===h?r._moveBackward(i):1===h&&r._moveForward(i)},updatePage:function(){var e=this.pages;return 0===this.pane.offset()?!1:(this.pane.offset()>0?(e.push(this.pages.shift()),this.page++,this.setPageContent(e[2],this.page+1)):(e.unshift(this.pages.pop()),this.page--,this.setPageContent(e[0],this.page-1)),this._repositionPages(),this._resetMovable(),!0)},forcePageUpdate:function(){var e=this.pane.offset(),t=3*this.pane.size().width/4;return y(e)>t?this.updatePage():!1},_resetMovable:function(){this.pane.moveTo(0)},_moveForward:function(e){this.pane.transitionTo(-this.width,c.effects.Transition.easeOutExpo,e)},_moveBackward:function(e){this.pane.transitionTo(this.width,c.effects.Transition.easeOutExpo,e)},_cancelMove:function(e,t){this.pane.transitionTo(0,e,t)},_resetPages:function(){this.page=this.options.page||0,this._updatePagesContent(this.page),this._repositionPages(),this.trigger("reset")},_onResize:function(){this.pageCount=x(this.dataSource.total()/this.options.itemsPerPage),this._pendingPageRefresh&&(this._updatePagesContent(this.page),this._pendingPageRefresh=!1),this.trigger("resize")},_onReset:function(){this.pageCount=x(this.dataSource.total()/this.options.itemsPerPage),this._resetPages()},_onEndReached:function(){this._pendingPageRefresh=!0},_repositionPages:function(){var e=this.pages;e[0].position(V),e[1].position(B),e[2].position(L)},_updatePagesContent:function(e){var t=this.pages,n=e||0;this.setPageContent(t[0],n-1),this.setPageContent(t[1],n),this.setPageContent(t[2],n+1)},setPageContent:function(t,n){var i=this.buffer,o=this.template,r=this.emptyTemplate,a=null;n>=0&&(a=i.at(n),e.isArray(a)&&!a.length&&(a=null)),this.trigger(O,{item:t.element}),t.content(null!==a?o(a):r({})),c.mobile.init(t.element),this.trigger(H,{item:t.element,data:a,ns:c.mobile.ui})}}),c.mobile.ui.VirtualScrollViewContent=s,l=c.Class.extend({init:function(t){this.element=e("<div class='"+A+"'></div>"),this.width=t.width(),this.element.width(this.width),t.append(this.element)},content:function(e){this.element.html(e)},position:function(e){this.element.css("transform","translate3d("+this.width*e+"px, 0, 0)")},setWidth:function(e){this.width=e,this.element.width(e)}}),c.mobile.ui.VirtualPage=l,u=v.extend({init:function(e,t){var n,i,o,l=this;v.fn.init.call(l,e,t),t=l.options,e=l.element,c.stripWhitespace(e[0]),e.wrapInner("<div/>").addClass("km-scrollview"),this.options.enablePager&&(this.pager=new U(this),this.options.pagerOverlay&&e.addClass("km-scrollview-overlay")),l.inner=e.children().first(),l.page=0,l.inner.css("height",t.contentHeight),l.pane=new r(l.inner,{duration:this.options.duration,transitionEnd:h(this,"_transitionEnd"),dragStart:h(this,"_dragStart"),dragEnd:h(this,"_dragEnd"),change:h(this,I)}),l.bind("resize",function(){l.pane.refresh()}),l.page=t.page,n=0===this.inner.children().length,i=n?new s(l.inner,l.pane,t):new a(l.inner,l.pane,t),i.page=l.page,i.bind("reset",function(){this._pendingPageRefresh=!1,l._syncWithContent(),l.trigger(I,{pageCount:i.pageCount,page:i.page})}),i.bind("resize",function(){l.trigger(I,{pageCount:i.pageCount,page:i.page})}),i.bind(H,function(e){l.trigger(H,e),l.angular("compile",function(){return{elements:e.item,data:[{dataItem:e.data}]}})}),i.bind(O,function(e){l.angular("cleanup",function(){return{elements:e.item}})}),l._content=i,l.setDataSource(t.dataSource),o=l.container(),o.nullObject?(l.viewInit(),l.viewShow()):o.bind("show",h(this,"viewShow")).bind("init",h(this,"viewInit"))},options:{name:"ScrollView",page:0,duration:400,velocityThreshold:.8,contentHeight:"auto",pageSize:1,itemsPerPage:1,bounceVelocityThreshold:1.6,enablePager:!0,pagerOverlay:!1,autoBind:!0,template:"",emptyTemplate:""},events:[E,F,I],destroy:function(){v.fn.destroy.call(this),c.destroy(this.element)},viewInit:function(){this.options.autoBind&&this._content.scrollTo(this._content.page,!0)},viewShow:function(){this.pane.refresh()},refresh:function(){var e=this._content;e.resizeTo(this.pane.size()),this.page=e.page,this.trigger(I,{pageCount:e.pageCount,page:e.page})},content:function(e){this.element.children().first().html(e),this._content._getPages(),this.pane.refresh()},value:function(e){var n=this.dataSource;return e?(this.scrollTo(n.indexOf(e),!0),t):n.at(this.page)},scrollTo:function(e,t){this._content.scrollTo(e,t),this._syncWithContent()},prev:function(){var e=this,n=e.page-1;e._content instanceof s?e._content.paneMoved(W,t,function(t){return e.trigger(E,t)}):n>-1&&e.scrollTo(n)},next:function(){var e=this,n=e.page+1;e._content instanceof s?e._content.paneMoved(R,t,function(t){return e.trigger(E,t)}):e._content.pageCount>n&&e.scrollTo(n)},setDataSource:function(e){if(this._content instanceof s){var t=!e;this.dataSource=_.create(e),this._content.setDataSource(this.dataSource),this.options.autoBind&&!t&&this.dataSource.fetch()}},items:function(){return this.element.find("."+A)},_syncWithContent:function(){var e,n,i=this._content.pages,o=this._content.buffer;this.page=this._content.page,e=o?o.at(this.page):t,e instanceof Array||(e=[e]),n=i?i[1].element:t,this.trigger(F,{page:this.page,element:n,data:e})},_dragStart:function(){this._content.forcePageUpdate()&&this._syncWithContent()},_dragEnd:function(e){var t=this,n=e.x.velocity,i=this.options.velocityThreshold,o=N,r=y(n)>this.options.bounceVelocityThreshold;n>i?o=W:-i>n&&(o=R),this._content.paneMoved(o,r,function(e){return t.trigger(E,e)})},_transitionEnd:function(){this._content.updatePage()&&this._syncWithContent()}}),p.plugin(u)}(window.kendo.jQuery),window.kendo},"function"==typeof define&&define.amd?define:function(e,t,n){(n||t)()}),function(e,define){define("kendo.mobile.switch.min",["kendo.fx.min","kendo.userevents.min"],e)}(function(){return function(e,t){function n(e,t,n){return Math.max(t,Math.min(n,e))}var i=window.kendo,o=i.mobile.ui,r=o.Widget,a=i.support,s="change",l="km-switch-on",u="km-switch-off",c="margin-left",d="km-state-active",p="km-state-disabled",h="disabled",f=a.transitions.css+"transform",m=e.proxy,g='<span class="km-switch km-widget">        <span class="km-switch-wrapper"><span class="km-switch-background"></span></span>         <span class="km-switch-container"><span class="km-switch-handle" >             <span class="km-switch-label-on">{0}</span>             <span class="km-switch-label-off">{1}</span>         </span>     </span>',v=r.extend({init:function(t,n){var o,a=this;r.fn.init.call(a,t,n),n=a.options,a.wrapper=e(i.format(g,n.onLabel,n.offLabel)),a.handle=a.wrapper.find(".km-switch-handle"),a.background=a.wrapper.find(".km-switch-background"),a.wrapper.insertBefore(a.element).prepend(a.element),a._drag(),a.origin=parseInt(a.background.css(c),10),a.constrain=0,a.snapPoint=0,t=a.element[0],t.type="checkbox",a._animateBackground=!0,o=a.options.checked,null===o&&(o=t.checked),a.check(o),a.options.enable=a.options.enable&&!a.element.attr(h),a.enable(a.options.enable),a.refresh(),i.notify(a,i.mobile.ui)},refresh:function(){var e=this,t=e.handle.outerWidth(!0);e.width=e.wrapper.width(),e.constrain=e.width-t,e.snapPoint=e.constrain/2,"number"!=typeof e.origin&&(e.origin=parseInt(e.background.css(c),10)),e.background.data("origin",e.origin),e.check(e.element[0].checked)},events:[s],options:{name:"Switch",onLabel:"on",offLabel:"off",checked:null,enable:!0},check:function(e){var n=this,i=n.element[0];return e===t?i.checked:(n._position(e?n.constrain:0),i.checked=e,n.wrapper.toggleClass(l,e).toggleClass(u,!e),t)},value:function(){return this.check.apply(this,arguments)},destroy:function(){r.fn.destroy.call(this),this.userEvents.destroy()},toggle:function(){var e=this;e.check(!e.element[0].checked)},enable:function(e){var n=this.element,i=this.wrapper;t===e&&(e=!0),this.options.enable=e,e?n.removeAttr(h):n.attr(h,h),i.toggleClass(p,!e)},_resize:function(){this.refresh()},_move:function(e){var t=this;e.preventDefault(),t._position(n(t.position+e.x.delta,0,t.width-t.handle.outerWidth(!0)))},_position:function(e){var t=this;t.position=e,t.handle.css(f,"translatex("+e+"px)"),t._animateBackground&&t.background.css(c,t.origin+e)},_start:function(){this.options.enable?(this.userEvents.capture(),this.handle.addClass(d)):this.userEvents.cancel()},_stop:function(){var e=this;e.handle.removeClass(d),e._toggle(e.position>e.snapPoint)},_toggle:function(e){var t,n=this,o=n.handle,r=n.element[0],a=r.checked,c=i.mobile.application&&i.mobile.application.os.wp?100:200;n.wrapper.toggleClass(l,e).toggleClass(u,!e),n.position=t=e*n.constrain,n._animateBackground&&n.background.kendoStop(!0,!0).kendoAnimate({effects:"slideMargin",offset:t,reset:!0,reverse:!e,axis:"left",duration:c}),o.kendoStop(!0,!0).kendoAnimate({effects:"slideTo",duration:c,offset:t+"px,0",reset:!0,complete:function(){a!==e&&(r.checked=e,n.trigger(s,{checked:e}))}})},_drag:function(){var e=this;e.userEvents=new i.UserEvents(e.wrapper,{fastTap:!0,tap:function(){e.options.enable&&e._toggle(!e.element[0].checked)},start:m(e._start,e),move:m(e._move,e),end:m(e._stop,e)})}});o.plugin(v)}(window.kendo.jQuery),window.kendo},"function"==typeof define&&define.amd?define:function(e,t,n){(n||t)()}),function(e,define){define("kendo.mobile.tabstrip.min",["kendo.core.min"],e)}(function(){return function(e,t){function n(t){return e('<span class="km-badge">'+t+"</span>")}var i=window.kendo,o=i.mobile.ui,r=o.Widget,a="km-state-active",s="select",l=r.extend({init:function(t,n){var i=this;r.fn.init.call(i,t,n),i.container().bind("show",e.proxy(this,"refresh")),i.element.addClass("km-tabstrip").find("a").each(i._buildButton).eq(i.options.selectedIndex).addClass(a),i.element.on("down","a","_release")},events:[s],switchTo:function(t){var n,i,o=this.element.find("a"),r=0,a=o.length;if(!isNaN(t))return this._setActiveItem(o.eq(t)),!0;for(;a>r;r++)if(n=o[r],i=n.href.replace(/(\#.+)(\?.+)$/,"$1"),-1!==i.indexOf(t,i.length-t.length))return this._setActiveItem(e(n)),!0;return!1},switchByFullUrl:function(e){var t;t=this.element.find("a[href$='"+e+"']"),this._setActiveItem(t)},clear:function(){this.currentItem().removeClass(a)},currentItem:function(){return this.element.children("."+a)},badge:function(t,i){var o,r=this.element;return isNaN(t)||(t=r.children().get(t)),t=r.find(t),o=e(t.find(".km-badge")[0]||n(i).insertAfter(t.children(".km-icon"))),i||0===i?(o.html(i),this):i===!1?(o.empty().remove(),this):o.html()},_release:function(t){if(!(t.which>1)){var n=this,i=e(t.currentTarget);i[0]!==n.currentItem()[0]&&(n.trigger(s,{item:i})?t.preventDefault():n._setActiveItem(i))}},_setActiveItem:function(e){e[0]&&(this.clear(),e.addClass(a))},_buildButton:function(){var t=e(this),o=i.attrValue(t,"icon"),r=i.attrValue(t,"badge"),a=t.find("img"),s=e('<span class="km-icon"/>');t.addClass("km-button").attr(i.attr("role"),"tab").contents().not(a).wrapAll('<span class="km-text"/>'),a[0]?a.addClass("km-image").prependTo(t):(t.prepend(s),o&&(s.addClass("km-"+o),(r||0===r)&&n(r).insertAfter(s)))},refresh:function(e){var t=e.view.id;t&&!this.switchTo(e.view.id)&&this.switchTo(t)},options:{name:"TabStrip",selectedIndex:0,enable:!0}});o.plugin(l)}(window.kendo.jQuery),window.kendo},"function"==typeof define&&define.amd?define:function(e,t,n){(n||t)()}),function(e,define){define("kendo.angular.min",["kendo.core.min"],e)}(function(){return function(e,t,n){"use strict";function i(e){var t=C;try{return C=function(e){return e()},e()}finally{C=t}}function o(t,i,o,u,c,g){function v(){var n,g,v,_,b,x,C;return o.kRebind&&(n=e(e(i)[0].cloneNode(!0))),T=r(t,i,o,u,y).options,i.is("select")&&!function(t){if(t.length>0){var n=e(t[0]);!/\S/.test(n.text())&&/^\?/.test(n.val())&&n.remove()}}(i[0].options),g=y.call(i,D=T).data(u),l(g,t,o,u,c),t.$emit("kendoWidgetCreated",g),v=h(t,g),o.kRebind&&m(g,t,i,n,o.kRebind,v,o),o.kNgDisabled&&(_=o.kNgDisabled,b=t.$eval(_),b&&g.enable(!b),a(g,t,i,_)),o.kNgReadonly&&(x=o.kNgReadonly,C=t.$eval(x),C&&g.readonly(C),s(g,t,i,x)),o.kNgModel&&p(g,t,o.kNgModel),w&&d(g,t,i,w,k),g&&f(g,i),g}var _,b,w,k,y,x,T,S,F,E,I,P,A,M;if(!(i instanceof jQuery))throw Error("The Kendo UI directives require jQuery to be available before AngularJS. Please include jquery before angular in the document.");if(_=o.kNgDelay,b=t.$eval(_),g=g||[],w=g[0],k=g[1],y=e(i)[u],!y)return window.console.error("Could not find: "+u),null;if(x=r(t,i,o,u,y),T=x.options,x.unresolved.length){for(S=[],F=0,E=x.unresolved.length;E>F;F++)I=x.unresolved[F],P=e.Deferred(function(e){var i=t.$watch(I.path,function(t){t!==n&&(i(),e.resolve())})}).promise(),S.push(P);return e.when.apply(null,S).then(v),n}return _&&!b?(A=t.$root||t,M=function(){var e=t.$watch(_,function(t){t!==n&&(e(),i.removeAttr(o.$attr.kNgDelay),_=null,C(v))})},/^\$(digest|apply)$/.test(A.$$phase)?M():t.$apply(M),n):v()}function r(i,o,r,a,s){function l(e,o){var r=t.copy(i.$eval(o));r===n?f.push({option:e,path:o}):u[e]=r}var u,c,d,p,h=a.replace(/^kendo/,""),f=[],m=r.kOptions||r.options,g=i.$eval(m);return m&&g===n&&f.push({option:"options",path:m}),u=t.extend({},r.defaultOptions,g),c=s.widget.prototype.options,d=s.widget.prototype.events,e.each(r,function(e,t){var n,i,o,r;"source"!==e&&"kDataSource"!==e&&"kScopeField"!==e&&"scopeField"!==e&&(n="data"+e.charAt(0).toUpperCase()+e.slice(1),0===e.indexOf("on")&&(i=e.replace(/^on./,function(e){return e.charAt(2).toLowerCase()}),d.indexOf(i)>-1&&(u[i]=t)),c.hasOwnProperty(n)?l(n,t):c.hasOwnProperty(e)&&!I[e]?l(e,t):E[e]||(o=e.match(/^k(On)?([A-Z].*)/),o&&(r=o[2].charAt(0).toLowerCase()+o[2].slice(1),o[1]&&"kOnLabel"!=e?u[r]=t:("kOnLabel"==e&&(r="onLabel"),l(r,t)))))}),p=r.kDataSource||r.source,p&&(u.dataSource=F(i,o,h,p)),u.$angular=[i],{options:u,unresolved:f}}function a(e,t,i,o){return kendo.ui.PanelBar&&e instanceof kendo.ui.PanelBar||kendo.ui.Menu&&e instanceof kendo.ui.Menu?(S.warn("k-ng-disabled specified on a widget that does not have the enable() method: "+e.options.name),n):(t.$watch(o,function(t,n){t!=n&&e.enable(!t)}),n)}function s(e,t,i,o){return"function"!=typeof e.readonly?(S.warn("k-ng-readonly specified on a widget that does not have the readonly() method: "+e.options.name),n):(t.$watch(o,function(t,n){t!=n&&e.readonly(t)}),n)}function l(e,t,n,i,o){if(n[o]){var r=x(n[o]).assign;if(!r)throw Error(o+" attribute used but expression in it is not assignable: "+n[i]);r(t,e)}}function u(e){return/checkbox|radio/i.test(e.attr("type"))?e.prop("checked"):e.val()}function c(e){return P.test(e[0].tagName)}function d(e,t,i,o,r){var a,s,l,d;e.value&&(a=c(i)?function(){return u(i)}:function(){return e.value()},o.$render=function(){var i=o.$viewValue;i===n&&(i=o.$modelValue),i===n&&(i=null),setTimeout(function(){if(e){var n=t[e.element.attr("k-ng-model")];n&&(i=n),e.options.autoBind!==!1||e.listView.bound()?e.value(i):i&&e.value(i)}},0)},s=!1,c(i)&&i.on("change",function(){s=!0}),l=function(e){return function(){var n;s||(e&&r&&(n=r.$pristine),o.$setViewValue(a()),e&&(o.$setPristine(),n&&r.$setPristine()),_(t))}},e.first("change",l(!1)),kendo.ui.AutoComplete&&e instanceof kendo.ui.AutoComplete||e.first("dataBound",l(!0)),d=a(),isNaN(o.$viewValue)||d==o.$viewValue||(o.$isEmpty(o.$viewValue)?null!=d&&""!==d&&d!=o.$viewValue&&o.$setViewValue(d):e.value(o.$viewValue)),o.$setPristine())}function p(t,i,o){var r,a,s,l,u,c,d,p,h;return"function"!=typeof t.value?(S.warn("k-ng-model specified on a widget that does not have the value() method: "+t.options.name),n):(r=e(t.element).parents("form"),a=i[r.attr("name")],s=x(o),l=s.assign,u=!1,c=kendo.ui.MultiSelect&&t instanceof kendo.ui.MultiSelect,d=function(e){return c?e.length:0},p=d(s(i)),t.$angular_setLogicValue(s(i)),h=function(e,i){e===n&&(e=null),u||e==i&&d(e)==p||(p=d(e),t.$angular_setLogicValue(e))},c?i.$watchCollection(o,h):i.$watch(o,h),t.first("change",function(){u=!0,a&&a.$pristine&&a.$setDirty(),_(i,function(){l(i,t.$angular_getLogicValue()),p=d(s(i))}),u=!1}),n)}function h(e,t){var n=e.$on("$destroy",function(){n(),t&&(t.element&&t.destroy(),t=null)});return n}function f(t,n){function i(){a.disconnect()}function o(){a.observe(e(n)[0],{attributes:!0})}var r,a;window.MutationObserver&&t.wrapper&&(r=[].slice.call(e(n)[0].classList),a=new MutationObserver(function(n){i(),t&&(n.forEach(function(n){var i,o=e(t.wrapper)[0];switch(n.attributeName){case"class":i=[].slice.call(n.target.classList),i.forEach(function(e){r.indexOf(e)<0&&(o.classList.add(e),kendo.ui.ComboBox&&t instanceof kendo.ui.ComboBox&&t.input[0].classList.add(e))}),r.forEach(function(e){i.indexOf(e)<0&&(o.classList.remove(e),kendo.ui.ComboBox&&t instanceof kendo.ui.ComboBox&&t.input[0].classList.remove(e))}),r=i;break;case"disabled":"function"!=typeof t.enable||t.element.attr("readonly")||t.enable(!e(n.target).attr("disabled"));break;case"readonly":"function"!=typeof t.readonly||t.element.attr("disabled")||t.readonly(!!e(n.target).attr("readonly"))}}),o())}),o(),t.first("destroy",i))}function m(t,n,i,o,r,a,s){var l=n.$watch(r,function(r,u){var c,d,p,h,f;t._muteRebind||r===u||(l(),c=z[t.options.name],c&&c.forEach(function(t){var i=n.$eval(s["k"+t]);i&&o.append(e(i).attr(kendo.toHyphens("k"+t),""))}),d=e(t.wrapper)[0],p=e(t.element)[0],h="Upload"===t.options.name,h&&(i=e(p)),f=i.injector().get("$compile"),t._destroy(),a&&a(),t=null,p&&(d&&d.parentNode.replaceChild(p,d),e(i).replaceWith(o)),f(o)(n))},!0);_(n)}function g(e,n){function i(e,t){k.directive(e,["directiveFactory",function(n){return n.create(t,e)}])}var o,r,a,s,l=n?"Mobile":"";l+=e.fn.options.name,o=l,r="kendo"+l.charAt(0)+l.substr(1).toLowerCase(),l="kendo"+l,a=l.replace(/([A-Z])/g,"-$1"),-1==M.indexOf(l.replace("kendo",""))&&(s=l===r?[l]:[l,r],t.forEach(s,function(e){k.directive(e,function(){return{restrict:"E",replace:!0,template:function(e,t){var n=A[o]||"div",i=t.kScopeField||t.scopeField;return"<"+n+" "+a+(i?'="'+i+'"':"")+">"+e.html()+"</"+n+">"}}})})),H.indexOf(l.replace("kendo",""))>-1||(i(l,l),r!=l&&i(r,l))}function v(t){return t=e(t),kendo.widgetInstance(t,kendo.ui)||kendo.widgetInstance(t,kendo.mobile.ui)||kendo.widgetInstance(t,kendo.dataviz.ui)}function _(e,t){var n=e.$root||e,i=/^\$(digest|apply)$/.test(n.$$phase);t?i?t():n.$apply(t):i||n.$digest()}function b(t,n){t.$destroy(),n&&e(n).removeData("$scope").removeData("$$kendoScope").removeData("$isolateScope").removeData("$isolateScopeNoTemplate").removeClass("ng-scope")}function w(n,i,o){var r,a,s;if(e.isArray(n))return t.forEach(n,function(e){w(e,i,o)});if("string"==typeof n){for(r=n.split("."),a=kendo;a&&r.length>0;)a=a[r.shift()];if(!a)return O.push([n,i,o]),!1;n=a.prototype}return s=n[i],n[i]=function(){var e=this,t=arguments;return o.apply({self:e,next:function(){return s.apply(e,arguments.length>0?arguments:t)}},t)},!0}var k,y,x,C,T,S,D,F,E,I,P,A,M,H,O,z;t&&t.injector&&(k=t.module("kendo.directives",[]),y=t.injector(["ng"]),x=y.get("$parse"),C=y.get("$timeout"),S=y.get("$log"),F=function(){var e={TreeList:"TreeListDataSource",TreeView:"HierarchicalDataSource",Scheduler:"SchedulerDataSource",PanelBar:"$PLAIN",Menu:"$PLAIN",ContextMenu:"$PLAIN"},t=function(e,t){return"$PLAIN"==t?e:kendo.data[t].create(e)};return function(n,i,o,r){var a=e[o]||"DataSource",s=n.$eval(r),l=t(s,a);return n.$watch(r,function(e){var n,o=v(i);o&&"function"==typeof o.setDataSource&&e!==s&&(n=t(e,a),o.setDataSource(n),s=e)}),l}}(),E={kDataSource:!0,kOptions:!0,kRebind:!0,kNgModel:!0,kNgDelay:!0},I={name:!0,title:!0,style:!0},P=/^(input|select|textarea)$/i,k.factory("directiveFactory",["$compile",function(t){var n,i,r=!1;return T=t,i=function(t,i){return{restrict:"AC",require:["?ngModel","^?form"],scope:!1,controller:["$scope","$attrs","$element",function(e,t){var n=this;n.template=function(e,n){t[e]=kendo.stringify(n)},e.$on("$destroy",function(){n.template=null,n=null})}],link:function(a,s,l,u){var c,d=e(s),p=t.replace(/([A-Z])/g,"-$1");d.attr(p,d.attr("data-"+p)),d[0].removeAttribute("data-"+p),c=o(a,s,l,t,i,u),c&&(n&&clearTimeout(n),n=setTimeout(function(){a.$emit("kendoRendered"),r||(r=!0,e("form").each(function(){var t=e(this).controller("form");t&&t.$setPristine()}))}))}}},{create:i}}]),A={Editor:"textarea",NumericTextBox:"input",DatePicker:"input",DateTimePicker:"input",TimePicker:"input",AutoComplete:"input",ColorPicker:"input",MaskedTextBox:"input",MultiSelect:"input",Upload:"input",Validator:"form",Button:"button",MobileButton:"a",MobileBackButton:"a",MobileDetailButton:"a",ListView:"ul",MobileListView:"ul",TreeView:"ul",Menu:"ul",ContextMenu:"ul",ActionSheet:"ul"},M=["MobileView","MobileDrawer","MobileLayout","MobileSplitView","MobilePane","MobileModalView"],H=["MobileApplication","MobileView","MobileModalView","MobileLayout","MobileActionSheet","MobileDrawer","MobileSplitView","MobilePane","MobileScrollView","MobilePopOver"],t.forEach(["MobileNavBar","MobileButton","MobileBackButton","MobileDetailButton","MobileTabStrip","MobileScrollView","MobileScroller"],function(e){H.push(e),e="kendo"+e,k.directive(e,function(){return{restrict:"A",link:function(t,n,i){o(t,n,i,e,e)}}})}),O=[],kendo.onWidgetRegistered(function(t){O=e.grep(O,function(e){return!w.apply(null,e)}),g(t.widget,"Mobile"==t.prefix)}),w(["ui.Widget","mobile.ui.Widget"],"angular",function(o,r){var a,s=this.self;return"init"==o?(!r&&D&&(r=D),D=null,r&&r.$angular&&(s.$angular_scope=r.$angular[0],s.$angular_init(s.element,r)),n):(a=s.$angular_scope,a&&i(function(){var i,l,u=r(),c=u.elements,d=u.data;if(c.length>0)switch(o){case"cleanup":t.forEach(c,function(t){var n=e(t).data("$$kendoScope");n&&n!==a&&n.$$kendoScope&&b(n,t)});break;case"compile":i=s.element.injector(),l=i?i.get("$compile"):T,t.forEach(c,function(t,i){var o,r;u.scopeFrom?o=u.scopeFrom:(r=d&&d[i],r!==n?(o=e.extend(a.$new(),r),o.$$kendoScope=!0):o=a),e(t).data("$$kendoScope",o),l(t)(o)}),_(a)}}),n)}),w("ui.Widget","$angular_getLogicValue",function(){return this.self.value()}),w("ui.Widget","$angular_setLogicValue",function(e){this.self.value(e)}),w("ui.Select","$angular_getLogicValue",function(){var e=this.self.dataItem(),t=this.self.options.dataValueField;return e?this.self.options.valuePrimitive?t?e[t]:e:e.toJSON():null}),w("ui.Select","$angular_setLogicValue",function(e){var t=this.self,i=t.options,o=i.dataValueField,r=i.text||"";e===n&&(e=""),o&&!i.valuePrimitive&&e&&(r=e[i.dataTextField]||"",e=e[o||i.dataTextField]),t.options.autoBind!==!1||t.listView.bound()?t.value(e):!r&&e&&i.valuePrimitive?t.value(e):t._preselect(e,r)}),w("ui.MultiSelect","$angular_getLogicValue",function(){var t=this.self.dataItems().slice(0),n=this.self.options.dataValueField;return n&&this.self.options.valuePrimitive&&(t=e.map(t,function(e){return e[n]})),t}),w("ui.MultiSelect","$angular_setLogicValue",function(t){var n,i,o,r;null==t&&(t=[]),n=this.self,i=n.options,o=i.dataValueField,r=t,o&&!i.valuePrimitive&&(t=e.map(t,function(e){return e[o]})),i.autoBind!==!1||i.valuePrimitive||n.listView.bound()?n.value(t):n._preselect(r,t)}),w("ui.AutoComplete","$angular_getLogicValue",function(){var e,t,n,i,o,r=this.self.options,a=this.self.value().split(r.separator),s=r.valuePrimitive,l=this.self.dataSource.data(),u=[];for(e=0,t=l.length;t>e;e++)for(n=l[e],i=r.dataTextField?n[r.dataTextField]:n,o=0;a.length>o;o++)if(i===a[o]){u.push(s?i:n.toJSON());break}return u}),w("ui.AutoComplete","$angular_setLogicValue",function(t){null==t&&(t=[]);var i=this.self,o=i.options.dataTextField;o&&!i.options.valuePrimitive&&(t=t.length!==n?e.map(t,function(e){return e[o]}):t[o]),i.value(t)}),w("ui.Widget","$angular_init",function(t,n){var i,o,r,a,s=this.self;if(n&&!e.isArray(n))for(i=s.$angular_scope,o=s.events.length;--o>=0;)r=s.events[o],a=n[r],a&&"string"==typeof a&&(n[r]=s.$angular_makeEventHandler(r,i,a))}),w("ui.Widget","$angular_makeEventHandler",function(e,t,n){return n=x(n),function(e){_(t,function(){n(t,{kendoEvent:e})})}}),w(["ui.Grid","ui.ListView","ui.TreeView"],"$angular_makeEventHandler",function(e,n,i){return"change"!=e?this.next():(i=x(i),function(e){var o,r,a,s,l,u,c,d,p,h=e.sender,f=h.options,m={kendoEvent:e};for(t.isString(f.selectable)&&(o=-1!==f.selectable.indexOf("cell"),r=-1!==f.selectable.indexOf("multiple")),a=m.selected=this.select(),s=m.data=[],l=m.columns=[],c=0;a.length>c;c++)d=o?a[c].parentNode:a[c],p=h.dataItem(d),o?(t.element.inArray(p,s)<0&&s.push(p),u=t.element(a[c]).index(),t.element.inArray(u,l)<0&&l.push(u)):s.push(p);r||(m.dataItem=m.data=s[0],m.angularDataItem=kendo.proxyModelSetters(m.dataItem),m.selected=a[0]),_(n,function(){i(n,m)})})}),w("ui.Grid","$angular_init",function(i,o){if(this.next(),o.columns){var r=e.extend({},kendo.Template,o.templateSettings);t.forEach(o.columns,function(e){!e.field||e.template||e.format||e.values||e.encoded!==n&&!e.encoded||(e.template="<span ng-bind='"+kendo.expr(e.field,"dataItem")+"'>#: "+kendo.expr(e.field,r.paramName)+"#</span>")})}}),w("mobile.ui.ButtonGroup","value",function(e){var t=this.self;return null!=e&&(t.select(t.element.children("li.km-button").eq(e)),t.trigger("change"),t.trigger("select",{index:t.selectedIndex})),t.selectedIndex}),w("mobile.ui.ButtonGroup","_select",function(){this.next(),this.self.trigger("change")}),k.directive("kendoMobileApplication",function(){return{terminal:!0,link:function(e,t,n){o(e,t,n,"kendoMobileApplication","kendoMobileApplication")}}}).directive("kendoMobileView",function(){return{scope:!0,link:{pre:function(e,t,n){n.defaultOptions=e.viewOptions,n._instance=o(e,t,n,"kendoMobileView","kendoMobileView")},post:function(e,t,n){n._instance._layout(),n._instance._scroller()}}}}).directive("kendoMobileDrawer",function(){return{scope:!0,link:{pre:function(e,t,n){n.defaultOptions=e.viewOptions,n._instance=o(e,t,n,"kendoMobileDrawer","kendoMobileDrawer")},post:function(e,t,n){n._instance._layout(),n._instance._scroller()}}}}).directive("kendoMobileModalView",function(){return{scope:!0,link:{pre:function(e,t,n){n.defaultOptions=e.viewOptions,n._instance=o(e,t,n,"kendoMobileModalView","kendoMobileModalView")},post:function(e,t,n){n._instance._layout(),n._instance._scroller()}}}}).directive("kendoMobileSplitView",function(){return{terminal:!0,link:{pre:function(e,t,n){n.defaultOptions=e.viewOptions,n._instance=o(e,t,n,"kendoMobileSplitView","kendoMobileSplitView")},post:function(e,t,n){n._instance._layout()}}}}).directive("kendoMobilePane",function(){return{terminal:!0,link:{pre:function(e,t,n){n.defaultOptions=e.viewOptions,o(e,t,n,"kendoMobilePane","kendoMobilePane")}}}}).directive("kendoMobileLayout",function(){return{link:{pre:function(e,t,n){o(e,t,n,"kendoMobileLayout","kendoMobileLayout")}}}}).directive("kendoMobileActionSheet",function(){return{restrict:"A",link:function(t,n,i){n.find("a[k-action]").each(function(){e(this).attr("data-"+kendo.ns+"action",e(this).attr("k-action"))}),o(t,n,i,"kendoMobileActionSheet","kendoMobileActionSheet")}}}).directive("kendoMobilePopOver",function(){return{terminal:!0,link:{pre:function(e,t,n){n.defaultOptions=e.viewOptions,o(e,t,n,"kendoMobilePopOver","kendoMobilePopOver")}}}}).directive("kendoViewTitle",function(){return{restrict:"E",replace:!0,template:function(e){return"<span data-"+kendo.ns+"role='view-title'>"+e.html()+"</span>"}}}).directive("kendoMobileHeader",function(){return{restrict:"E",link:function(e,t){t.addClass("km-header").attr("data-role","header")}}}).directive("kendoMobileFooter",function(){return{restrict:"E",link:function(e,t){t.addClass("km-footer").attr("data-role","footer")}}}).directive("kendoMobileScrollViewPage",function(){return{restrict:"E",replace:!0,template:function(e){return"<div data-"+kendo.ns+"role='page'>"+e.html()+"</div>"}}}),t.forEach(["align","icon","rel","transition","actionsheetContext"],function(e){var t="k"+e.slice(0,1).toUpperCase()+e.slice(1);k.directive(t,function(){return{restrict:"A",priority:2,link:function(n,i,o){i.attr(kendo.attr(kendo.toHyphens(e)),n.$eval(o[t]))}}})}),z={TreeMap:["Template"],MobileListView:["HeaderTemplate","Template"],MobileScrollView:["EmptyTemplate","Template"],Grid:["AltRowTemplate","DetailTemplate","RowTemplate"],ListView:["EditTemplate","Template","AltTemplate"],Pager:["SelectTemplate","LinkTemplate"],PivotGrid:["ColumnHeaderTemplate","DataCellTemplate","RowHeaderTemplate"],Scheduler:["AllDayEventTemplate","DateHeaderTemplate","EventTemplate","MajorTimeHeaderTemplate","MinorTimeHeaderTemplate"],TreeView:["Template"],Validator:["ErrorTemplate"]},function(){var e={};t.forEach(z,function(n,i){t.forEach(n,function(t){e[t]||(e[t]=[]),e[t].push("?^^kendo"+i)})}),t.forEach(e,function(e,t){var n="k"+t,i=kendo.toHyphens(n);k.directive(n,function(){return{restrict:"A",require:e,terminal:!0,compile:function(t,o){if(""===o[n]){t.removeAttr(i);var r=t[0].outerHTML;return function(o,a,s,l){for(var u;!u&&l.length;)u=l.shift();u?(u.template(n,r),t.remove()):S.warn(i+" without a matching parent widget found. It can be one of the following: "+e.join(", "))}}}}})})}())}(window.kendo.jQuery,window.angular),window.kendo},"function"==typeof define&&define.amd?define:function(e,t,n){(n||t)()}),function(e,define){define("kendo.webcomponents.min",["kendo.core.min"],e)}(function(){return function(e,t,n){function i(e,t){var i=e.getAttribute(t);return null===i?i=n:"null"===i?i=null:"true"===i?i=!0:"false"===i?i=!1:f.test(i)?i=parseFloat(i):p.test(i)&&!h.test(i)&&(i=Function("return ("+i+")")()),i}function o(e,t){var n={};return Object.keys(t).concat("dataSource").forEach(function(t){e.hasAttribute(kendo.toHyphens(t))&&(n[t]=i(e,kendo.toHyphens(t)));
 }),n}function r(e){var t={};return Object.keys(e).forEach(function(n){"_"!=n[0]&&(t[n]=e[n])}),t}function a(e,t){var n=document.createEvent("CustomEvent");n.initCustomEvent(e,!1,!0,r(t)),this.dispatchEvent(n),n.defaultPrevented&&t.preventDefault()}function s(e,t){var n,i=Object.keys(t);for(n=0;i.length>=n;n++)if("function"==typeof t[i[n]])e[i[n]]||(e[i[n]]=t[i[n]].bind(e.widget));else{if("options"===i[n])continue;e[i[n]]=e[i[n]]||t[i[n]]}}function l(t,n){var i=n.prototype.options,r=Object.create(HTMLElement.prototype);Object.defineProperty(r,"options",{get:function(){return this.widget.options},set:function(n){var i,o,r,a=this.widget;n=e.extend(!0,{},a.options,n),i=e(a.wrapper)[0],o=e(a.element)[0],a._destroy(),r=document.createElement(u[t]||"div"),i&&o&&(i.parentNode.replaceChild(o,i),e(o).replaceWith(r)),a.value&&(n.value=a.value()),a.init(r,n),this.bindEvents()}}),r.bindEvents=function(){n.prototype.events.forEach(function(e){this.widget.bind(e,a.bind(this,e)),this.hasAttribute(c+e)&&this.bind(e,function(t){window[this.getAttribute(c+e)].call(this,t)}.bind(this))}.bind(this))},r.attachedCallback=function(){var r,a=this,l=document.createElement(u[t]||"div");e(l).append(a.childNodes),e(l).attr("class",e(a).attr("class")),e(l).attr("style",e(a).attr("style")),a.appendChild(l),a.widget=new n(l,o(a,i)),r=a.widget;do s(a,r);while(r=Object.getPrototypeOf(r));this.bindEvents()},r.detachedCallback=function(){kendo.destroy(this.element)},kendo.webComponents.push("kendo-"+t),document.registerElement("kendo-"+t,{prototype:r})}var u,c,d,p,h,f;kendo.support.customElements&&!kendo.webComponents.length&&(!t||1!=t.version.major&&!t.injector)&&(u={editor:"textarea",numerictextbox:"input",datepicker:"input",datetimepicker:"input",timepicker:"input",autocomplete:"input",colorpicker:"input",maskedtextbox:"input",dropdownlist:"select",multiselect:"select",upload:"input",validator:"form",button:"button",mobilebutton:"a",mobilebackbutton:"a",mobiledetailbutton:"a",listview:"ul",mobilelistview:"ul",treeview:"ul",menu:"ul",contextmenu:"ul",actionsheet:"ul"},c="on-",d=[],kendo.onWidgetRegistered(function(e){var t=e.prefix+e.widget.prototype.options.name.toLowerCase();-1===d.indexOf(t)&&(d.push(t),l(t,e.widget))}),p=/^\s*(?:\{(?:.|\r\n|\n)*\}|\[(?:.|\r\n|\n)*\])\s*$/,h=/^\{(\d+)(:[^\}]+)?\}|^\[[A-Za-z_]*\]$/,f=/^(\+|-?)\d+(\.?)\d*$/)}(window.kendo.jQuery,window.angular),window.kendo},"function"==typeof define&&define.amd?define:function(e,t,n){(n||t)()}),function(e,define){define("kendo.angular2.min",["kendo.core.min","kendo.webcomponents.min"],e)}(function(){!function(e,t){var n,i;t&&t.register&&(n=this&&this.__decorate||function(e,t,n,i){if("object"==typeof Reflect&&"function"==typeof Reflect.decorate)return Reflect.decorate(e,t,n,i);switch(arguments.length){case 2:return e.reduceRight(function(e,t){return t&&t(e)||e},t);case 3:return e.reduceRight(function(e,i){return void(i&&i(t,n))},void 0);case 4:return e.reduceRight(function(e,i){return i&&i(t,n,e)||e},i)}},i=this&&this.__metadata||function(e,t){return"object"==typeof Reflect&&"function"==typeof Reflect.metadata?Reflect.metadata(e,t):void 0},t.register("kendo/angular2",["angular2/angular2"],function(t){var o,r;return{setters:[function(e){o=e}],execute:function(){r=function(){function t(e,t){var n=this;this.elementRef=t,this.onChange=function(e){},this.onTouched=function(){},this.element=t.nativeElement,this.element.addEventListener("change",function(){n.onChange(n.element.value())}),this.element.addEventListener("spin",function(){n.onChange(n.element.value())}),e.valueAccessor=this,this.cd=e,e.valueAccessor=this}return t.prototype.writeValue=function(e){this.element.value(e)},t.prototype.registerOnChange=function(e){this.onChange=e},t.prototype.registerOnTouched=function(e){this.onTouched=e},t=n([o.Directive({selector:e.webComponents.join(",")}),i("design:paramtypes",[o.NgControl,o.ElementRef])],t)}(),t("KendoValueAccessor",r)}}}))}(window.kendo,window.System)},"function"==typeof define&&define.amd?define:function(e,t,n){(n||t)()}),function(e,define){define("kendo.ui.core.min",["kendo.core.min","kendo.router.min","kendo.touch.min","kendo.view.min","kendo.fx.min","kendo.data.odata.min","kendo.data.xml.min","kendo.data.min","kendo.data.signalr.min","kendo.binder.min","kendo.validator.min","kendo.userevents.min","kendo.draganddrop.min","kendo.mobile.scroller.min","kendo.resizable.min","kendo.sortable.min","kendo.selectable.min","kendo.button.min","kendo.pager.min","kendo.popup.min","kendo.notification.min","kendo.tooltip.min","kendo.toolbar.min","kendo.list.min","kendo.calendar.min","kendo.datepicker.min","kendo.autocomplete.min","kendo.dropdownlist.min","kendo.combobox.min","kendo.multiselect.min","kendo.colorpicker.min","kendo.listview.min","kendo.numerictextbox.min","kendo.maskedtextbox.min","kendo.menu.min","kendo.editable.min","kendo.panelbar.min","kendo.progressbar.min","kendo.responsivepanel.min","kendo.tabstrip.min","kendo.timepicker.min","kendo.datetimepicker.min","kendo.slider.min","kendo.splitter.min","kendo.window.min","kendo.virtuallist.min","kendo.mobile.popover.min","kendo.mobile.loader.min","kendo.mobile.scroller.min","kendo.mobile.shim.min","kendo.mobile.view.min","kendo.mobile.modalview.min","kendo.mobile.drawer.min","kendo.mobile.splitview.min","kendo.mobile.pane.min","kendo.mobile.application.min","kendo.mobile.actionsheet.min","kendo.mobile.button.min","kendo.mobile.buttongroup.min","kendo.mobile.collapsible.min","kendo.mobile.listview.min","kendo.mobile.navbar.min","kendo.mobile.scrollview.min","kendo.mobile.switch.min","kendo.mobile.tabstrip.min","kendo.angular.min","kendo.webcomponents.min","kendo.angular2.min"],e)}(function(){"bundle all";return window.kendo},"function"==typeof define&&define.amd?define:function(e,t,n){(n||t)()});
 //# sourceMappingURL=kendo.ui.core.min.js.map
+
+//     Underscore.js 1.8.3
+//     http://underscorejs.org
+//     (c) 2009-2015 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
+//     Underscore may be freely distributed under the MIT license.
+
+(function() {
+
+  // Baseline setup
+  // --------------
+
+  // Establish the root object, `window` in the browser, or `exports` on the server.
+  var root = this;
+
+  // Save the previous value of the `_` variable.
+  var previousUnderscore = root._;
+
+  // Save bytes in the minified (but not gzipped) version:
+  var ArrayProto = Array.prototype, ObjProto = Object.prototype, FuncProto = Function.prototype;
+
+  // Create quick reference variables for speed access to core prototypes.
+  var
+    push             = ArrayProto.push,
+    slice            = ArrayProto.slice,
+    toString         = ObjProto.toString,
+    hasOwnProperty   = ObjProto.hasOwnProperty;
+
+  // All **ECMAScript 5** native function implementations that we hope to use
+  // are declared here.
+  var
+    nativeIsArray      = Array.isArray,
+    nativeKeys         = Object.keys,
+    nativeBind         = FuncProto.bind,
+    nativeCreate       = Object.create;
+
+  // Naked function reference for surrogate-prototype-swapping.
+  var Ctor = function(){};
+
+  // Create a safe reference to the Underscore object for use below.
+  var _ = function(obj) {
+    if (obj instanceof _) return obj;
+    if (!(this instanceof _)) return new _(obj);
+    this._wrapped = obj;
+  };
+
+  // Export the Underscore object for **Node.js**, with
+  // backwards-compatibility for the old `require()` API. If we're in
+  // the browser, add `_` as a global object.
+  if (typeof exports !== 'undefined') {
+    if (typeof module !== 'undefined' && module.exports) {
+      exports = module.exports = _;
+    }
+    exports._ = _;
+  } else {
+    root._ = _;
+  }
+
+  // Current version.
+  _.VERSION = '1.8.3';
+
+  // Internal function that returns an efficient (for current engines) version
+  // of the passed-in callback, to be repeatedly applied in other Underscore
+  // functions.
+  var optimizeCb = function(func, context, argCount) {
+    if (context === void 0) return func;
+    switch (argCount == null ? 3 : argCount) {
+      case 1: return function(value) {
+        return func.call(context, value);
+      };
+      case 2: return function(value, other) {
+        return func.call(context, value, other);
+      };
+      case 3: return function(value, index, collection) {
+        return func.call(context, value, index, collection);
+      };
+      case 4: return function(accumulator, value, index, collection) {
+        return func.call(context, accumulator, value, index, collection);
+      };
+    }
+    return function() {
+      return func.apply(context, arguments);
+    };
+  };
+
+  // A mostly-internal function to generate callbacks that can be applied
+  // to each element in a collection, returning the desired result — either
+  // identity, an arbitrary callback, a property matcher, or a property accessor.
+  var cb = function(value, context, argCount) {
+    if (value == null) return _.identity;
+    if (_.isFunction(value)) return optimizeCb(value, context, argCount);
+    if (_.isObject(value)) return _.matcher(value);
+    return _.property(value);
+  };
+  _.iteratee = function(value, context) {
+    return cb(value, context, Infinity);
+  };
+
+  // An internal function for creating assigner functions.
+  var createAssigner = function(keysFunc, undefinedOnly) {
+    return function(obj) {
+      var length = arguments.length;
+      if (length < 2 || obj == null) return obj;
+      for (var index = 1; index < length; index++) {
+        var source = arguments[index],
+            keys = keysFunc(source),
+            l = keys.length;
+        for (var i = 0; i < l; i++) {
+          var key = keys[i];
+          if (!undefinedOnly || obj[key] === void 0) obj[key] = source[key];
+        }
+      }
+      return obj;
+    };
+  };
+
+  // An internal function for creating a new object that inherits from another.
+  var baseCreate = function(prototype) {
+    if (!_.isObject(prototype)) return {};
+    if (nativeCreate) return nativeCreate(prototype);
+    Ctor.prototype = prototype;
+    var result = new Ctor;
+    Ctor.prototype = null;
+    return result;
+  };
+
+  var property = function(key) {
+    return function(obj) {
+      return obj == null ? void 0 : obj[key];
+    };
+  };
+
+  // Helper for collection methods to determine whether a collection
+  // should be iterated as an array or as an object
+  // Related: http://people.mozilla.org/~jorendorff/es6-draft.html#sec-tolength
+  // Avoids a very nasty iOS 8 JIT bug on ARM-64. #2094
+  var MAX_ARRAY_INDEX = Math.pow(2, 53) - 1;
+  var getLength = property('length');
+  var isArrayLike = function(collection) {
+    var length = getLength(collection);
+    return typeof length == 'number' && length >= 0 && length <= MAX_ARRAY_INDEX;
+  };
+
+  // Collection Functions
+  // --------------------
+
+  // The cornerstone, an `each` implementation, aka `forEach`.
+  // Handles raw objects in addition to array-likes. Treats all
+  // sparse array-likes as if they were dense.
+  _.each = _.forEach = function(obj, iteratee, context) {
+    iteratee = optimizeCb(iteratee, context);
+    var i, length;
+    if (isArrayLike(obj)) {
+      for (i = 0, length = obj.length; i < length; i++) {
+        iteratee(obj[i], i, obj);
+      }
+    } else {
+      var keys = _.keys(obj);
+      for (i = 0, length = keys.length; i < length; i++) {
+        iteratee(obj[keys[i]], keys[i], obj);
+      }
+    }
+    return obj;
+  };
+
+  // Return the results of applying the iteratee to each element.
+  _.map = _.collect = function(obj, iteratee, context) {
+    iteratee = cb(iteratee, context);
+    var keys = !isArrayLike(obj) && _.keys(obj),
+        length = (keys || obj).length,
+        results = Array(length);
+    for (var index = 0; index < length; index++) {
+      var currentKey = keys ? keys[index] : index;
+      results[index] = iteratee(obj[currentKey], currentKey, obj);
+    }
+    return results;
+  };
+
+  // Create a reducing function iterating left or right.
+  function createReduce(dir) {
+    // Optimized iterator function as using arguments.length
+    // in the main function will deoptimize the, see #1991.
+    function iterator(obj, iteratee, memo, keys, index, length) {
+      for (; index >= 0 && index < length; index += dir) {
+        var currentKey = keys ? keys[index] : index;
+        memo = iteratee(memo, obj[currentKey], currentKey, obj);
+      }
+      return memo;
+    }
+
+    return function(obj, iteratee, memo, context) {
+      iteratee = optimizeCb(iteratee, context, 4);
+      var keys = !isArrayLike(obj) && _.keys(obj),
+          length = (keys || obj).length,
+          index = dir > 0 ? 0 : length - 1;
+      // Determine the initial value if none is provided.
+      if (arguments.length < 3) {
+        memo = obj[keys ? keys[index] : index];
+        index += dir;
+      }
+      return iterator(obj, iteratee, memo, keys, index, length);
+    };
+  }
+
+  // **Reduce** builds up a single result from a list of values, aka `inject`,
+  // or `foldl`.
+  _.reduce = _.foldl = _.inject = createReduce(1);
+
+  // The right-associative version of reduce, also known as `foldr`.
+  _.reduceRight = _.foldr = createReduce(-1);
+
+  // Return the first value which passes a truth test. Aliased as `detect`.
+  _.find = _.detect = function(obj, predicate, context) {
+    var key;
+    if (isArrayLike(obj)) {
+      key = _.findIndex(obj, predicate, context);
+    } else {
+      key = _.findKey(obj, predicate, context);
+    }
+    if (key !== void 0 && key !== -1) return obj[key];
+  };
+
+  // Return all the elements that pass a truth test.
+  // Aliased as `select`.
+  _.filter = _.select = function(obj, predicate, context) {
+    var results = [];
+    predicate = cb(predicate, context);
+    _.each(obj, function(value, index, list) {
+      if (predicate(value, index, list)) results.push(value);
+    });
+    return results;
+  };
+
+  // Return all the elements for which a truth test fails.
+  _.reject = function(obj, predicate, context) {
+    return _.filter(obj, _.negate(cb(predicate)), context);
+  };
+
+  // Determine whether all of the elements match a truth test.
+  // Aliased as `all`.
+  _.every = _.all = function(obj, predicate, context) {
+    predicate = cb(predicate, context);
+    var keys = !isArrayLike(obj) && _.keys(obj),
+        length = (keys || obj).length;
+    for (var index = 0; index < length; index++) {
+      var currentKey = keys ? keys[index] : index;
+      if (!predicate(obj[currentKey], currentKey, obj)) return false;
+    }
+    return true;
+  };
+
+  // Determine if at least one element in the object matches a truth test.
+  // Aliased as `any`.
+  _.some = _.any = function(obj, predicate, context) {
+    predicate = cb(predicate, context);
+    var keys = !isArrayLike(obj) && _.keys(obj),
+        length = (keys || obj).length;
+    for (var index = 0; index < length; index++) {
+      var currentKey = keys ? keys[index] : index;
+      if (predicate(obj[currentKey], currentKey, obj)) return true;
+    }
+    return false;
+  };
+
+  // Determine if the array or object contains a given item (using `===`).
+  // Aliased as `includes` and `include`.
+  _.contains = _.includes = _.include = function(obj, item, fromIndex, guard) {
+    if (!isArrayLike(obj)) obj = _.values(obj);
+    if (typeof fromIndex != 'number' || guard) fromIndex = 0;
+    return _.indexOf(obj, item, fromIndex) >= 0;
+  };
+
+  // Invoke a method (with arguments) on every item in a collection.
+  _.invoke = function(obj, method) {
+    var args = slice.call(arguments, 2);
+    var isFunc = _.isFunction(method);
+    return _.map(obj, function(value) {
+      var func = isFunc ? method : value[method];
+      return func == null ? func : func.apply(value, args);
+    });
+  };
+
+  // Convenience version of a common use case of `map`: fetching a property.
+  _.pluck = function(obj, key) {
+    return _.map(obj, _.property(key));
+  };
+
+  // Convenience version of a common use case of `filter`: selecting only objects
+  // containing specific `key:value` pairs.
+  _.where = function(obj, attrs) {
+    return _.filter(obj, _.matcher(attrs));
+  };
+
+  // Convenience version of a common use case of `find`: getting the first object
+  // containing specific `key:value` pairs.
+  _.findWhere = function(obj, attrs) {
+    return _.find(obj, _.matcher(attrs));
+  };
+
+  // Return the maximum element (or element-based computation).
+  _.max = function(obj, iteratee, context) {
+    var result = -Infinity, lastComputed = -Infinity,
+        value, computed;
+    if (iteratee == null && obj != null) {
+      obj = isArrayLike(obj) ? obj : _.values(obj);
+      for (var i = 0, length = obj.length; i < length; i++) {
+        value = obj[i];
+        if (value > result) {
+          result = value;
+        }
+      }
+    } else {
+      iteratee = cb(iteratee, context);
+      _.each(obj, function(value, index, list) {
+        computed = iteratee(value, index, list);
+        if (computed > lastComputed || computed === -Infinity && result === -Infinity) {
+          result = value;
+          lastComputed = computed;
+        }
+      });
+    }
+    return result;
+  };
+
+  // Return the minimum element (or element-based computation).
+  _.min = function(obj, iteratee, context) {
+    var result = Infinity, lastComputed = Infinity,
+        value, computed;
+    if (iteratee == null && obj != null) {
+      obj = isArrayLike(obj) ? obj : _.values(obj);
+      for (var i = 0, length = obj.length; i < length; i++) {
+        value = obj[i];
+        if (value < result) {
+          result = value;
+        }
+      }
+    } else {
+      iteratee = cb(iteratee, context);
+      _.each(obj, function(value, index, list) {
+        computed = iteratee(value, index, list);
+        if (computed < lastComputed || computed === Infinity && result === Infinity) {
+          result = value;
+          lastComputed = computed;
+        }
+      });
+    }
+    return result;
+  };
+
+  // Shuffle a collection, using the modern version of the
+  // [Fisher-Yates shuffle](http://en.wikipedia.org/wiki/Fisher–Yates_shuffle).
+  _.shuffle = function(obj) {
+    var set = isArrayLike(obj) ? obj : _.values(obj);
+    var length = set.length;
+    var shuffled = Array(length);
+    for (var index = 0, rand; index < length; index++) {
+      rand = _.random(0, index);
+      if (rand !== index) shuffled[index] = shuffled[rand];
+      shuffled[rand] = set[index];
+    }
+    return shuffled;
+  };
+
+  // Sample **n** random values from a collection.
+  // If **n** is not specified, returns a single random element.
+  // The internal `guard` argument allows it to work with `map`.
+  _.sample = function(obj, n, guard) {
+    if (n == null || guard) {
+      if (!isArrayLike(obj)) obj = _.values(obj);
+      return obj[_.random(obj.length - 1)];
+    }
+    return _.shuffle(obj).slice(0, Math.max(0, n));
+  };
+
+  // Sort the object's values by a criterion produced by an iteratee.
+  _.sortBy = function(obj, iteratee, context) {
+    iteratee = cb(iteratee, context);
+    return _.pluck(_.map(obj, function(value, index, list) {
+      return {
+        value: value,
+        index: index,
+        criteria: iteratee(value, index, list)
+      };
+    }).sort(function(left, right) {
+      var a = left.criteria;
+      var b = right.criteria;
+      if (a !== b) {
+        if (a > b || a === void 0) return 1;
+        if (a < b || b === void 0) return -1;
+      }
+      return left.index - right.index;
+    }), 'value');
+  };
+
+  // An internal function used for aggregate "group by" operations.
+  var group = function(behavior) {
+    return function(obj, iteratee, context) {
+      var result = {};
+      iteratee = cb(iteratee, context);
+      _.each(obj, function(value, index) {
+        var key = iteratee(value, index, obj);
+        behavior(result, value, key);
+      });
+      return result;
+    };
+  };
+
+  // Groups the object's values by a criterion. Pass either a string attribute
+  // to group by, or a function that returns the criterion.
+  _.groupBy = group(function(result, value, key) {
+    if (_.has(result, key)) result[key].push(value); else result[key] = [value];
+  });
+
+  // Indexes the object's values by a criterion, similar to `groupBy`, but for
+  // when you know that your index values will be unique.
+  _.indexBy = group(function(result, value, key) {
+    result[key] = value;
+  });
+
+  // Counts instances of an object that group by a certain criterion. Pass
+  // either a string attribute to count by, or a function that returns the
+  // criterion.
+  _.countBy = group(function(result, value, key) {
+    if (_.has(result, key)) result[key]++; else result[key] = 1;
+  });
+
+  // Safely create a real, live array from anything iterable.
+  _.toArray = function(obj) {
+    if (!obj) return [];
+    if (_.isArray(obj)) return slice.call(obj);
+    if (isArrayLike(obj)) return _.map(obj, _.identity);
+    return _.values(obj);
+  };
+
+  // Return the number of elements in an object.
+  _.size = function(obj) {
+    if (obj == null) return 0;
+    return isArrayLike(obj) ? obj.length : _.keys(obj).length;
+  };
+
+  // Split a collection into two arrays: one whose elements all satisfy the given
+  // predicate, and one whose elements all do not satisfy the predicate.
+  _.partition = function(obj, predicate, context) {
+    predicate = cb(predicate, context);
+    var pass = [], fail = [];
+    _.each(obj, function(value, key, obj) {
+      (predicate(value, key, obj) ? pass : fail).push(value);
+    });
+    return [pass, fail];
+  };
+
+  // Array Functions
+  // ---------------
+
+  // Get the first element of an array. Passing **n** will return the first N
+  // values in the array. Aliased as `head` and `take`. The **guard** check
+  // allows it to work with `_.map`.
+  _.first = _.head = _.take = function(array, n, guard) {
+    if (array == null) return void 0;
+    if (n == null || guard) return array[0];
+    return _.initial(array, array.length - n);
+  };
+
+  // Returns everything but the last entry of the array. Especially useful on
+  // the arguments object. Passing **n** will return all the values in
+  // the array, excluding the last N.
+  _.initial = function(array, n, guard) {
+    return slice.call(array, 0, Math.max(0, array.length - (n == null || guard ? 1 : n)));
+  };
+
+  // Get the last element of an array. Passing **n** will return the last N
+  // values in the array.
+  _.last = function(array, n, guard) {
+    if (array == null) return void 0;
+    if (n == null || guard) return array[array.length - 1];
+    return _.rest(array, Math.max(0, array.length - n));
+  };
+
+  // Returns everything but the first entry of the array. Aliased as `tail` and `drop`.
+  // Especially useful on the arguments object. Passing an **n** will return
+  // the rest N values in the array.
+  _.rest = _.tail = _.drop = function(array, n, guard) {
+    return slice.call(array, n == null || guard ? 1 : n);
+  };
+
+  // Trim out all falsy values from an array.
+  _.compact = function(array) {
+    return _.filter(array, _.identity);
+  };
+
+  // Internal implementation of a recursive `flatten` function.
+  var flatten = function(input, shallow, strict, startIndex) {
+    var output = [], idx = 0;
+    for (var i = startIndex || 0, length = getLength(input); i < length; i++) {
+      var value = input[i];
+      if (isArrayLike(value) && (_.isArray(value) || _.isArguments(value))) {
+        //flatten current level of array or arguments object
+        if (!shallow) value = flatten(value, shallow, strict);
+        var j = 0, len = value.length;
+        output.length += len;
+        while (j < len) {
+          output[idx++] = value[j++];
+        }
+      } else if (!strict) {
+        output[idx++] = value;
+      }
+    }
+    return output;
+  };
+
+  // Flatten out an array, either recursively (by default), or just one level.
+  _.flatten = function(array, shallow) {
+    return flatten(array, shallow, false);
+  };
+
+  // Return a version of the array that does not contain the specified value(s).
+  _.without = function(array) {
+    return _.difference(array, slice.call(arguments, 1));
+  };
+
+  // Produce a duplicate-free version of the array. If the array has already
+  // been sorted, you have the option of using a faster algorithm.
+  // Aliased as `unique`.
+  _.uniq = _.unique = function(array, isSorted, iteratee, context) {
+    if (!_.isBoolean(isSorted)) {
+      context = iteratee;
+      iteratee = isSorted;
+      isSorted = false;
+    }
+    if (iteratee != null) iteratee = cb(iteratee, context);
+    var result = [];
+    var seen = [];
+    for (var i = 0, length = getLength(array); i < length; i++) {
+      var value = array[i],
+          computed = iteratee ? iteratee(value, i, array) : value;
+      if (isSorted) {
+        if (!i || seen !== computed) result.push(value);
+        seen = computed;
+      } else if (iteratee) {
+        if (!_.contains(seen, computed)) {
+          seen.push(computed);
+          result.push(value);
+        }
+      } else if (!_.contains(result, value)) {
+        result.push(value);
+      }
+    }
+    return result;
+  };
+
+  // Produce an array that contains the union: each distinct element from all of
+  // the passed-in arrays.
+  _.union = function() {
+    return _.uniq(flatten(arguments, true, true));
+  };
+
+  // Produce an array that contains every item shared between all the
+  // passed-in arrays.
+  _.intersection = function(array) {
+    var result = [];
+    var argsLength = arguments.length;
+    for (var i = 0, length = getLength(array); i < length; i++) {
+      var item = array[i];
+      if (_.contains(result, item)) continue;
+      for (var j = 1; j < argsLength; j++) {
+        if (!_.contains(arguments[j], item)) break;
+      }
+      if (j === argsLength) result.push(item);
+    }
+    return result;
+  };
+
+  // Take the difference between one array and a number of other arrays.
+  // Only the elements present in just the first array will remain.
+  _.difference = function(array) {
+    var rest = flatten(arguments, true, true, 1);
+    return _.filter(array, function(value){
+      return !_.contains(rest, value);
+    });
+  };
+
+  // Zip together multiple lists into a single array -- elements that share
+  // an index go together.
+  _.zip = function() {
+    return _.unzip(arguments);
+  };
+
+  // Complement of _.zip. Unzip accepts an array of arrays and groups
+  // each array's elements on shared indices
+  _.unzip = function(array) {
+    var length = array && _.max(array, getLength).length || 0;
+    var result = Array(length);
+
+    for (var index = 0; index < length; index++) {
+      result[index] = _.pluck(array, index);
+    }
+    return result;
+  };
+
+  // Converts lists into objects. Pass either a single array of `[key, value]`
+  // pairs, or two parallel arrays of the same length -- one of keys, and one of
+  // the corresponding values.
+  _.object = function(list, values) {
+    var result = {};
+    for (var i = 0, length = getLength(list); i < length; i++) {
+      if (values) {
+        result[list[i]] = values[i];
+      } else {
+        result[list[i][0]] = list[i][1];
+      }
+    }
+    return result;
+  };
+
+  // Generator function to create the findIndex and findLastIndex functions
+  function createPredicateIndexFinder(dir) {
+    return function(array, predicate, context) {
+      predicate = cb(predicate, context);
+      var length = getLength(array);
+      var index = dir > 0 ? 0 : length - 1;
+      for (; index >= 0 && index < length; index += dir) {
+        if (predicate(array[index], index, array)) return index;
+      }
+      return -1;
+    };
+  }
+
+  // Returns the first index on an array-like that passes a predicate test
+  _.findIndex = createPredicateIndexFinder(1);
+  _.findLastIndex = createPredicateIndexFinder(-1);
+
+  // Use a comparator function to figure out the smallest index at which
+  // an object should be inserted so as to maintain order. Uses binary search.
+  _.sortedIndex = function(array, obj, iteratee, context) {
+    iteratee = cb(iteratee, context, 1);
+    var value = iteratee(obj);
+    var low = 0, high = getLength(array);
+    while (low < high) {
+      var mid = Math.floor((low + high) / 2);
+      if (iteratee(array[mid]) < value) low = mid + 1; else high = mid;
+    }
+    return low;
+  };
+
+  // Generator function to create the indexOf and lastIndexOf functions
+  function createIndexFinder(dir, predicateFind, sortedIndex) {
+    return function(array, item, idx) {
+      var i = 0, length = getLength(array);
+      if (typeof idx == 'number') {
+        if (dir > 0) {
+            i = idx >= 0 ? idx : Math.max(idx + length, i);
+        } else {
+            length = idx >= 0 ? Math.min(idx + 1, length) : idx + length + 1;
+        }
+      } else if (sortedIndex && idx && length) {
+        idx = sortedIndex(array, item);
+        return array[idx] === item ? idx : -1;
+      }
+      if (item !== item) {
+        idx = predicateFind(slice.call(array, i, length), _.isNaN);
+        return idx >= 0 ? idx + i : -1;
+      }
+      for (idx = dir > 0 ? i : length - 1; idx >= 0 && idx < length; idx += dir) {
+        if (array[idx] === item) return idx;
+      }
+      return -1;
+    };
+  }
+
+  // Return the position of the first occurrence of an item in an array,
+  // or -1 if the item is not included in the array.
+  // If the array is large and already in sort order, pass `true`
+  // for **isSorted** to use binary search.
+  _.indexOf = createIndexFinder(1, _.findIndex, _.sortedIndex);
+  _.lastIndexOf = createIndexFinder(-1, _.findLastIndex);
+
+  // Generate an integer Array containing an arithmetic progression. A port of
+  // the native Python `range()` function. See
+  // [the Python documentation](http://docs.python.org/library/functions.html#range).
+  _.range = function(start, stop, step) {
+    if (stop == null) {
+      stop = start || 0;
+      start = 0;
+    }
+    step = step || 1;
+
+    var length = Math.max(Math.ceil((stop - start) / step), 0);
+    var range = Array(length);
+
+    for (var idx = 0; idx < length; idx++, start += step) {
+      range[idx] = start;
+    }
+
+    return range;
+  };
+
+  // Function (ahem) Functions
+  // ------------------
+
+  // Determines whether to execute a function as a constructor
+  // or a normal function with the provided arguments
+  var executeBound = function(sourceFunc, boundFunc, context, callingContext, args) {
+    if (!(callingContext instanceof boundFunc)) return sourceFunc.apply(context, args);
+    var self = baseCreate(sourceFunc.prototype);
+    var result = sourceFunc.apply(self, args);
+    if (_.isObject(result)) return result;
+    return self;
+  };
+
+  // Create a function bound to a given object (assigning `this`, and arguments,
+  // optionally). Delegates to **ECMAScript 5**'s native `Function.bind` if
+  // available.
+  _.bind = function(func, context) {
+    if (nativeBind && func.bind === nativeBind) return nativeBind.apply(func, slice.call(arguments, 1));
+    if (!_.isFunction(func)) throw new TypeError('Bind must be called on a function');
+    var args = slice.call(arguments, 2);
+    var bound = function() {
+      return executeBound(func, bound, context, this, args.concat(slice.call(arguments)));
+    };
+    return bound;
+  };
+
+  // Partially apply a function by creating a version that has had some of its
+  // arguments pre-filled, without changing its dynamic `this` context. _ acts
+  // as a placeholder, allowing any combination of arguments to be pre-filled.
+  _.partial = function(func) {
+    var boundArgs = slice.call(arguments, 1);
+    var bound = function() {
+      var position = 0, length = boundArgs.length;
+      var args = Array(length);
+      for (var i = 0; i < length; i++) {
+        args[i] = boundArgs[i] === _ ? arguments[position++] : boundArgs[i];
+      }
+      while (position < arguments.length) args.push(arguments[position++]);
+      return executeBound(func, bound, this, this, args);
+    };
+    return bound;
+  };
+
+  // Bind a number of an object's methods to that object. Remaining arguments
+  // are the method names to be bound. Useful for ensuring that all callbacks
+  // defined on an object belong to it.
+  _.bindAll = function(obj) {
+    var i, length = arguments.length, key;
+    if (length <= 1) throw new Error('bindAll must be passed function names');
+    for (i = 1; i < length; i++) {
+      key = arguments[i];
+      obj[key] = _.bind(obj[key], obj);
+    }
+    return obj;
+  };
+
+  // Memoize an expensive function by storing its results.
+  _.memoize = function(func, hasher) {
+    var memoize = function(key) {
+      var cache = memoize.cache;
+      var address = '' + (hasher ? hasher.apply(this, arguments) : key);
+      if (!_.has(cache, address)) cache[address] = func.apply(this, arguments);
+      return cache[address];
+    };
+    memoize.cache = {};
+    return memoize;
+  };
+
+  // Delays a function for the given number of milliseconds, and then calls
+  // it with the arguments supplied.
+  _.delay = function(func, wait) {
+    var args = slice.call(arguments, 2);
+    return setTimeout(function(){
+      return func.apply(null, args);
+    }, wait);
+  };
+
+  // Defers a function, scheduling it to run after the current call stack has
+  // cleared.
+  _.defer = _.partial(_.delay, _, 1);
+
+  // Returns a function, that, when invoked, will only be triggered at most once
+  // during a given window of time. Normally, the throttled function will run
+  // as much as it can, without ever going more than once per `wait` duration;
+  // but if you'd like to disable the execution on the leading edge, pass
+  // `{leading: false}`. To disable execution on the trailing edge, ditto.
+  _.throttle = function(func, wait, options) {
+    var context, args, result;
+    var timeout = null;
+    var previous = 0;
+    if (!options) options = {};
+    var later = function() {
+      previous = options.leading === false ? 0 : _.now();
+      timeout = null;
+      result = func.apply(context, args);
+      if (!timeout) context = args = null;
+    };
+    return function() {
+      var now = _.now();
+      if (!previous && options.leading === false) previous = now;
+      var remaining = wait - (now - previous);
+      context = this;
+      args = arguments;
+      if (remaining <= 0 || remaining > wait) {
+        if (timeout) {
+          clearTimeout(timeout);
+          timeout = null;
+        }
+        previous = now;
+        result = func.apply(context, args);
+        if (!timeout) context = args = null;
+      } else if (!timeout && options.trailing !== false) {
+        timeout = setTimeout(later, remaining);
+      }
+      return result;
+    };
+  };
+
+  // Returns a function, that, as long as it continues to be invoked, will not
+  // be triggered. The function will be called after it stops being called for
+  // N milliseconds. If `immediate` is passed, trigger the function on the
+  // leading edge, instead of the trailing.
+  _.debounce = function(func, wait, immediate) {
+    var timeout, args, context, timestamp, result;
+
+    var later = function() {
+      var last = _.now() - timestamp;
+
+      if (last < wait && last >= 0) {
+        timeout = setTimeout(later, wait - last);
+      } else {
+        timeout = null;
+        if (!immediate) {
+          result = func.apply(context, args);
+          if (!timeout) context = args = null;
+        }
+      }
+    };
+
+    return function() {
+      context = this;
+      args = arguments;
+      timestamp = _.now();
+      var callNow = immediate && !timeout;
+      if (!timeout) timeout = setTimeout(later, wait);
+      if (callNow) {
+        result = func.apply(context, args);
+        context = args = null;
+      }
+
+      return result;
+    };
+  };
+
+  // Returns the first function passed as an argument to the second,
+  // allowing you to adjust arguments, run code before and after, and
+  // conditionally execute the original function.
+  _.wrap = function(func, wrapper) {
+    return _.partial(wrapper, func);
+  };
+
+  // Returns a negated version of the passed-in predicate.
+  _.negate = function(predicate) {
+    return function() {
+      return !predicate.apply(this, arguments);
+    };
+  };
+
+  // Returns a function that is the composition of a list of functions, each
+  // consuming the return value of the function that follows.
+  _.compose = function() {
+    var args = arguments;
+    var start = args.length - 1;
+    return function() {
+      var i = start;
+      var result = args[start].apply(this, arguments);
+      while (i--) result = args[i].call(this, result);
+      return result;
+    };
+  };
+
+  // Returns a function that will only be executed on and after the Nth call.
+  _.after = function(times, func) {
+    return function() {
+      if (--times < 1) {
+        return func.apply(this, arguments);
+      }
+    };
+  };
+
+  // Returns a function that will only be executed up to (but not including) the Nth call.
+  _.before = function(times, func) {
+    var memo;
+    return function() {
+      if (--times > 0) {
+        memo = func.apply(this, arguments);
+      }
+      if (times <= 1) func = null;
+      return memo;
+    };
+  };
+
+  // Returns a function that will be executed at most one time, no matter how
+  // often you call it. Useful for lazy initialization.
+  _.once = _.partial(_.before, 2);
+
+  // Object Functions
+  // ----------------
+
+  // Keys in IE < 9 that won't be iterated by `for key in ...` and thus missed.
+  var hasEnumBug = !{toString: null}.propertyIsEnumerable('toString');
+  var nonEnumerableProps = ['valueOf', 'isPrototypeOf', 'toString',
+                      'propertyIsEnumerable', 'hasOwnProperty', 'toLocaleString'];
+
+  function collectNonEnumProps(obj, keys) {
+    var nonEnumIdx = nonEnumerableProps.length;
+    var constructor = obj.constructor;
+    var proto = (_.isFunction(constructor) && constructor.prototype) || ObjProto;
+
+    // Constructor is a special case.
+    var prop = 'constructor';
+    if (_.has(obj, prop) && !_.contains(keys, prop)) keys.push(prop);
+
+    while (nonEnumIdx--) {
+      prop = nonEnumerableProps[nonEnumIdx];
+      if (prop in obj && obj[prop] !== proto[prop] && !_.contains(keys, prop)) {
+        keys.push(prop);
+      }
+    }
+  }
+
+  // Retrieve the names of an object's own properties.
+  // Delegates to **ECMAScript 5**'s native `Object.keys`
+  _.keys = function(obj) {
+    if (!_.isObject(obj)) return [];
+    if (nativeKeys) return nativeKeys(obj);
+    var keys = [];
+    for (var key in obj) if (_.has(obj, key)) keys.push(key);
+    // Ahem, IE < 9.
+    if (hasEnumBug) collectNonEnumProps(obj, keys);
+    return keys;
+  };
+
+  // Retrieve all the property names of an object.
+  _.allKeys = function(obj) {
+    if (!_.isObject(obj)) return [];
+    var keys = [];
+    for (var key in obj) keys.push(key);
+    // Ahem, IE < 9.
+    if (hasEnumBug) collectNonEnumProps(obj, keys);
+    return keys;
+  };
+
+  // Retrieve the values of an object's properties.
+  _.values = function(obj) {
+    var keys = _.keys(obj);
+    var length = keys.length;
+    var values = Array(length);
+    for (var i = 0; i < length; i++) {
+      values[i] = obj[keys[i]];
+    }
+    return values;
+  };
+
+  // Returns the results of applying the iteratee to each element of the object
+  // In contrast to _.map it returns an object
+  _.mapObject = function(obj, iteratee, context) {
+    iteratee = cb(iteratee, context);
+    var keys =  _.keys(obj),
+          length = keys.length,
+          results = {},
+          currentKey;
+      for (var index = 0; index < length; index++) {
+        currentKey = keys[index];
+        results[currentKey] = iteratee(obj[currentKey], currentKey, obj);
+      }
+      return results;
+  };
+
+  // Convert an object into a list of `[key, value]` pairs.
+  _.pairs = function(obj) {
+    var keys = _.keys(obj);
+    var length = keys.length;
+    var pairs = Array(length);
+    for (var i = 0; i < length; i++) {
+      pairs[i] = [keys[i], obj[keys[i]]];
+    }
+    return pairs;
+  };
+
+  // Invert the keys and values of an object. The values must be serializable.
+  _.invert = function(obj) {
+    var result = {};
+    var keys = _.keys(obj);
+    for (var i = 0, length = keys.length; i < length; i++) {
+      result[obj[keys[i]]] = keys[i];
+    }
+    return result;
+  };
+
+  // Return a sorted list of the function names available on the object.
+  // Aliased as `methods`
+  _.functions = _.methods = function(obj) {
+    var names = [];
+    for (var key in obj) {
+      if (_.isFunction(obj[key])) names.push(key);
+    }
+    return names.sort();
+  };
+
+  // Extend a given object with all the properties in passed-in object(s).
+  _.extend = createAssigner(_.allKeys);
+
+  // Assigns a given object with all the own properties in the passed-in object(s)
+  // (https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Object/assign)
+  _.extendOwn = _.assign = createAssigner(_.keys);
+
+  // Returns the first key on an object that passes a predicate test
+  _.findKey = function(obj, predicate, context) {
+    predicate = cb(predicate, context);
+    var keys = _.keys(obj), key;
+    for (var i = 0, length = keys.length; i < length; i++) {
+      key = keys[i];
+      if (predicate(obj[key], key, obj)) return key;
+    }
+  };
+
+  // Return a copy of the object only containing the whitelisted properties.
+  _.pick = function(object, oiteratee, context) {
+    var result = {}, obj = object, iteratee, keys;
+    if (obj == null) return result;
+    if (_.isFunction(oiteratee)) {
+      keys = _.allKeys(obj);
+      iteratee = optimizeCb(oiteratee, context);
+    } else {
+      keys = flatten(arguments, false, false, 1);
+      iteratee = function(value, key, obj) { return key in obj; };
+      obj = Object(obj);
+    }
+    for (var i = 0, length = keys.length; i < length; i++) {
+      var key = keys[i];
+      var value = obj[key];
+      if (iteratee(value, key, obj)) result[key] = value;
+    }
+    return result;
+  };
+
+   // Return a copy of the object without the blacklisted properties.
+  _.omit = function(obj, iteratee, context) {
+    if (_.isFunction(iteratee)) {
+      iteratee = _.negate(iteratee);
+    } else {
+      var keys = _.map(flatten(arguments, false, false, 1), String);
+      iteratee = function(value, key) {
+        return !_.contains(keys, key);
+      };
+    }
+    return _.pick(obj, iteratee, context);
+  };
+
+  // Fill in a given object with default properties.
+  _.defaults = createAssigner(_.allKeys, true);
+
+  // Creates an object that inherits from the given prototype object.
+  // If additional properties are provided then they will be added to the
+  // created object.
+  _.create = function(prototype, props) {
+    var result = baseCreate(prototype);
+    if (props) _.extendOwn(result, props);
+    return result;
+  };
+
+  // Create a (shallow-cloned) duplicate of an object.
+  _.clone = function(obj) {
+    if (!_.isObject(obj)) return obj;
+    return _.isArray(obj) ? obj.slice() : _.extend({}, obj);
+  };
+
+  // Invokes interceptor with the obj, and then returns obj.
+  // The primary purpose of this method is to "tap into" a method chain, in
+  // order to perform operations on intermediate results within the chain.
+  _.tap = function(obj, interceptor) {
+    interceptor(obj);
+    return obj;
+  };
+
+  // Returns whether an object has a given set of `key:value` pairs.
+  _.isMatch = function(object, attrs) {
+    var keys = _.keys(attrs), length = keys.length;
+    if (object == null) return !length;
+    var obj = Object(object);
+    for (var i = 0; i < length; i++) {
+      var key = keys[i];
+      if (attrs[key] !== obj[key] || !(key in obj)) return false;
+    }
+    return true;
+  };
+
+
+  // Internal recursive comparison function for `isEqual`.
+  var eq = function(a, b, aStack, bStack) {
+    // Identical objects are equal. `0 === -0`, but they aren't identical.
+    // See the [Harmony `egal` proposal](http://wiki.ecmascript.org/doku.php?id=harmony:egal).
+    if (a === b) return a !== 0 || 1 / a === 1 / b;
+    // A strict comparison is necessary because `null == undefined`.
+    if (a == null || b == null) return a === b;
+    // Unwrap any wrapped objects.
+    if (a instanceof _) a = a._wrapped;
+    if (b instanceof _) b = b._wrapped;
+    // Compare `[[Class]]` names.
+    var className = toString.call(a);
+    if (className !== toString.call(b)) return false;
+    switch (className) {
+      // Strings, numbers, regular expressions, dates, and booleans are compared by value.
+      case '[object RegExp]':
+      // RegExps are coerced to strings for comparison (Note: '' + /a/i === '/a/i')
+      case '[object String]':
+        // Primitives and their corresponding object wrappers are equivalent; thus, `"5"` is
+        // equivalent to `new String("5")`.
+        return '' + a === '' + b;
+      case '[object Number]':
+        // `NaN`s are equivalent, but non-reflexive.
+        // Object(NaN) is equivalent to NaN
+        if (+a !== +a) return +b !== +b;
+        // An `egal` comparison is performed for other numeric values.
+        return +a === 0 ? 1 / +a === 1 / b : +a === +b;
+      case '[object Date]':
+      case '[object Boolean]':
+        // Coerce dates and booleans to numeric primitive values. Dates are compared by their
+        // millisecond representations. Note that invalid dates with millisecond representations
+        // of `NaN` are not equivalent.
+        return +a === +b;
+    }
+
+    var areArrays = className === '[object Array]';
+    if (!areArrays) {
+      if (typeof a != 'object' || typeof b != 'object') return false;
+
+      // Objects with different constructors are not equivalent, but `Object`s or `Array`s
+      // from different frames are.
+      var aCtor = a.constructor, bCtor = b.constructor;
+      if (aCtor !== bCtor && !(_.isFunction(aCtor) && aCtor instanceof aCtor &&
+                               _.isFunction(bCtor) && bCtor instanceof bCtor)
+                          && ('constructor' in a && 'constructor' in b)) {
+        return false;
+      }
+    }
+    // Assume equality for cyclic structures. The algorithm for detecting cyclic
+    // structures is adapted from ES 5.1 section 15.12.3, abstract operation `JO`.
+
+    // Initializing stack of traversed objects.
+    // It's done here since we only need them for objects and arrays comparison.
+    aStack = aStack || [];
+    bStack = bStack || [];
+    var length = aStack.length;
+    while (length--) {
+      // Linear search. Performance is inversely proportional to the number of
+      // unique nested structures.
+      if (aStack[length] === a) return bStack[length] === b;
+    }
+
+    // Add the first object to the stack of traversed objects.
+    aStack.push(a);
+    bStack.push(b);
+
+    // Recursively compare objects and arrays.
+    if (areArrays) {
+      // Compare array lengths to determine if a deep comparison is necessary.
+      length = a.length;
+      if (length !== b.length) return false;
+      // Deep compare the contents, ignoring non-numeric properties.
+      while (length--) {
+        if (!eq(a[length], b[length], aStack, bStack)) return false;
+      }
+    } else {
+      // Deep compare objects.
+      var keys = _.keys(a), key;
+      length = keys.length;
+      // Ensure that both objects contain the same number of properties before comparing deep equality.
+      if (_.keys(b).length !== length) return false;
+      while (length--) {
+        // Deep compare each member
+        key = keys[length];
+        if (!(_.has(b, key) && eq(a[key], b[key], aStack, bStack))) return false;
+      }
+    }
+    // Remove the first object from the stack of traversed objects.
+    aStack.pop();
+    bStack.pop();
+    return true;
+  };
+
+  // Perform a deep comparison to check if two objects are equal.
+  _.isEqual = function(a, b) {
+    return eq(a, b);
+  };
+
+  // Is a given array, string, or object empty?
+  // An "empty" object has no enumerable own-properties.
+  _.isEmpty = function(obj) {
+    if (obj == null) return true;
+    if (isArrayLike(obj) && (_.isArray(obj) || _.isString(obj) || _.isArguments(obj))) return obj.length === 0;
+    return _.keys(obj).length === 0;
+  };
+
+  // Is a given value a DOM element?
+  _.isElement = function(obj) {
+    return !!(obj && obj.nodeType === 1);
+  };
+
+  // Is a given value an array?
+  // Delegates to ECMA5's native Array.isArray
+  _.isArray = nativeIsArray || function(obj) {
+    return toString.call(obj) === '[object Array]';
+  };
+
+  // Is a given variable an object?
+  _.isObject = function(obj) {
+    var type = typeof obj;
+    return type === 'function' || type === 'object' && !!obj;
+  };
+
+  // Add some isType methods: isArguments, isFunction, isString, isNumber, isDate, isRegExp, isError.
+  _.each(['Arguments', 'Function', 'String', 'Number', 'Date', 'RegExp', 'Error'], function(name) {
+    _['is' + name] = function(obj) {
+      return toString.call(obj) === '[object ' + name + ']';
+    };
+  });
+
+  // Define a fallback version of the method in browsers (ahem, IE < 9), where
+  // there isn't any inspectable "Arguments" type.
+  if (!_.isArguments(arguments)) {
+    _.isArguments = function(obj) {
+      return _.has(obj, 'callee');
+    };
+  }
+
+  // Optimize `isFunction` if appropriate. Work around some typeof bugs in old v8,
+  // IE 11 (#1621), and in Safari 8 (#1929).
+  if (typeof /./ != 'function' && typeof Int8Array != 'object') {
+    _.isFunction = function(obj) {
+      return typeof obj == 'function' || false;
+    };
+  }
+
+  // Is a given object a finite number?
+  _.isFinite = function(obj) {
+    return isFinite(obj) && !isNaN(parseFloat(obj));
+  };
+
+  // Is the given value `NaN`? (NaN is the only number which does not equal itself).
+  _.isNaN = function(obj) {
+    return _.isNumber(obj) && obj !== +obj;
+  };
+
+  // Is a given value a boolean?
+  _.isBoolean = function(obj) {
+    return obj === true || obj === false || toString.call(obj) === '[object Boolean]';
+  };
+
+  // Is a given value equal to null?
+  _.isNull = function(obj) {
+    return obj === null;
+  };
+
+  // Is a given variable undefined?
+  _.isUndefined = function(obj) {
+    return obj === void 0;
+  };
+
+  // Shortcut function for checking if an object has a given property directly
+  // on itself (in other words, not on a prototype).
+  _.has = function(obj, key) {
+    return obj != null && hasOwnProperty.call(obj, key);
+  };
+
+  // Utility Functions
+  // -----------------
+
+  // Run Underscore.js in *noConflict* mode, returning the `_` variable to its
+  // previous owner. Returns a reference to the Underscore object.
+  _.noConflict = function() {
+    root._ = previousUnderscore;
+    return this;
+  };
+
+  // Keep the identity function around for default iteratees.
+  _.identity = function(value) {
+    return value;
+  };
+
+  // Predicate-generating functions. Often useful outside of Underscore.
+  _.constant = function(value) {
+    return function() {
+      return value;
+    };
+  };
+
+  _.noop = function(){};
+
+  _.property = property;
+
+  // Generates a function for a given object that returns a given property.
+  _.propertyOf = function(obj) {
+    return obj == null ? function(){} : function(key) {
+      return obj[key];
+    };
+  };
+
+  // Returns a predicate for checking whether an object has a given set of
+  // `key:value` pairs.
+  _.matcher = _.matches = function(attrs) {
+    attrs = _.extendOwn({}, attrs);
+    return function(obj) {
+      return _.isMatch(obj, attrs);
+    };
+  };
+
+  // Run a function **n** times.
+  _.times = function(n, iteratee, context) {
+    var accum = Array(Math.max(0, n));
+    iteratee = optimizeCb(iteratee, context, 1);
+    for (var i = 0; i < n; i++) accum[i] = iteratee(i);
+    return accum;
+  };
+
+  // Return a random integer between min and max (inclusive).
+  _.random = function(min, max) {
+    if (max == null) {
+      max = min;
+      min = 0;
+    }
+    return min + Math.floor(Math.random() * (max - min + 1));
+  };
+
+  // A (possibly faster) way to get the current timestamp as an integer.
+  _.now = Date.now || function() {
+    return new Date().getTime();
+  };
+
+   // List of HTML entities for escaping.
+  var escapeMap = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#x27;',
+    '`': '&#x60;'
+  };
+  var unescapeMap = _.invert(escapeMap);
+
+  // Functions for escaping and unescaping strings to/from HTML interpolation.
+  var createEscaper = function(map) {
+    var escaper = function(match) {
+      return map[match];
+    };
+    // Regexes for identifying a key that needs to be escaped
+    var source = '(?:' + _.keys(map).join('|') + ')';
+    var testRegexp = RegExp(source);
+    var replaceRegexp = RegExp(source, 'g');
+    return function(string) {
+      string = string == null ? '' : '' + string;
+      return testRegexp.test(string) ? string.replace(replaceRegexp, escaper) : string;
+    };
+  };
+  _.escape = createEscaper(escapeMap);
+  _.unescape = createEscaper(unescapeMap);
+
+  // If the value of the named `property` is a function then invoke it with the
+  // `object` as context; otherwise, return it.
+  _.result = function(object, property, fallback) {
+    var value = object == null ? void 0 : object[property];
+    if (value === void 0) {
+      value = fallback;
+    }
+    return _.isFunction(value) ? value.call(object) : value;
+  };
+
+  // Generate a unique integer id (unique within the entire client session).
+  // Useful for temporary DOM ids.
+  var idCounter = 0;
+  _.uniqueId = function(prefix) {
+    var id = ++idCounter + '';
+    return prefix ? prefix + id : id;
+  };
+
+  // By default, Underscore uses ERB-style template delimiters, change the
+  // following template settings to use alternative delimiters.
+  _.templateSettings = {
+    evaluate    : /<%([\s\S]+?)%>/g,
+    interpolate : /<%=([\s\S]+?)%>/g,
+    escape      : /<%-([\s\S]+?)%>/g
+  };
+
+  // When customizing `templateSettings`, if you don't want to define an
+  // interpolation, evaluation or escaping regex, we need one that is
+  // guaranteed not to match.
+  var noMatch = /(.)^/;
+
+  // Certain characters need to be escaped so that they can be put into a
+  // string literal.
+  var escapes = {
+    "'":      "'",
+    '\\':     '\\',
+    '\r':     'r',
+    '\n':     'n',
+    '\u2028': 'u2028',
+    '\u2029': 'u2029'
+  };
+
+  var escaper = /\\|'|\r|\n|\u2028|\u2029/g;
+
+  var escapeChar = function(match) {
+    return '\\' + escapes[match];
+  };
+
+  // JavaScript micro-templating, similar to John Resig's implementation.
+  // Underscore templating handles arbitrary delimiters, preserves whitespace,
+  // and correctly escapes quotes within interpolated code.
+  // NB: `oldSettings` only exists for backwards compatibility.
+  _.template = function(text, settings, oldSettings) {
+    if (!settings && oldSettings) settings = oldSettings;
+    settings = _.defaults({}, settings, _.templateSettings);
+
+    // Combine delimiters into one regular expression via alternation.
+    var matcher = RegExp([
+      (settings.escape || noMatch).source,
+      (settings.interpolate || noMatch).source,
+      (settings.evaluate || noMatch).source
+    ].join('|') + '|$', 'g');
+
+    // Compile the template source, escaping string literals appropriately.
+    var index = 0;
+    var source = "__p+='";
+    text.replace(matcher, function(match, escape, interpolate, evaluate, offset) {
+      source += text.slice(index, offset).replace(escaper, escapeChar);
+      index = offset + match.length;
+
+      if (escape) {
+        source += "'+\n((__t=(" + escape + "))==null?'':_.escape(__t))+\n'";
+      } else if (interpolate) {
+        source += "'+\n((__t=(" + interpolate + "))==null?'':__t)+\n'";
+      } else if (evaluate) {
+        source += "';\n" + evaluate + "\n__p+='";
+      }
+
+      // Adobe VMs need the match returned to produce the correct offest.
+      return match;
+    });
+    source += "';\n";
+
+    // If a variable is not specified, place data values in local scope.
+    if (!settings.variable) source = 'with(obj||{}){\n' + source + '}\n';
+
+    source = "var __t,__p='',__j=Array.prototype.join," +
+      "print=function(){__p+=__j.call(arguments,'');};\n" +
+      source + 'return __p;\n';
+
+    try {
+      var render = new Function(settings.variable || 'obj', '_', source);
+    } catch (e) {
+      e.source = source;
+      throw e;
+    }
+
+    var template = function(data) {
+      return render.call(this, data, _);
+    };
+
+    // Provide the compiled source as a convenience for precompilation.
+    var argument = settings.variable || 'obj';
+    template.source = 'function(' + argument + '){\n' + source + '}';
+
+    return template;
+  };
+
+  // Add a "chain" function. Start chaining a wrapped Underscore object.
+  _.chain = function(obj) {
+    var instance = _(obj);
+    instance._chain = true;
+    return instance;
+  };
+
+  // OOP
+  // ---------------
+  // If Underscore is called as a function, it returns a wrapped object that
+  // can be used OO-style. This wrapper holds altered versions of all the
+  // underscore functions. Wrapped objects may be chained.
+
+  // Helper function to continue chaining intermediate results.
+  var result = function(instance, obj) {
+    return instance._chain ? _(obj).chain() : obj;
+  };
+
+  // Add your own custom functions to the Underscore object.
+  _.mixin = function(obj) {
+    _.each(_.functions(obj), function(name) {
+      var func = _[name] = obj[name];
+      _.prototype[name] = function() {
+        var args = [this._wrapped];
+        push.apply(args, arguments);
+        return result(this, func.apply(_, args));
+      };
+    });
+  };
+
+  // Add all of the Underscore functions to the wrapper object.
+  _.mixin(_);
+
+  // Add all mutator Array functions to the wrapper.
+  _.each(['pop', 'push', 'reverse', 'shift', 'sort', 'splice', 'unshift'], function(name) {
+    var method = ArrayProto[name];
+    _.prototype[name] = function() {
+      var obj = this._wrapped;
+      method.apply(obj, arguments);
+      if ((name === 'shift' || name === 'splice') && obj.length === 0) delete obj[0];
+      return result(this, obj);
+    };
+  });
+
+  // Add all accessor Array functions to the wrapper.
+  _.each(['concat', 'join', 'slice'], function(name) {
+    var method = ArrayProto[name];
+    _.prototype[name] = function() {
+      return result(this, method.apply(this._wrapped, arguments));
+    };
+  });
+
+  // Extracts the result from a wrapped and chained object.
+  _.prototype.value = function() {
+    return this._wrapped;
+  };
+
+  // Provide unwrapping proxy for some methods used in engine operations
+  // such as arithmetic and JSON stringification.
+  _.prototype.valueOf = _.prototype.toJSON = _.prototype.value;
+
+  _.prototype.toString = function() {
+    return '' + this._wrapped;
+  };
+
+  // AMD registration happens at the end for compatibility with AMD loaders
+  // that may not enforce next-turn semantics on modules. Even though general
+  // practice for AMD registration is to be anonymous, underscore registers
+  // as a named module because, like jQuery, it is a base library that is
+  // popular enough to be bundled in a third party lib, but not be part of
+  // an AMD load request. Those cases could generate an error when an
+  // anonymous define() is called outside of a loader request.
+  if (typeof define === 'function' && define.amd) {
+    define('underscore', [], function() {
+      return _;
+    });
+  }
+}.call(this));
+
+!function(e){if("object"==typeof exports)module.exports=e();else if("function"==typeof define&&define.amd)define(e);else{var f;"undefined"!=typeof window?f=window:"undefined"!=typeof global?f=global:"undefined"!=typeof self&&(f=self),f.s=e()}}(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);throw new Error("Cannot find module '"+o+"'")}var f=n[o]={exports:{}};t[o][0].call(f.exports,function(e){var n=t[o][1][e];return s(n?n:e)},f,f.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(_dereq_,module,exports){
+var trim = _dereq_('./trim');
+var decap = _dereq_('./decapitalize');
+
+module.exports = function camelize(str, decapitalize) {
+  str = trim(str).replace(/[-_\s]+(.)?/g, function(match, c) {
+    return c ? c.toUpperCase() : "";
+  });
+
+  if (decapitalize === true) {
+    return decap(str);
+  } else {
+    return str;
+  }
+};
+
+},{"./decapitalize":9,"./trim":61}],2:[function(_dereq_,module,exports){
+var makeString = _dereq_('./helper/makeString');
+
+module.exports = function capitalize(str, lowercaseRest) {
+  str = makeString(str);
+  var remainingChars = !lowercaseRest ? str.slice(1) : str.slice(1).toLowerCase();
+
+  return str.charAt(0).toUpperCase() + remainingChars;
+};
+
+},{"./helper/makeString":20}],3:[function(_dereq_,module,exports){
+var makeString = _dereq_('./helper/makeString');
+
+module.exports = function chars(str) {
+  return makeString(str).split('');
+};
+
+},{"./helper/makeString":20}],4:[function(_dereq_,module,exports){
+module.exports = function chop(str, step) {
+  if (str == null) return [];
+  str = String(str);
+  step = ~~step;
+  return step > 0 ? str.match(new RegExp('.{1,' + step + '}', 'g')) : [str];
+};
+
+},{}],5:[function(_dereq_,module,exports){
+var capitalize = _dereq_('./capitalize');
+var camelize = _dereq_('./camelize');
+var makeString = _dereq_('./helper/makeString');
+
+module.exports = function classify(str) {
+  str = makeString(str);
+  return capitalize(camelize(str.replace(/[\W_]/g, ' ')).replace(/\s/g, ''));
+};
+
+},{"./camelize":1,"./capitalize":2,"./helper/makeString":20}],6:[function(_dereq_,module,exports){
+var trim = _dereq_('./trim');
+
+module.exports = function clean(str) {
+  return trim(str).replace(/\s+/g, ' ');
+};
+
+},{"./trim":61}],7:[function(_dereq_,module,exports){
+var makeString = _dereq_('./helper/makeString');
+
+module.exports = function(str, substr) {
+  str = makeString(str);
+  substr = makeString(substr);
+
+  if (str.length === 0 || substr.length === 0) return 0;
+  
+  return str.split(substr).length - 1;
+};
+
+},{"./helper/makeString":20}],8:[function(_dereq_,module,exports){
+var trim = _dereq_('./trim');
+
+module.exports = function dasherize(str) {
+  return trim(str).replace(/([A-Z])/g, '-$1').replace(/[-_\s]+/g, '-').toLowerCase();
+};
+
+},{"./trim":61}],9:[function(_dereq_,module,exports){
+var makeString = _dereq_('./helper/makeString');
+
+module.exports = function decapitalize(str) {
+  str = makeString(str);
+  return str.charAt(0).toLowerCase() + str.slice(1);
+};
+
+},{"./helper/makeString":20}],10:[function(_dereq_,module,exports){
+var makeString = _dereq_('./helper/makeString');
+
+function getIndent(str) {
+  var matches = str.match(/^[\s\\t]*/gm);
+  var indent = matches[0].length;
+  
+  for (var i = 1; i < matches.length; i++) {
+    indent = Math.min(matches[i].length, indent);
+  }
+
+  return indent;
+}
+
+module.exports = function dedent(str, pattern) {
+  str = makeString(str);
+  var indent = getIndent(str);
+  var reg;
+
+  if (indent === 0) return str;
+
+  if (typeof pattern === 'string') {
+    reg = new RegExp('^' + pattern, 'gm');
+  } else {
+    reg = new RegExp('^[ \\t]{' + indent + '}', 'gm');
+  }
+
+  return str.replace(reg, '');
+};
+
+},{"./helper/makeString":20}],11:[function(_dereq_,module,exports){
+var makeString = _dereq_('./helper/makeString');
+var toPositive = _dereq_('./helper/toPositive');
+
+module.exports = function endsWith(str, ends, position) {
+  str = makeString(str);
+  ends = '' + ends;
+  if (typeof position == 'undefined') {
+    position = str.length - ends.length;
+  } else {
+    position = Math.min(toPositive(position), str.length) - ends.length;
+  }
+  return position >= 0 && str.indexOf(ends, position) === position;
+};
+
+},{"./helper/makeString":20,"./helper/toPositive":22}],12:[function(_dereq_,module,exports){
+var makeString = _dereq_('./helper/makeString');
+var escapeChars = _dereq_('./helper/escapeChars');
+var reversedEscapeChars = {};
+
+var regexString = "[";
+for(var key in escapeChars) {
+  regexString += key;
+}
+regexString += "]";
+
+var regex = new RegExp( regexString, 'g');
+
+module.exports = function escapeHTML(str) {
+
+  return makeString(str).replace(regex, function(m) {
+    return '&' + escapeChars[m] + ';';
+  });
+};
+
+},{"./helper/escapeChars":17,"./helper/makeString":20}],13:[function(_dereq_,module,exports){
+module.exports = function() {
+  var result = {};
+
+  for (var prop in this) {
+    if (!this.hasOwnProperty(prop) || prop.match(/^(?:include|contains|reverse|join)$/)) continue;
+    result[prop] = this[prop];
+  }
+
+  return result;
+};
+
+},{}],14:[function(_dereq_,module,exports){
+//  Underscore.string
+//  (c) 2010 Esa-Matti Suuronen <esa-matti aet suuronen dot org>
+//  Underscore.string is freely distributable under the terms of the MIT license.
+//  Documentation: https://github.com/epeli/underscore.string
+//  Some code is borrowed from MooTools and Alexandru Marasteanu.
+//  Version '3.1.1'
+
+'use strict';
+
+function s(value) {
+  /* jshint validthis: true */
+  if (!(this instanceof s)) return new s(value);
+  this._wrapped = value;
+}
+
+s.VERSION = '3.1.1';
+
+s.isBlank          = _dereq_('./isBlank');
+s.stripTags        = _dereq_('./stripTags');
+s.capitalize       = _dereq_('./capitalize');
+s.decapitalize     = _dereq_('./decapitalize');
+s.chop             = _dereq_('./chop');
+s.trim             = _dereq_('./trim');
+s.clean            = _dereq_('./clean');
+s.count            = _dereq_('./count');
+s.chars            = _dereq_('./chars');
+s.swapCase         = _dereq_('./swapCase');
+s.escapeHTML       = _dereq_('./escapeHTML');
+s.unescapeHTML     = _dereq_('./unescapeHTML');
+s.splice           = _dereq_('./splice');
+s.insert           = _dereq_('./insert');
+s.replaceAll       = _dereq_('./replaceAll');
+s.include          = _dereq_('./include');
+s.join             = _dereq_('./join');
+s.lines            = _dereq_('./lines');
+s.dedent           = _dereq_('./dedent');
+s.reverse          = _dereq_('./reverse');
+s.startsWith       = _dereq_('./startsWith');
+s.endsWith         = _dereq_('./endsWith');
+s.pred             = _dereq_('./pred');
+s.succ             = _dereq_('./succ');
+s.titleize         = _dereq_('./titleize');
+s.camelize         = _dereq_('./camelize');
+s.underscored      = _dereq_('./underscored');
+s.dasherize        = _dereq_('./dasherize');
+s.classify         = _dereq_('./classify');
+s.humanize         = _dereq_('./humanize');
+s.ltrim            = _dereq_('./ltrim');
+s.rtrim            = _dereq_('./rtrim');
+s.truncate         = _dereq_('./truncate');
+s.prune            = _dereq_('./prune');
+s.words            = _dereq_('./words');
+s.pad              = _dereq_('./pad');
+s.lpad             = _dereq_('./lpad');
+s.rpad             = _dereq_('./rpad');
+s.lrpad            = _dereq_('./lrpad');
+s.sprintf          = _dereq_('./sprintf');
+s.vsprintf         = _dereq_('./vsprintf');
+s.toNumber         = _dereq_('./toNumber');
+s.numberFormat     = _dereq_('./numberFormat');
+s.strRight         = _dereq_('./strRight');
+s.strRightBack     = _dereq_('./strRightBack');
+s.strLeft          = _dereq_('./strLeft');
+s.strLeftBack      = _dereq_('./strLeftBack');
+s.toSentence       = _dereq_('./toSentence');
+s.toSentenceSerial = _dereq_('./toSentenceSerial');
+s.slugify          = _dereq_('./slugify');
+s.surround         = _dereq_('./surround');
+s.quote            = _dereq_('./quote');
+s.unquote          = _dereq_('./unquote');
+s.repeat           = _dereq_('./repeat');
+s.naturalCmp       = _dereq_('./naturalCmp');
+s.levenshtein      = _dereq_('./levenshtein');
+s.toBoolean        = _dereq_('./toBoolean');
+s.exports          = _dereq_('./exports');
+s.escapeRegExp     = _dereq_('./helper/escapeRegExp');
+
+// Aliases
+s.strip     = s.trim;
+s.lstrip    = s.ltrim;
+s.rstrip    = s.rtrim;
+s.center    = s.lrpad;
+s.rjust     = s.lpad;
+s.ljust     = s.rpad;
+s.contains  = s.include;
+s.q         = s.quote;
+s.toBool    = s.toBoolean;
+s.camelcase = s.camelize;
+
+
+// Implement chaining
+s.prototype = {
+  value: function value() {
+    return this._wrapped;
+  }
+};
+
+function fn2method(key, fn) {
+    if (typeof fn !== "function") return;
+    s.prototype[key] = function() {
+      var args = [this._wrapped].concat(Array.prototype.slice.call(arguments));
+      var res = fn.apply(null, args);
+      // if the result is non-string stop the chain and return the value
+      return typeof res === 'string' ? new s(res) : res;
+    };
+}
+
+// Copy functions to instance methods for chaining
+for (var key in s) fn2method(key, s[key]);
+
+fn2method("tap", function tap(string, fn) {
+  return fn(string);
+});
+
+function prototype2method(methodName) {
+  fn2method(methodName, function(context) {
+    var args = Array.prototype.slice.call(arguments, 1);
+    return String.prototype[methodName].apply(context, args);
+  });
+}
+
+var prototypeMethods = [
+  "toUpperCase",
+  "toLowerCase",
+  "split",
+  "replace",
+  "slice",
+  "substring",
+  "substr",
+  "concat"
+];
+
+for (var key in prototypeMethods) prototype2method(prototypeMethods[key]);
+
+
+module.exports = s;
+
+},{"./camelize":1,"./capitalize":2,"./chars":3,"./chop":4,"./classify":5,"./clean":6,"./count":7,"./dasherize":8,"./decapitalize":9,"./dedent":10,"./endsWith":11,"./escapeHTML":12,"./exports":13,"./helper/escapeRegExp":18,"./humanize":23,"./include":24,"./insert":25,"./isBlank":26,"./join":27,"./levenshtein":28,"./lines":29,"./lpad":30,"./lrpad":31,"./ltrim":32,"./naturalCmp":33,"./numberFormat":34,"./pad":35,"./pred":36,"./prune":37,"./quote":38,"./repeat":39,"./replaceAll":40,"./reverse":41,"./rpad":42,"./rtrim":43,"./slugify":44,"./splice":45,"./sprintf":46,"./startsWith":47,"./strLeft":48,"./strLeftBack":49,"./strRight":50,"./strRightBack":51,"./stripTags":52,"./succ":53,"./surround":54,"./swapCase":55,"./titleize":56,"./toBoolean":57,"./toNumber":58,"./toSentence":59,"./toSentenceSerial":60,"./trim":61,"./truncate":62,"./underscored":63,"./unescapeHTML":64,"./unquote":65,"./vsprintf":66,"./words":67}],15:[function(_dereq_,module,exports){
+var makeString = _dereq_('./makeString');
+
+module.exports = function adjacent(str, direction) {
+  str = makeString(str);
+  if (str.length === 0) {
+    return '';
+  }
+  return str.slice(0, -1) + String.fromCharCode(str.charCodeAt(str.length - 1) + direction);
+};
+
+},{"./makeString":20}],16:[function(_dereq_,module,exports){
+var escapeRegExp = _dereq_('./escapeRegExp');
+
+module.exports = function defaultToWhiteSpace(characters) {
+  if (characters == null)
+    return '\\s';
+  else if (characters.source)
+    return characters.source;
+  else
+    return '[' + escapeRegExp(characters) + ']';
+};
+
+},{"./escapeRegExp":18}],17:[function(_dereq_,module,exports){
+/* We're explicitly defining the list of entities we want to escape.
+nbsp is an HTML entity, but we don't want to escape all space characters in a string, hence its omission in this map.
+
+*/
+var escapeChars = {
+  '¢' : 'cent',
+  '£' : 'pound',
+  '¥' : 'yen',
+  '€': 'euro',
+  '©' :'copy',
+  '®' : 'reg',
+  '<' : 'lt',
+  '>' : 'gt',
+  '"' : 'quot',
+  '&' : 'amp',
+  "'": '#39'
+};
+
+module.exports = escapeChars;
+
+},{}],18:[function(_dereq_,module,exports){
+var makeString = _dereq_('./makeString');
+
+module.exports = function escapeRegExp(str) {
+  return makeString(str).replace(/([.*+?^=!:${}()|[\]\/\\])/g, '\\$1');
+};
+
+},{"./makeString":20}],19:[function(_dereq_,module,exports){
+/*
+We're explicitly defining the list of entities that might see in escape HTML strings
+*/
+var htmlEntities = {
+  nbsp: ' ',
+  cent: '¢',
+  pound: '£',
+  yen: '¥',
+  euro: '€',
+  copy: '©',
+  reg: '®',
+  lt: '<',
+  gt: '>',
+  quot: '"',
+  amp: '&',
+  apos: "'"
+};
+
+module.exports = htmlEntities;
+
+},{}],20:[function(_dereq_,module,exports){
+/**
+ * Ensure some object is a coerced to a string
+ **/
+module.exports = function makeString(object) {
+  if (object == null) return '';
+  return '' + object;
+};
+
+},{}],21:[function(_dereq_,module,exports){
+module.exports = function strRepeat(str, qty){
+  if (qty < 1) return '';
+  var result = '';
+  while (qty > 0) {
+    if (qty & 1) result += str;
+    qty >>= 1, str += str;
+  }
+  return result;
+};
+
+},{}],22:[function(_dereq_,module,exports){
+module.exports = function toPositive(number) {
+  return number < 0 ? 0 : (+number || 0);
+};
+
+},{}],23:[function(_dereq_,module,exports){
+var capitalize = _dereq_('./capitalize');
+var underscored = _dereq_('./underscored');
+var trim = _dereq_('./trim');
+
+module.exports = function humanize(str) {
+  return capitalize(trim(underscored(str).replace(/_id$/, '').replace(/_/g, ' ')));
+};
+
+},{"./capitalize":2,"./trim":61,"./underscored":63}],24:[function(_dereq_,module,exports){
+var makeString = _dereq_('./helper/makeString');
+
+module.exports = function include(str, needle) {
+  if (needle === '') return true;
+  return makeString(str).indexOf(needle) !== -1;
+};
+
+},{"./helper/makeString":20}],25:[function(_dereq_,module,exports){
+var splice = _dereq_('./splice');
+
+module.exports = function insert(str, i, substr) {
+  return splice(str, i, 0, substr);
+};
+
+},{"./splice":45}],26:[function(_dereq_,module,exports){
+var makeString = _dereq_('./helper/makeString');
+
+module.exports = function isBlank(str) {
+  return (/^\s*$/).test(makeString(str));
+};
+
+},{"./helper/makeString":20}],27:[function(_dereq_,module,exports){
+var makeString = _dereq_('./helper/makeString');
+var slice = [].slice;
+
+module.exports = function join() {
+  var args = slice.call(arguments),
+    separator = args.shift();
+
+  return args.join(makeString(separator));
+};
+
+},{"./helper/makeString":20}],28:[function(_dereq_,module,exports){
+var makeString = _dereq_('./helper/makeString');
+
+/**
+ * Based on the implementation here: https://github.com/hiddentao/fast-levenshtein
+ */
+module.exports = function levenshtein(str1, str2) {
+  'use strict';
+  str1 = makeString(str1);
+  str2 = makeString(str2);
+
+  // Short cut cases  
+  if (str1 === str2) return 0;
+  if (!str1 || !str2) return Math.max(str1.length, str2.length);
+
+  // two rows
+  var prevRow = new Array(str2.length + 1);
+
+  // initialise previous row
+  for (var i = 0; i < prevRow.length; ++i) {
+    prevRow[i] = i;
+  }
+
+  // calculate current row distance from previous row
+  for (i = 0; i < str1.length; ++i) {
+    var nextCol = i + 1;
+
+    for (var j = 0; j < str2.length; ++j) {
+      var curCol = nextCol;
+
+      // substution
+      nextCol = prevRow[j] + ( (str1.charAt(i) === str2.charAt(j)) ? 0 : 1 );
+      // insertion
+      var tmp = curCol + 1;
+      if (nextCol > tmp) {
+        nextCol = tmp;
+      }
+      // deletion
+      tmp = prevRow[j + 1] + 1;
+      if (nextCol > tmp) {
+        nextCol = tmp;
+      }
+
+      // copy current col value into previous (in preparation for next iteration)
+      prevRow[j] = curCol;
+    }
+
+    // copy last col value into previous (in preparation for next iteration)
+    prevRow[j] = nextCol;
+  }
+
+  return nextCol;
+};
+
+},{"./helper/makeString":20}],29:[function(_dereq_,module,exports){
+module.exports = function lines(str) {
+  if (str == null) return [];
+  return String(str).split(/\r?\n/);
+};
+
+},{}],30:[function(_dereq_,module,exports){
+var pad = _dereq_('./pad');
+
+module.exports = function lpad(str, length, padStr) {
+  return pad(str, length, padStr);
+};
+
+},{"./pad":35}],31:[function(_dereq_,module,exports){
+var pad = _dereq_('./pad');
+
+module.exports = function lrpad(str, length, padStr) {
+  return pad(str, length, padStr, 'both');
+};
+
+},{"./pad":35}],32:[function(_dereq_,module,exports){
+var makeString = _dereq_('./helper/makeString');
+var defaultToWhiteSpace = _dereq_('./helper/defaultToWhiteSpace');
+var nativeTrimLeft = String.prototype.trimLeft;
+
+module.exports = function ltrim(str, characters) {
+  str = makeString(str);
+  if (!characters && nativeTrimLeft) return nativeTrimLeft.call(str);
+  characters = defaultToWhiteSpace(characters);
+  return str.replace(new RegExp('^' + characters + '+'), '');
+};
+
+},{"./helper/defaultToWhiteSpace":16,"./helper/makeString":20}],33:[function(_dereq_,module,exports){
+module.exports = function naturalCmp(str1, str2) {
+  if (str1 == str2) return 0;
+  if (!str1) return -1;
+  if (!str2) return 1;
+
+  var cmpRegex = /(\.\d+|\d+|\D+)/g,
+    tokens1 = String(str1).match(cmpRegex),
+    tokens2 = String(str2).match(cmpRegex),
+    count = Math.min(tokens1.length, tokens2.length);
+
+  for (var i = 0; i < count; i++) {
+    var a = tokens1[i],
+      b = tokens2[i];
+
+    if (a !== b) {
+      var num1 = +a;
+      var num2 = +b;
+      if (num1 === num1 && num2 === num2) {
+        return num1 > num2 ? 1 : -1;
+      }
+      return a < b ? -1 : 1;
+    }
+  }
+
+  if (tokens1.length != tokens2.length)
+    return tokens1.length - tokens2.length;
+
+  return str1 < str2 ? -1 : 1;
+};
+
+},{}],34:[function(_dereq_,module,exports){
+module.exports = function numberFormat(number, dec, dsep, tsep) {
+  if (isNaN(number) || number == null) return '';
+
+  number = number.toFixed(~~dec);
+  tsep = typeof tsep == 'string' ? tsep : ',';
+
+  var parts = number.split('.'),
+    fnums = parts[0],
+    decimals = parts[1] ? (dsep || '.') + parts[1] : '';
+
+  return fnums.replace(/(\d)(?=(?:\d{3})+$)/g, '$1' + tsep) + decimals;
+};
+
+},{}],35:[function(_dereq_,module,exports){
+var makeString = _dereq_('./helper/makeString');
+var strRepeat = _dereq_('./helper/strRepeat');
+
+module.exports = function pad(str, length, padStr, type) {
+  str = makeString(str);
+  length = ~~length;
+
+  var padlen = 0;
+
+  if (!padStr)
+    padStr = ' ';
+  else if (padStr.length > 1)
+    padStr = padStr.charAt(0);
+
+  switch (type) {
+    case 'right':
+      padlen = length - str.length;
+      return str + strRepeat(padStr, padlen);
+    case 'both':
+      padlen = length - str.length;
+      return strRepeat(padStr, Math.ceil(padlen / 2)) + str + strRepeat(padStr, Math.floor(padlen / 2));
+    default: // 'left'
+      padlen = length - str.length;
+      return strRepeat(padStr, padlen) + str;
+  }
+};
+
+},{"./helper/makeString":20,"./helper/strRepeat":21}],36:[function(_dereq_,module,exports){
+var adjacent = _dereq_('./helper/adjacent');
+
+module.exports = function succ(str) {
+  return adjacent(str, -1);
+};
+
+},{"./helper/adjacent":15}],37:[function(_dereq_,module,exports){
+/**
+ * _s.prune: a more elegant version of truncate
+ * prune extra chars, never leaving a half-chopped word.
+ * @author github.com/rwz
+ */
+var makeString = _dereq_('./helper/makeString');
+var rtrim = _dereq_('./rtrim');
+
+module.exports = function prune(str, length, pruneStr) {
+  str = makeString(str);
+  length = ~~length;
+  pruneStr = pruneStr != null ? String(pruneStr) : '...';
+
+  if (str.length <= length) return str;
+
+  var tmpl = function(c) {
+    return c.toUpperCase() !== c.toLowerCase() ? 'A' : ' ';
+  },
+    template = str.slice(0, length + 1).replace(/.(?=\W*\w*$)/g, tmpl); // 'Hello, world' -> 'HellAA AAAAA'
+
+  if (template.slice(template.length - 2).match(/\w\w/))
+    template = template.replace(/\s*\S+$/, '');
+  else
+    template = rtrim(template.slice(0, template.length - 1));
+
+  return (template + pruneStr).length > str.length ? str : str.slice(0, template.length) + pruneStr;
+};
+
+},{"./helper/makeString":20,"./rtrim":43}],38:[function(_dereq_,module,exports){
+var surround = _dereq_('./surround');
+
+module.exports = function quote(str, quoteChar) {
+  return surround(str, quoteChar || '"');
+};
+
+},{"./surround":54}],39:[function(_dereq_,module,exports){
+var makeString = _dereq_('./helper/makeString');
+var strRepeat = _dereq_('./helper/strRepeat');
+
+module.exports = function repeat(str, qty, separator) {
+  str = makeString(str);
+
+  qty = ~~qty;
+
+  // using faster implementation if separator is not needed;
+  if (separator == null) return strRepeat(str, qty);
+
+  // this one is about 300x slower in Google Chrome
+  for (var repeat = []; qty > 0; repeat[--qty] = str) {}
+  return repeat.join(separator);
+};
+
+},{"./helper/makeString":20,"./helper/strRepeat":21}],40:[function(_dereq_,module,exports){
+var makeString = _dereq_('./helper/makeString');
+
+module.exports = function replaceAll(str, find, replace, ignorecase) {
+  var flags = (ignorecase === true)?'gi':'g';
+  var reg = new RegExp(find, flags);
+
+  return makeString(str).replace(reg, replace);
+};
+
+},{"./helper/makeString":20}],41:[function(_dereq_,module,exports){
+var chars = _dereq_('./chars');
+
+module.exports = function reverse(str) {
+  return chars(str).reverse().join('');
+};
+
+},{"./chars":3}],42:[function(_dereq_,module,exports){
+var pad = _dereq_('./pad');
+
+module.exports = function rpad(str, length, padStr) {
+  return pad(str, length, padStr, 'right');
+};
+
+},{"./pad":35}],43:[function(_dereq_,module,exports){
+var makeString = _dereq_('./helper/makeString');
+var defaultToWhiteSpace = _dereq_('./helper/defaultToWhiteSpace');
+var nativeTrimRight = String.prototype.trimRight;
+
+module.exports = function rtrim(str, characters) {
+  str = makeString(str);
+  if (!characters && nativeTrimRight) return nativeTrimRight.call(str);
+  characters = defaultToWhiteSpace(characters);
+  return str.replace(new RegExp(characters + '+$'), '');
+};
+
+},{"./helper/defaultToWhiteSpace":16,"./helper/makeString":20}],44:[function(_dereq_,module,exports){
+var makeString = _dereq_('./helper/makeString');
+var defaultToWhiteSpace = _dereq_('./helper/defaultToWhiteSpace');
+var trim = _dereq_('./trim');
+var dasherize = _dereq_('./dasherize');
+
+module.exports = function slugify(str) {
+  var from  = "ąàáäâãåæăćčĉęèéëêĝĥìíïîĵłľńňòóöőôõðøśșšŝťțŭùúüűûñÿýçżźž",
+      to    = "aaaaaaaaaccceeeeeghiiiijllnnoooooooossssttuuuuuunyyczzz",
+      regex = new RegExp(defaultToWhiteSpace(from), 'g');
+
+  str = makeString(str).toLowerCase().replace(regex, function(c){
+    var index = from.indexOf(c);
+    return to.charAt(index) || '-';
+  });
+
+  return trim(dasherize(str.replace(/[^\w\s-]/g, '-')), '-');
+};
+
+},{"./dasherize":8,"./helper/defaultToWhiteSpace":16,"./helper/makeString":20,"./trim":61}],45:[function(_dereq_,module,exports){
+var chars = _dereq_('./chars');
+
+module.exports = function splice(str, i, howmany, substr) {
+  var arr = chars(str);
+  arr.splice(~~i, ~~howmany, substr);
+  return arr.join('');
+};
+
+},{"./chars":3}],46:[function(_dereq_,module,exports){
+// sprintf() for JavaScript 0.7-beta1
+// http://www.diveintojavascript.com/projects/javascript-sprintf
+//
+// Copyright (c) Alexandru Marasteanu <alexaholic [at) gmail (dot] com>
+// All rights reserved.
+var strRepeat = _dereq_('./helper/strRepeat');
+var toString = Object.prototype.toString;
+var sprintf = (function() {
+  function get_type(variable) {
+    return toString.call(variable).slice(8, -1).toLowerCase();
+  }
+
+  var str_repeat = strRepeat;
+
+  var str_format = function() {
+    if (!str_format.cache.hasOwnProperty(arguments[0])) {
+      str_format.cache[arguments[0]] = str_format.parse(arguments[0]);
+    }
+    return str_format.format.call(null, str_format.cache[arguments[0]], arguments);
+  };
+
+  str_format.format = function(parse_tree, argv) {
+    var cursor = 1, tree_length = parse_tree.length, node_type = '', arg, output = [], i, k, match, pad, pad_character, pad_length;
+    for (i = 0; i < tree_length; i++) {
+      node_type = get_type(parse_tree[i]);
+      if (node_type === 'string') {
+        output.push(parse_tree[i]);
+      }
+      else if (node_type === 'array') {
+        match = parse_tree[i]; // convenience purposes only
+        if (match[2]) { // keyword argument
+          arg = argv[cursor];
+          for (k = 0; k < match[2].length; k++) {
+            if (!arg.hasOwnProperty(match[2][k])) {
+              throw new Error(sprintf('[_.sprintf] property "%s" does not exist', match[2][k]));
+            }
+            arg = arg[match[2][k]];
+          }
+        } else if (match[1]) { // positional argument (explicit)
+          arg = argv[match[1]];
+        }
+        else { // positional argument (implicit)
+          arg = argv[cursor++];
+        }
+
+        if (/[^s]/.test(match[8]) && (get_type(arg) != 'number')) {
+          throw new Error(sprintf('[_.sprintf] expecting number but found %s', get_type(arg)));
+        }
+        switch (match[8]) {
+          case 'b': arg = arg.toString(2); break;
+          case 'c': arg = String.fromCharCode(arg); break;
+          case 'd': arg = parseInt(arg, 10); break;
+          case 'e': arg = match[7] ? arg.toExponential(match[7]) : arg.toExponential(); break;
+          case 'f': arg = match[7] ? parseFloat(arg).toFixed(match[7]) : parseFloat(arg); break;
+          case 'o': arg = arg.toString(8); break;
+          case 's': arg = ((arg = String(arg)) && match[7] ? arg.substring(0, match[7]) : arg); break;
+          case 'u': arg = Math.abs(arg); break;
+          case 'x': arg = arg.toString(16); break;
+          case 'X': arg = arg.toString(16).toUpperCase(); break;
+        }
+        arg = (/[def]/.test(match[8]) && match[3] && arg >= 0 ? '+'+ arg : arg);
+        pad_character = match[4] ? match[4] == '0' ? '0' : match[4].charAt(1) : ' ';
+        pad_length = match[6] - String(arg).length;
+        pad = match[6] ? str_repeat(pad_character, pad_length) : '';
+        output.push(match[5] ? arg + pad : pad + arg);
+      }
+    }
+    return output.join('');
+  };
+
+  str_format.cache = {};
+
+  str_format.parse = function(fmt) {
+    var _fmt = fmt, match = [], parse_tree = [], arg_names = 0;
+    while (_fmt) {
+      if ((match = /^[^\x25]+/.exec(_fmt)) !== null) {
+        parse_tree.push(match[0]);
+      }
+      else if ((match = /^\x25{2}/.exec(_fmt)) !== null) {
+        parse_tree.push('%');
+      }
+      else if ((match = /^\x25(?:([1-9]\d*)\$|\(([^\)]+)\))?(\+)?(0|'[^$])?(-)?(\d+)?(?:\.(\d+))?([b-fosuxX])/.exec(_fmt)) !== null) {
+        if (match[2]) {
+          arg_names |= 1;
+          var field_list = [], replacement_field = match[2], field_match = [];
+          if ((field_match = /^([a-z_][a-z_\d]*)/i.exec(replacement_field)) !== null) {
+            field_list.push(field_match[1]);
+            while ((replacement_field = replacement_field.substring(field_match[0].length)) !== '') {
+              if ((field_match = /^\.([a-z_][a-z_\d]*)/i.exec(replacement_field)) !== null) {
+                field_list.push(field_match[1]);
+              }
+              else if ((field_match = /^\[(\d+)\]/.exec(replacement_field)) !== null) {
+                field_list.push(field_match[1]);
+              }
+              else {
+                throw new Error('[_.sprintf] huh?');
+              }
+            }
+          }
+          else {
+            throw new Error('[_.sprintf] huh?');
+          }
+          match[2] = field_list;
+        }
+        else {
+          arg_names |= 2;
+        }
+        if (arg_names === 3) {
+          throw new Error('[_.sprintf] mixing positional and named placeholders is not (yet) supported');
+        }
+        parse_tree.push(match);
+      }
+      else {
+        throw new Error('[_.sprintf] huh?');
+      }
+      _fmt = _fmt.substring(match[0].length);
+    }
+    return parse_tree;
+  };
+
+  return str_format;
+})();
+
+module.exports = sprintf;
+
+},{"./helper/strRepeat":21}],47:[function(_dereq_,module,exports){
+var makeString = _dereq_('./helper/makeString');
+var toPositive = _dereq_('./helper/toPositive');
+
+module.exports = function startsWith(str, starts, position) {
+  str = makeString(str);
+  starts = '' + starts;
+  position = position == null ? 0 : Math.min(toPositive(position), str.length);
+  return str.lastIndexOf(starts, position) === position;
+};
+
+},{"./helper/makeString":20,"./helper/toPositive":22}],48:[function(_dereq_,module,exports){
+var makeString = _dereq_('./helper/makeString');
+
+module.exports = function strLeft(str, sep) {
+  str = makeString(str);
+  sep = makeString(sep);
+  var pos = !sep ? -1 : str.indexOf(sep);
+  return~ pos ? str.slice(0, pos) : str;
+};
+
+},{"./helper/makeString":20}],49:[function(_dereq_,module,exports){
+var makeString = _dereq_('./helper/makeString');
+
+module.exports = function strLeftBack(str, sep) {
+  str = makeString(str);
+  sep = makeString(sep);
+  var pos = str.lastIndexOf(sep);
+  return~ pos ? str.slice(0, pos) : str;
+};
+
+},{"./helper/makeString":20}],50:[function(_dereq_,module,exports){
+var makeString = _dereq_('./helper/makeString');
+
+module.exports = function strRight(str, sep) {
+  str = makeString(str);
+  sep = makeString(sep);
+  var pos = !sep ? -1 : str.indexOf(sep);
+  return~ pos ? str.slice(pos + sep.length, str.length) : str;
+};
+
+},{"./helper/makeString":20}],51:[function(_dereq_,module,exports){
+var makeString = _dereq_('./helper/makeString');
+
+module.exports = function strRightBack(str, sep) {
+  str = makeString(str);
+  sep = makeString(sep);
+  var pos = !sep ? -1 : str.lastIndexOf(sep);
+  return~ pos ? str.slice(pos + sep.length, str.length) : str;
+};
+
+},{"./helper/makeString":20}],52:[function(_dereq_,module,exports){
+var makeString = _dereq_('./helper/makeString');
+
+module.exports = function stripTags(str) {
+  return makeString(str).replace(/<\/?[^>]+>/g, '');
+};
+
+},{"./helper/makeString":20}],53:[function(_dereq_,module,exports){
+var adjacent = _dereq_('./helper/adjacent');
+
+module.exports = function succ(str) {
+  return adjacent(str, 1);
+};
+
+},{"./helper/adjacent":15}],54:[function(_dereq_,module,exports){
+module.exports = function surround(str, wrapper) {
+  return [wrapper, str, wrapper].join('');
+};
+
+},{}],55:[function(_dereq_,module,exports){
+var makeString = _dereq_('./helper/makeString');
+
+module.exports = function swapCase(str) {
+  return makeString(str).replace(/\S/g, function(c) {
+    return c === c.toUpperCase() ? c.toLowerCase() : c.toUpperCase();
+  });
+};
+
+},{"./helper/makeString":20}],56:[function(_dereq_,module,exports){
+var makeString = _dereq_('./helper/makeString');
+
+module.exports = function titleize(str) {
+  return makeString(str).toLowerCase().replace(/(?:^|\s|-)\S/g, function(c) {
+    return c.toUpperCase();
+  });
+};
+
+},{"./helper/makeString":20}],57:[function(_dereq_,module,exports){
+var trim = _dereq_('./trim');
+
+function boolMatch(s, matchers) {
+  var i, matcher, down = s.toLowerCase();
+  matchers = [].concat(matchers);
+  for (i = 0; i < matchers.length; i += 1) {
+    matcher = matchers[i];
+    if (!matcher) continue;
+    if (matcher.test && matcher.test(s)) return true;
+    if (matcher.toLowerCase() === down) return true;
+  }
+}
+
+module.exports = function toBoolean(str, trueValues, falseValues) {
+  if (typeof str === "number") str = "" + str;
+  if (typeof str !== "string") return !!str;
+  str = trim(str);
+  if (boolMatch(str, trueValues || ["true", "1"])) return true;
+  if (boolMatch(str, falseValues || ["false", "0"])) return false;
+};
+
+},{"./trim":61}],58:[function(_dereq_,module,exports){
+var trim = _dereq_('./trim');
+
+module.exports = function toNumber(num, precision) {
+  if (num == null) return 0;
+  var factor = Math.pow(10, isFinite(precision) ? precision : 0);
+  return Math.round(num * factor) / factor;
+};
+
+},{"./trim":61}],59:[function(_dereq_,module,exports){
+var rtrim = _dereq_('./rtrim');
+
+module.exports = function toSentence(array, separator, lastSeparator, serial) {
+  separator = separator || ', ';
+  lastSeparator = lastSeparator || ' and ';
+  var a = array.slice(),
+    lastMember = a.pop();
+
+  if (array.length > 2 && serial) lastSeparator = rtrim(separator) + lastSeparator;
+
+  return a.length ? a.join(separator) + lastSeparator + lastMember : lastMember;
+};
+
+},{"./rtrim":43}],60:[function(_dereq_,module,exports){
+var toSentence = _dereq_('./toSentence');
+
+module.exports = function toSentenceSerial(array, sep, lastSep) {
+  return toSentence(array, sep, lastSep, true);
+};
+
+},{"./toSentence":59}],61:[function(_dereq_,module,exports){
+var makeString = _dereq_('./helper/makeString');
+var defaultToWhiteSpace = _dereq_('./helper/defaultToWhiteSpace');
+var nativeTrim = String.prototype.trim;
+
+module.exports = function trim(str, characters) {
+  str = makeString(str);
+  if (!characters && nativeTrim) return nativeTrim.call(str);
+  characters = defaultToWhiteSpace(characters);
+  return str.replace(new RegExp('^' + characters + '+|' + characters + '+$', 'g'), '');
+};
+
+},{"./helper/defaultToWhiteSpace":16,"./helper/makeString":20}],62:[function(_dereq_,module,exports){
+var makeString = _dereq_('./helper/makeString');
+
+module.exports = function truncate(str, length, truncateStr) {
+  str = makeString(str);
+  truncateStr = truncateStr || '...';
+  length = ~~length;
+  return str.length > length ? str.slice(0, length) + truncateStr : str;
+};
+
+},{"./helper/makeString":20}],63:[function(_dereq_,module,exports){
+var trim = _dereq_('./trim');
+
+module.exports = function underscored(str) {
+  return trim(str).replace(/([a-z\d])([A-Z]+)/g, '$1_$2').replace(/[-\s]+/g, '_').toLowerCase();
+};
+
+},{"./trim":61}],64:[function(_dereq_,module,exports){
+var makeString = _dereq_('./helper/makeString');
+var htmlEntities = _dereq_('./helper/htmlEntities');
+
+module.exports = function unescapeHTML(str) {
+  return makeString(str).replace(/\&([^;]+);/g, function(entity, entityCode) {
+    var match;
+
+    if (entityCode in htmlEntities) {
+      return htmlEntities[entityCode];
+    } else if (match = entityCode.match(/^#x([\da-fA-F]+)$/)) {
+      return String.fromCharCode(parseInt(match[1], 16));
+    } else if (match = entityCode.match(/^#(\d+)$/)) {
+      return String.fromCharCode(~~match[1]);
+    } else {
+      return entity;
+    }
+  });
+};
+
+},{"./helper/htmlEntities":19,"./helper/makeString":20}],65:[function(_dereq_,module,exports){
+module.exports = function unquote(str, quoteChar) {
+  quoteChar = quoteChar || '"';
+  if (str[0] === quoteChar && str[str.length - 1] === quoteChar)
+    return str.slice(1, str.length - 1);
+  else return str;
+};
+
+},{}],66:[function(_dereq_,module,exports){
+var sprintf = _dereq_('./sprintf');
+
+module.exports = function vsprintf(fmt, argv) {
+  argv.unshift(fmt);
+  return sprintf.apply(null, argv);
+};
+
+},{"./sprintf":46}],67:[function(_dereq_,module,exports){
+var isBlank = _dereq_('./isBlank');
+var trim = _dereq_('./trim');
+
+module.exports = function words(str, delimiter) {
+  if (isBlank(str)) return [];
+  return trim(str, delimiter).split(delimiter || /\s+/);
+};
+
+},{"./isBlank":26,"./trim":61}]},{},[14])
+(14)
+});
+/*jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLinesBeforeLineComments, requireTrailingComma*/
+(function() {
+  'use strict';
+
+  angular
+        .module('openmrs-ngresource.restServices', [
+            'base64',
+            'ngResource',
+            'ngCookies',
+            'openmrs-ngresource.models',
+            'restangular'
+        ])
+        .run(RestangularConfig);
+
+  RestangularConfig.$inject = ['Restangular', 'OpenmrsSettings'];
+
+  function RestangularConfig(Restangular, OpenmrsSettings) {  // jshint ignore:line
+    // Should of the form /ws/rest/v1 or https://host/ws/rest/v1
+    Restangular.setBaseUrl(OpenmrsSettings.getCurrentRestUrlBase().trim());
+  }
+})();
+
+(function() {
+  'use strict';
+
+  angular
+        .module('openmrs-ngresource.models', [
+          'openmrs-ngresource.utils'
+        ]);
+})();
+
+/*jshint -W098, -W030 */
+
+(function() {
+  'use strict';
+  var app = angular.module('openmrs-ngresource.utils', []);
+})();
+
+/* global _ */
+/*jshint -W003, -W098, -W117, -W026 */
+(function () {
+  'use strict';
+
+  angular
+    .module('openmrs-ngresource.restServices')
+    .service('ConceptResService', ProviderResService);
+
+  ProviderResService.$inject = ['OpenmrsSettings', '$resource'];
+
+  function ProviderResService(OpenmrsSettings, $resource) {
+    var serviceDefinition;
+    serviceDefinition = {
+      getResource: getResource,
+      getConceptClassResource: getConceptClassResource,
+      getSearchResource: getSearchResource,
+      getConceptClasses: getConceptClasses,
+      getConceptByUuid: getConceptByUuid,
+      findConcept: findConcept,
+      findConceptByConceptClassesUuid: findConceptByConceptClassesUuid,
+      filterResultsByConceptClassesUuid: filterResultsByConceptClassesUuid,
+      filterResultsByConceptClassesName:filterResultsByConceptClassesName,
+      getConceptAnswers:getConceptAnswers
+    };
+    return serviceDefinition;
+
+    function getResource() {
+      return $resource(OpenmrsSettings.getCurrentRestUrlBase().trim() + 'concept/:uuid?v=custom:(uuid,name,conceptClass)',
+        { uuid: '@uuid' },
+        { query: { method: 'GET', isArray: false } });
+    }
+
+    function getSearchResource() {
+      return $resource(OpenmrsSettings.getCurrentRestUrlBase().trim() + 'concept?q=:q&v=custom:(uuid,name,conceptClass)',
+        { q: '@q' },
+        { query: { method: 'GET', isArray: false } });
+    }
+
+    function getConceptClassResource() {
+      return $resource(OpenmrsSettings.getCurrentRestUrlBase().trim() + 'conceptclass',
+        { uuid: '@uuid' },
+        { query: { method: 'GET', isArray: false } });
+    }
+
+    function getConceptWithAnswersResource() {
+      return $resource(OpenmrsSettings.getCurrentRestUrlBase().trim() + 'concept/:uuid?v=custom:(uuid,name,answers)',
+        { q: '@q' },
+        { query: { method: 'GET', isArray: false } });
+    }
+
+    function getConceptClasses(successCallback, failedCallback) {
+      var resource = getConceptClassResource();
+      return resource.get({ v: 'default' }).$promise
+        .then(function (response) {
+          successCallback(response.results ? response.results : response);
+        })
+        .catch(function (error) {
+          failedCallback('Error processing request', error);
+          console.error(error);
+        });
+    }
+
+    function getConceptByUuid(uuid, successCallback, failedCallback) {
+      var resource = getResource();
+      return resource.get({ uuid: uuid }).$promise
+        .then(function (response) {
+          successCallback(response);
+        })
+        .catch(function (error) {
+          failedCallback('Error processing request', error);
+          console.error(error);
+        });
+    }
+
+    function getConceptAnswers(uuid, successCallback, failedCallback) {
+      var resource = getConceptWithAnswersResource();
+      return resource.get({ uuid: uuid }).$promise
+        .then(function (response) {
+          successCallback(response);
+        })
+        .catch(function (error) {
+          failedCallback('Error processing request', error);
+          console.error(error);
+        });
+    }
+
+    function findConcept(searchText, successCallback, failedCallback) {
+      var resource = getSearchResource();
+      return resource.get({ q: searchText }).$promise
+        .then(function (response) {
+          successCallback(response.results ? response.results : response);
+        })
+        .catch(function (error) {
+          failedCallback('Error processing request', error);
+          console.error(error);
+        });
+    }
+
+    function findConceptByConceptClassesUuid(searchText, conceptClassesUuidArray, successCallback, failedCallback) {
+      var resource = getSearchResource();
+
+      return resource.get({ q: searchText }).$promise
+        .then(function (response) {
+          successCallback(response.results ? filterResultsByConceptClassesUuid(response.results, conceptClassesUuidArray) : response);
+        })
+        .catch(function (error) {
+          failedCallback('Error processing request', error);
+          console.error(error);
+        });
+    }
+
+    function filterResultsByConceptClassesUuid(results, conceptClassesUuidArray) {
+      var res = _.filter(results, function (result) {
+        return _.find(conceptClassesUuidArray, function (uuid) {
+          return result.conceptClass.uuid === uuid;
+        });
+      });
+      return res;
+    }
+
+    function filterResultsByConceptClassesName(results, conceptClassesNameArray) {
+      var res = _.filter(results, function (result) {
+        return _.find(conceptClassesNameArray, function (name) {
+          return result.conceptClass.name === name;
+        });
+      });
+      return res;
+    }
+
+    function filterConceptAnswersByConcept(results, conceptUuid) {
+      var res = _.filter(results, function (result) {
+        return _.find(conceptUuid, function (name) {
+          return result.uuid === name;
+        });
+      });
+      return res;
+    }
+
+  }
+})();
+
+/* global _ */
+/*jshint -W003, -W098, -W117, -W026 */
+(function () {
+  'use strict';
+
+  angular
+    .module('openmrs-ngresource.restServices')
+    .service('DrugResService', DrugResService);
+
+  DrugResService.$inject = ['OpenmrsSettings', '$resource'];
+
+  function DrugResService(OpenmrsSettings, $resource) {
+    var serviceDefinition;
+    serviceDefinition = {
+      getResource: getResource,
+      getSearchResource: getSearchResource,
+      getDrugByUuid: getDrugByUuid,
+      findDrugs: findDrugs
+    };
+
+    return serviceDefinition;
+
+    function getResource() {
+      return $resource(OpenmrsSettings.getCurrentRestUrlBase().trim() + 'drug/:uuid?v=custom:(uuid,name,concept)',
+        { uuid: '@uuid' },
+        { query: { method: 'GET', isArray: false } });
+    }
+
+    function getSearchResource() {
+      return $resource(OpenmrsSettings.getCurrentRestUrlBase().trim() + 'drug?q=:q&v=custom:(uuid,name,concept)',
+        { q: '@q' },
+        { query: { method: 'GET', isArray: false } });
+    }
+
+
+    function getDrugByUuid(uuid, successCallback, failedCallback) {
+      var resource = getResource();
+      return resource.get({ uuid: uuid }).$promise
+        .then(function (response) {
+          successCallback(response);
+        })
+        .catch(function (error) {
+          failedCallback('Error processing request', error);
+          console.error(error);
+        });
+    }
+
+    function findDrugs(searchText, successCallback, failedCallback) {
+      var resource = getSearchResource();
+      return resource.get({ search: searchText }).$promise
+        .then(function (response) {
+          successCallback(response.results ? response.results : response);
+        })
+        .catch(function (error) {
+          failedCallback('Error processing request', error);
+          console.error(error);
+        });
+    }
+
+  }
+})();
+
+/*
+jshint -W026, -W116, -W098, -W003, -W068, -W069, -W004, -W033, -W030, -W117
+*/
+(function () {
+    'use strict';
+
+    angular
+        .module('openmrs-ngresource.restServices')
+        .factory('EncounterResService', EncounterResService);
+
+    EncounterResService.$inject = ['Restangular', 'OpenmrsSettings', '$resource'];
+
+    function EncounterResService(Restangular, OpenmrsSettings, $resource) {
+        var service = {
+            getEncounterByUuid: getEncounterByUuid,
+            saveEncounter: saveEncounter,
+            getPatientEncounters: getPatientEncounters,
+            voidEncounter: voidEncounter
+        };
+
+        return service;
+
+        function getResource() {
+            var v = 'custom:(uuid,encounterDatetime,' +
+                'patient:(uuid,uuid),form:(uuid,name),' +
+                'location:ref,encounterType:ref,provider:ref,' +
+                'obs:(uuid,obsDatetime,concept:(uuid,uuid),value:ref,groupMembers))';
+            return $resource(OpenmrsSettings.getCurrentRestUrlBase().trim() + 'encounter/:uuid',
+                { uuid: '@uuid', v: v },
+                { query: { method: 'GET', isArray: false } });
+        }
+
+        function voidEncounter(uuid, successCallback, errorCallback) {
+            Restangular.one('encounter', uuid).remove().then(function (response) {
+                if (typeof successCallback === 'function') {
+                    successCallback(response);
+                }
+            }, function (error) {
+                if (typeof errorCallback === 'function') {
+                    errorCallback(error);
+                }
+            });
+        }
+
+        function getEncounterByUuid(params, successCallback, errorCallback) {
+            var objParams = {};
+            var _customDefaultRep = 'custom:(uuid,encounterDatetime,' +
+                'patient:(uuid,uuid),form:(uuid,name),' +
+                'location:ref,encounterType:ref,provider:ref,' +
+                'obs:(uuid,obsDatetime,concept:(uuid,uuid),value:ref,groupMembers))';
+
+            if (angular.isDefined(params) && typeof params === 'string') {
+                var encounterUuid = params;
+                objParams = { 'encounter': encounterUuid, 'v': _customDefaultRep };
+            } else {
+                objParams = {
+                    'encounter': params.uuid,
+                    'v': params.rep || _customDefaultRep
+                };
+            }
+            Restangular.one('encounter', objParams.encounter).get({ v: objParams.v }).then(function (data) {
+                _successCallbackHandler(successCallback, data);
+            },
+                function (error) {
+                    console.log('An error occured while attempting to fetch encounter ' +
+                        'with uuid ' + params.patientUuid);
+                    if (typeof errorCallback === 'function') errorCallback(error);
+                });
+        }
+
+        function saveEncounter(encounter, successCallback, errorCallback) {
+
+            var _encounter = JSON.parse(encounter);
+            var encounterResource = getResource();
+
+            if (_encounter.uuid !== undefined) {
+                var uuid = _encounter.uuid;
+                delete _encounter['uuid'];
+
+                console.log('update json');
+                console.log(JSON.stringify(_encounter));
+                //updating an existing encounter
+                // Restangular.one('encounter', uuid).customPOST(JSON.stringify(_encounter)).then(function (success) {
+                //     console.log('Encounter saved successfully');
+                //     if (typeof successCallback === 'function') successCallback(success);
+                // },
+                //     function (error) {
+                //         console.log('Error saving encounter');
+                //         if (typeof errorCallback === 'function') errorCallback(error);
+                //    });
+
+                encounterResource.save({ uuid: uuid }, JSON.stringify(_encounter)).$promise
+                    .then(function (data) {
+                        console.log('Encounter saved successfully');
+                        if (typeof successCallback === 'function') successCallback(data);
+                    })
+                    .catch(function (error) {
+                        console.log('Error saving encounter');
+                        if (typeof errorCallback === 'function')
+                            errorCallback(error);
+                    });
+            }
+            else {
+                // Restangular.service('encounter').post(encounter).then(function (success) {
+                //     console.log('Encounter saved successfully');
+                //     if (typeof successCallback === 'function') successCallback(success);
+                // },
+                //     function (error) {
+                //         console.log('Error saving encounter');
+                //         if (typeof errorCallback === 'function') errorCallback(error);
+                //     });
+                encounterResource.save(encounter).$promise
+                    .then(function (data) {
+                        console.log('Encounter saved successfully');
+                        if (typeof successCallback === 'function')
+                            successCallback(data);
+                    })
+                    .catch(function (error) {
+                        console.log('Error saving encounter');
+                        if (typeof errorCallback === 'function')
+                            errorCallback(error);
+                    });
+            }
+        }
+
+        function getPatientEncounters(params, successCallback, errorCallback) {
+            var objParams = {};
+
+            // Don't include obs by default
+            var _customDefaultRep = 'custom:(uuid,encounterDatetime,' +
+                'patient:(uuid,uuid),form:(uuid,name),' +
+                'location:ref,encounterType:ref,provider:ref)';
+
+            if (angular.isDefined(params) && typeof params === 'string') {
+                var patientUuid = params;
+                objParams = { 'patient': patientUuid, 'v': _customDefaultRep }
+            } else {
+                var v = params.rep || params.v;
+                objParams = {
+                    'patient': params.patientUuid,
+                    'v': v || _customDefaultRep
+                };
+
+                /* jshint ignore: start */
+                delete params.patientUuid;
+                delete params.rep;
+                /* jshint ignore: end */
+
+                //Add objParams to params and assign it back objParams
+                params.patient = objParams.patient;
+                params.v = objParams.v;
+
+                objParams = params;
+            }
+
+            Restangular.one('encounter').get(objParams).then(function (data) {
+                if (angular.isDefined(data.results)) data = data.results;
+                _successCallbackHandler(successCallback, data.reverse());
+            },
+                function (error) {
+                    console.log('An error occured while attempting to fetch encounters ' +
+                        'for patient with uuid ' + params.patientUuid);
+                    if (typeof errorCallback === 'function') errorCallback(error);
+                });
+        }
+
+        function _successCallbackHandler(successCallback, data) {
+            if (typeof successCallback !== 'function') {
+                console.log('Error: You need a callback function to process' +
+                    ' results');
+                return;
+            }
+            successCallback(data);
+        }
+    }
+})();
+
+/* global _ */
+/*jshint -W003, -W098, -W117, -W026 */
+(function () {
+  'use strict';
+
+  angular
+    .module('openmrs-ngresource.restServices')
+    .service('IdentifierResService',IdentifierResService);
+
+  IdentifierResService.$inject = ['OpenmrsSettings', '$resource'];
+
+  function IdentifierResService(OpenmrsSettings, $resource) {
+    var serviceDefinition;
+    serviceDefinition = {
+      getResource: getResource,
+      getPatientIdentifiers: getPatientIdentifiers
+    };
+    return serviceDefinition;
+
+    function getResource() {
+      return $resource(OpenmrsSettings.getCurrentRestUrlBase().trim() + 'patient/:uuid/identifier',
+        {q: '@q'},
+        {query: {method: 'GET', isArray: false}});
+    }
+
+    function getPatientIdentifiers(uuid, successCallback, failedCallback) {
+      var resource = getResource();
+      return resource.get({uuid: uuid}).$promise
+        .then(function (response) {
+          console.log('This is Identifier Object', response);
+          successCallback(response);
+
+        })
+        .catch(function (error) {
+          failedCallback('Error processing request', error);
+          console.error(error);
+        });
+    }
+  }
+})();
+
+
+/*
+jshint -W026, -W116, -W098, -W003, -W068, -W069, -W004, -W033, -W030, -W117
+*/
+(function() {
+  'use strict';
+
+  angular
+    .module('openmrs-ngresource.restServices')
+    .service('LocationResService', LocationResService);
+
+  LocationResService.$inject = ['OpenmrsSettings', '$resource', '$rootScope', 'CachedDataService'];
+
+  function LocationResService(OpenmrsSettings, $resource, $rootScope, CachedDataService) {
+    var serviceDefinition;
+
+    var cachedLocations = [];
+
+    serviceDefinition = {
+      initialize: initialize,
+      getResource: getResource,
+      searchResource: searchResource,
+      getListResource: getListResource,
+      getLocations: getLocations,
+      getLocationByUuid: getLocationByUuid,
+      findLocation: findLocation,
+      cachedLocations: cachedLocations
+    };
+
+    return serviceDefinition;
+
+    function initialize() {
+      getLocations(function() {}, function() {});
+    }
+
+    function getResource() {
+      return $resource(OpenmrsSettings.getCurrentRestUrlBase().trim() + 'location/:uuid', {
+        uuid: '@uuid'
+      }, {
+        query: {
+          method: 'GET',
+          isArray: false
+        }
+      });
+    }
+
+    function getListResource() {
+      return $resource(OpenmrsSettings.getCurrentRestUrlBase().trim() + 'location?v=default', {
+        uuid: '@uuid'
+      }, {
+        query: {
+          method: 'GET',
+          isArray: false
+        }
+      });
+    }
+
+    function searchResource() {
+      return $resource(OpenmrsSettings.getCurrentRestUrlBase().trim() + 'location?q=:search&v=default', {
+        search: '@search'
+      }, {
+        query: {
+          method: 'GET',
+          isArray: false
+        }
+      });
+    }
+
+    function getLocationByUuid(uuid, successCallback, failedCallback) {
+      var resource = getResource();
+      return resource.get({
+          uuid: uuid
+        }).$promise
+        .then(function(response) {
+          successCallback(response);
+        })
+        .catch(function(error) {
+          failedCallback('Error processing request', error);
+          console.error(error);
+        });
+    }
+
+    function findLocation(searchText, successCallback, failedCallback) {
+      var resource = searchResource();
+      return resource.get({
+          search: searchText
+        }).$promise
+        .then(function(response) {
+          successCallback(response.results ? response.results : response);
+        })
+        .catch(function(error) {
+          failedCallback('Error processing request', error);
+          console.error(error);
+        });
+    }
+
+    function getLocations(successCallback, failedCallback, refreshCache) {
+      var resource = getListResource();
+      //console.log(serviceDefinition.cachedLocations);
+      if (refreshCache === false && serviceDefinition.cachedLocations.length !== 0) {
+        successCallback(serviceDefinition.cachedLocations);
+        return {
+          results: serviceDefinition.cachedLocations
+        };
+      }
+
+      return resource.get().$promise
+        .then(function(response) {
+          serviceDefinition.cachedLocations = response.results ? response.results : response;
+          successCallback(response.results ? response.results : response);
+        })
+        .catch(function(error) {
+          failedCallback('Error processing request', error);
+          console.error(error);
+        });
+    }
+  }
+})();
+
+/*
+jshint -W026, -W116, -W098, -W003, -W068, -W069, -W004, -W033, -W030, -W117
+*/
+/*
+jscs:disable disallowQuotedKeysInObjects, safeContextKeyword, requireDotNotation, requirePaddingNewLinesBeforeLineComments, requireTrailingComma
+*/
+(function() {
+  'use strict';
+
+  angular
+    .module('openmrs-ngresource.restServices')
+          .factory('ObsResService', ObsResService);
+
+  ObsResService.$inject = ['OpenmrsSettings', '$resource'];
+
+  function ObsResService(OpenmrsSettings, $resource) {
+    var service = {
+      getObsByUuid: getObsByUuid,
+      saveUpdateObs:saveUpdateObs,
+      voidObs: voidObs
+    };
+
+    return service;
+
+    function getResource() {
+      var v = 'custom:(uuid,obsDatetime,concept:(uuid,uuid),groupMembers,value:ref)';
+      return $resource(OpenmrsSettings.getCurrentRestUrlBase().trim() + 'obs/:uuid',
+        { uuid: '@uuid', v:v},
+        { query: { method: 'GET', isArray: false } });
+    }
+
+    function saveUpdateObs(obs, successCallback, errorCallback) {
+      // console.log('Received Obs', obs)
+      var obsResource = getResource();
+      var _obs = obs;
+      if (obs.uuid !== undefined)
+      {
+        //update obs
+        var uuid = obs.uuid;
+        delete obs['uuid'];
+        console.log('Stringified Obs', JSON.stringify(obs));
+        obsResource.save({uuid: uuid }, JSON.stringify(obs)).$promise
+          .then(function(data) {
+          successCallback(data);
+        })
+          .catch(function(error) {
+            console.error('An Error occured when saving Obs ', error);
+            if (typeof errorCallback === 'function')
+              errorCallback('Error processing request', error);
+          });
+        /*
+        Plan B
+        var _obs =JSON.parse(obs);
+        var uuid = _obs.uuid
+        delete _obs['uuid'];
+        obsResource.save({uuid: uuid, value:JSON.stringify(_obs)}).$promise
+          .then(function (data) {
+          successCallback(data);
+        })
+          .catch(function (error) {
+          errorCallback('Error processing request', error);
+          console.error(error);
+        });
+
+        */
+      } else {
+        obsResource = getResource();
+        obsResource.save(obs).$promise
+        .then(function(data) {
+        successCallback(data);
+      })
+        .catch(function(error) {
+          console.error('An Error occured when saving Obs ', error);
+          if (typeof errorCallback === 'function')
+            errorCallback('Error processing request', error);
+        });
+      }
+    }
+
+    function getObsByUuid(obs, successCallback, errorCallback) {
+      var obsResource = getResource();
+
+      return obsResource.get({ uuid: obs.uuid }).$promise
+        .then(function(data) {
+        successCallback(data);
+      })
+        .catch(function(error) {
+          console.error('An Error occured when getting Obs ', error);
+          if (typeof errorCallback === 'function')
+            errorCallback('Error processing request', error);
+        });
+    }
+
+    function voidObs(obs, successCallback, errorCallback) {
+      var obsResource = getResource();
+      obsResource.delete({uuid:obs.uuid},
+        function(data) {
+          if (successCallback) {
+            successCallback(data);
+          } else return data;
+        },
+
+        function(error) {
+          console.error('An Error occured when voiding Obs ', error);
+          if (typeof errorCallback === 'function')
+            errorCallback('Error processing request', error);
+        }
+      );
+    }
+
+  }
+})();
+
+/*
+jshint -W003,-W109, -W106, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W069, -W026
+*/
+/*jscs:disable requireDotNotation, requirePaddingNewLinesBeforeLineComments, requireTrailingComma*/
+(function() {
+  'use strict';
+
+  angular
+    .module('openmrs-ngresource.restServices')
+    .service('FormResService', FormResService);
+
+  FormResService.$inject = ['OpenmrsSettings','$resource'];
+
+  function FormResService(OpenmrsSettings, $resource) {
+    var serviceDefinition;
+
+    serviceDefinition = {
+      getFormByUuid: getFormByUuid,
+      findPocForms: findPocForms
+    };
+
+    return serviceDefinition;
+
+    function getSearchResource() {
+      return $resource(OpenmrsSettings.getCurrentRestUrlBase().trim() + 'form?q=:q&v=custom:(uuid,name,encounterType,version)',
+        { q: '@q' },
+        { query: { method: 'GET', isArray: false } });
+    }
+
+    function findPocForms(searchText, successCallback, failedCallback) {
+      var resource = getSearchResource();
+      return resource.get({ q: searchText }).$promise
+        .then(function(response) {
+          var wrapped = wrapForms(response.results ? response.results : response);
+          // successCallback(response.results ? response.results : response);
+          successCallback(wrapped);
+        })
+        .catch(function(error) {
+          failedCallback('Error processing request', error);
+          console.error(error);
+        });
+    }
+
+    function getResource() {
+      return $resource(OpenmrsSettings.getCurrentRestUrlBase().trim() + 'form/:uuid?v=custom:(uuid,name,encounterType,version)',
+        { uuid: '@uuid' },
+        { query: { method: 'GET', isArray: false } });
+    }
+
+    function getFormByUuid(uuid, successCallback, failedCallback) {
+      var resource = getResource();
+      return resource.get({ uuid: uuid }).$promise
+        .then(function(response) {
+          var _form = response;
+          var form = {
+            uuid:_form.uuid,
+            name: _form.name,
+            encounterTypeUuid: _form.encounterType.uuid,
+            encounterTypeName: _form.encounterType.display,
+            version: _form.version
+          };
+          successCallback(form);
+        })
+        .catch(function(error) {
+          failedCallback('Error processing request', error);
+          console.error(error);
+        });
+    }
+
+    function wrapForms(forms) {
+      var wrappedObjects = [];
+      _.each(forms, function(_form) {
+        var form = {
+          uuid:_form.uuid,
+          name: _form.name,
+          encounterTypeUuid: _form.encounterType.uuid,
+          encounterTypeName: _form.encounterType.display,
+          version: _form.version
+        };
+        wrappedObjects.push(form);
+      });
+
+      return wrappedObjects;
+    }
+
+  }
+})();
+
+/*jshint -W003, -W098, -W117, -W026 */
+(function() {
+  'use strict';
+
+  angular
+    .module('openmrs-ngresource.restServices')
+    .service('PatientResService', PatientResService);
+
+  PatientResService.$inject = ['OpenmrsSettings', '$resource', 'PatientModel'];
+
+  function PatientResService(OpenmrsSettings, $resource, PatientModel) {
+    var service;
+    var currentSession;
+    service = {
+      getPatientByUuid: getPatientByUuid,
+      getPatientQuery: getPatientQuery
+    };
+    return service;
+    function getResource() {
+          var v = 'custom:(uuid,identifiers:(identifier,uuid,identifierType:(uuid,name)),person:(uuid,gender,birthdate,dead,age,deathDate,preferredName:(givenName,middleName,familyName),';
+          v = v  + 'attributes,preferredAddress:(preferred,address1,address2,cityVillage,stateProvince,country,postalCode,countyDistrict,address3,address4,address5,address6)))';
+      var r = $resource(OpenmrsSettings.getCurrentRestUrlBase().trim() + 'patient/:uuid',
+                {uuid: '@uuid', v: v},
+                {query: {method: 'GET', isArray: false}});
+          return r;
+
+        }
+
+    function getPatientByUuid(params, callback) {
+        var PatientRes = getResource();
+
+        PatientRes.get(params, function(data) {
+          //console.log(data);
+          var p = {uuid:data.uuid,
+            identifiers:data.identifiers,
+            person:data.person};
+          console.log(p);
+          var d = new PatientModel.patient(p);
+          callback(d);
+        });
+      }
+
+    function getPatientQuery(params, callback) {
+      var PatientRes = getResource();
+      var patients = [];
+      //console.log(params);
+      PatientRes.query(params, false, function(data) {
+        //console.log(data.results);
+        angular.forEach(data.results, function(value, key) {
+          //console.log(value);
+          var myperson = value.person;
+          var p = new PatientModel.patient(value);
+          //console.log('Attedmted'+patientUuid);
+          //console.log("New UUUID"+value.person.uuid+"d"+value.person.display);
+          patients.push(p);
+      });
+
+        callback(patients);
+      });
+    }
+  }
+})();
+
+/*
+jshint -W117, -W098, -W116, -W003, -W026
+*/
+(function() {
+  'use strict';
+
+  angular
+        .module('openmrs-ngresource.restServices')
+        .factory('OpenmrsRestService', OpenmrsRestService);
+
+  OpenmrsRestService.$inject = ['SessionResService',
+                                'AuthService',
+                                'PatientResService',
+                                'UserResService',
+                                'EncounterResService',
+                                'LocationResService',
+                                'ProviderResService',
+                                'ObsResService',
+                                'DrugResService'];
+
+  function OpenmrsRestService(session, authService, PatientResService,
+              UserResService, EncounterResService, LocationResService,
+              ProviderResService, ObsResService, DrugResService, UserDefaultPropertiesService) {
+    var service = {
+          getSession: getSession,
+          getAuthService: getAuthService,
+          getPatientService: getPatientService,
+          getUserService: getUserService,
+          getLocationResService: getLocationService,
+          getEncounterResService: getEncounterService,
+          getProviderResService:getProviderResService,
+          getObsResService:getObsResService,
+          getDrugResService:getDrugResService,
+          getUserDefaultPropertiesService:getUserDefaultPropertiesService
+        };
+
+    return service;
+
+    function getSession() {
+      return session;
+    }
+
+    function getAuthService() {
+      return authService;
+    }
+
+    function getPatientService() {
+      return PatientResService;
+    }
+
+    function getUserService() {
+      return UserResService;
+    }
+
+    function getEncounterService() {
+      return EncounterResService;
+    }
+
+    function getLocationService() {
+      return LocationResService;
+    }
+
+    function getProviderResService() {
+      return ProviderResService;
+    }
+
+    function getObsResService() {
+      return ObsResService;
+    }
+
+    function getDrugResService() {
+      return DrugResService;
+    }
+    
+    function getUserDefaultPropertiesService() {
+      return UserDefaultPropertiesService;
+    }    
+  }
+}) ();
+
+/*jshint -W003, -W026, -W117, -W098 */
+(function () {
+  'use strict';
+
+  angular
+    .module('openmrs-ngresource.restServices')
+    .service('OpenmrsSettings', OpenmrsSettings);
+
+  OpenmrsSettings.$inject = ['$cookies'];
+
+  function OpenmrsSettings($cookies) {
+    var serviceDefinition;
+    var restUrlBaseList = [
+      'https://test1.ampath.or.ke:8443/amrs/ws/rest/v1/',
+      'https://amrs.ampath.or.ke:8443/amrs/ws/rest/v1/',
+      'https://etl1.ampath.or.ke:8443/amrs/ws/rest/v1/',
+      'http://localhost:8080/openmrs/ws/rest/v1/'
+    ];
+    var restUrlBase = restUrlBaseList[0];
+
+    initialize();
+    serviceDefinition = {
+      reInitialize: initialize,
+      getCurrentRestUrlBase: getCurrentRestUrlBase,
+      setCurrentRestUrlBase: setCurrentRestUrlBase,
+      restUrlBase: restUrlBase,
+      addUrlToList: addUrlToList,
+      getUrlBaseList: getUrlBaseList,
+      hasCoockiePersistedCurrentUrlBase: hasCoockiePersistedCurrentUrlBase
+    };
+    return serviceDefinition;
+
+    function initialize() {
+
+      var lastSetUrl = $cookies.get('restUrlBase');
+
+      if (lastSetUrl) {
+        restUrlBase = lastSetUrl;
+      }
+    }
+
+    function hasCoockiePersistedCurrentUrlBase() {
+      var lastSetUrl = $cookies.get('restUrlBase');
+
+      if (lastSetUrl) {
+        return true;
+      }
+
+      return false;
+    }
+
+    function getCurrentRestUrlBase() {
+      return restUrlBase;
+    }
+
+    function setCurrentRestUrlBase(url) {
+      restUrlBase = url;
+      var d = new Date();
+      d.setFullYear(2050);//expires in 2050
+      $cookies.put('restUrlBase', url, { 'expires': d });
+    }
+
+    function getUrlBaseList() {
+      return restUrlBaseList;
+    }
+
+    function addUrlToList(url) {
+      restUrlBaseList.push(url);
+    }
+  }
+})();
+
+/*jshint -W003, -W098, -W117, -W026 */
+(function () {
+  'use strict';
+
+  angular
+    .module('openmrs-ngresource.restServices')
+    .service('ProviderResService', ProviderResService);
+
+  ProviderResService.$inject = ['OpenmrsSettings', '$resource'];
+
+  function ProviderResService(OpenmrsSettings, $resource) {
+    var serviceDefinition;
+    serviceDefinition = {
+      getResource: getResource,
+      searchResource: searchResource,
+      getProviderByUuid: getProviderByUuid,
+      getProviderByPersonUuid: getProviderByPersonUuid,
+      findProvider: findProvider
+    };
+    return serviceDefinition;
+
+    function getResource() {
+      return $resource(OpenmrsSettings.getCurrentRestUrlBase().trim() + 'provider/:uuid?v=full',
+        { uuid: '@uuid' },
+        { query: { method: 'GET', isArray: false } });
+    }
+
+    function getPersonResource() {
+      return $resource(OpenmrsSettings.getCurrentRestUrlBase().trim() + 'person/:uuid',
+        { uuid: '@uuid' },
+        { query: { method: 'GET', isArray: false } });
+    }
+
+    function searchResource() {
+        return $resource(OpenmrsSettings.getCurrentRestUrlBase().trim() + 'provider?q=:search&v=default',
+        { search: '@search' },
+        { query: { method: 'GET', isArray: false } });
+    }
+
+    function getProviderByUuid(uuid, successCallback, failedCallback) {
+      var resource = getResource();
+      return resource.get({ uuid: uuid }).$promise
+        .then(function (response) {
+        successCallback(response);
+      })
+        .catch(function (error) {
+        failedCallback('Error processing request', error);
+        console.error(error);
+      });
+    }
+
+    function getProviderByPersonUuid(uuid, successCallback, failedCallback) {
+      var resource = getPersonResource();
+      return resource.get({ uuid: uuid }).$promise
+        .then(function (response) {
+        var provider = {person:response, display:response.display };
+        successCallback(provider);
+      })
+        .catch(function (error) {
+        failedCallback('Error processing request', error);
+        console.error(error);
+      });
+    }
+
+    function findProvider(searchText, successCallback, failedCallback) {
+      var resource = searchResource();
+      return resource.get({ search: searchText }).$promise
+        .then(function (response) {
+           successCallback(response.results? response.results: response);
+      })
+        .catch(function (error) {
+        failedCallback('Error processing request', error);
+        console.error(error);
+      });
+    }
+  }
+})();
+
+/*jshint -W003, -W098, -W117, -W026 */
+(function() {
+  'use strict';
+
+  angular
+        .module('openmrs-ngresource.restServices')
+        .service('SessionResService', SessionResService);
+
+  SessionResService.$inject = ['OpenmrsSettings', '$resource'];
+
+  function SessionResService(OpenmrsSettings, $resource) {
+        var serviceDefinition;
+        var currentSession;
+        serviceDefinition = {
+          getResource:getResource,
+          getSession:getSession,
+          currentSession:currentSession,
+          deleteSession:deleteSession
+        };
+        return serviceDefinition;
+
+        function getResource() {
+          return $resource(OpenmrsSettings.getCurrentRestUrlBase().trim() + 'session');
+        }
+
+        function getSession(successCallback, failedCallback) {
+          var resource = getResource();
+          return resource.get({}).$promise
+          .then(function(response) {
+            serviceDefinition.currentSession = response.sessionId;
+            successCallback(response);
+          })
+          .catch(function(error) {
+            serviceDefinition.currentSession = null;
+            failedCallback('Error processing request', error);
+            console.error(error);
+          });
+        }
+
+        function deleteSession(callback) {
+          var resource = getResource();
+          return resource.delete({}).$promise
+          .then(function(response) {
+            callback(response);
+          })
+          .catch(function(error) {
+            callback(error);
+            console.error(error);
+          });
+        }
+      }
+})();
+
+/*
+jshint -W003, -W026, -W098
+*/
+(function () {
+  'use strict';
+
+  angular
+    .module('openmrs-ngresource.restServices')
+    .factory('UserResService', UserResService);
+
+  UserResService.$inject = ['$resource', 'OpenmrsSettings', 'UserModel', '$rootScope'];
+
+  function UserResService($resource, settings, UserModel, $rootScope) {
+    var service = {
+      getUser: getUser,
+      user: '',
+      getUserByUuid: getUserByUuid,
+      findUser: findUser
+    };
+
+    return service;
+
+    function getResource() {
+      var v = 'custom:(uuid,username,systemId,roles:(uuid,name,privileges),person:(uuid,preferredName))'; // avoid spaces in this string
+      var r = $resource(settings.getCurrentRestUrlBase().trim() + 'user/:uuid',
+        { uuid: '@uuid', v: v },
+        { query: { method: 'GET', isArray: false } }
+        );
+      return r;
+    }
+
+    function getFullResource() {
+      var v = 'full'; // avoid spaces in this string
+      var r = $resource(settings.getCurrentRestUrlBase().trim() + 'user/:uuid',
+        { uuid: '@uuid', v: v },
+        { query: { method: 'GET', isArray: false } }
+        );
+      return r;
+    }
+
+
+    function getUser(params, callback) {
+      var UserRes = getResource();
+      //console.log(params);
+      UserRes.query(params, false,
+        function (data) {
+          console.log('userData');
+          console.log(data.results);
+          var result = data.results;
+          if (result.length > 0) {
+            //user(userName_, personUuId_, password_, uuId_, systemId_, userRole_)
+            service.user = new UserModel.user(result[0].username, result[0].person.uuid, '', result[0].uuid, result[0].systemId, result[0].roles);
+            //service.user = result;
+            $rootScope.$broadcast('loggedUser');//broadcasting user to other controllers
+            callback(service.user);
+          }
+        });
+
+    }
+
+    function getUserByUuid(uuid, onSuccess, onError) {
+      var resource = getFullResource();
+
+      return resource.get({ uuid: uuid }).$promise
+        .then(function (data) {
+          onSuccess(data);
+        })
+        .catch(function (error) {
+          onError(error);
+          console.error(error);
+        });
+    }
+
+
+    function findUser(searchText, onSuccess, onError) {
+      var resource = getFullResource();
+
+      return resource.get({ q: searchText }).$promise
+        .then(function (data) {
+          onSuccess(data.results);
+        })
+        .catch(function (error) {
+          onError(error);
+          console.error(error);
+        });
+    }
+
+
+    function getRoles(argument) {
+      // body...
+      var UserRes = getResource();
+    }
+  }
+})()
+;
+
+/*
+jshint -W026, -W116, -W098, -W003, -W068, -W069, -W004, -W033, -W030, -W117
+*/
+(function() {
+  'use strict';
+
+  angular
+    .module('openmrs-ngresource.restServices')
+          .factory('VisitResService', VisitResService);
+
+  VisitResService.$inject = ['Restangular'];
+
+  function VisitResService(Restangular) {
+      var service = {
+          getVisitByUuid: getVisitByUuid,
+          getPatientVisits: getPatientVisits,
+          saveVisit: saveOrUpdateVisit,
+          getVisitEncounters: getVisitEncounters,
+          getVisitTypes: getVisitTypes,
+          defaultCustomRep: new DefaultCustomRep().getterSetter
+      };
+
+      return service;
+
+      function getVisitByUuid(params, successCallback, errorCallBack) {
+          var objParams = {};
+          if(angular.isDefined(params) && typeof params === 'string') {
+            objParams = {
+                'visitUuid': params,
+                'v': new DefaultCustomRep().getterSetter()
+            }
+          } else {
+             var v = params.rep || params.v;
+             objParams = {
+                 'visitUuid': params.uuid,
+                 'v': v || new DefaultCustomRep().getterSetter()
+             }
+          }
+
+         Restangular.one('visit', objParams.visitUuid).get({v: objParams.v})
+            .then(function(data) {
+                _successCallbackHandler(successCallback, data);
+            }, function(error) {
+                console.log('Error: An error occured while fetching visit' +
+                ' data for visit with uuid ' + objParams.visitUuid);
+                if(typeof errorCallBack === 'function') {
+                    errorCallBack(error);
+                }
+            });
+      }
+
+      function getPatientVisits(params, successCallback, errorCallBack) {
+          var objParams = {};
+          if(angular.isDefined(params) && typeof params === 'string') {
+              // params is a patient uuid
+              objParams = {
+                  'patient': params,
+                  'v': new DefaultCustomRep().getterSetter()
+              }
+          } else {
+              var v = params.rep || params.v;
+              objParams = {
+                  'patient': params.patientUuid,
+                  'v': v || new DefaultCustomRep().getterSetter()
+              }
+              /* jshint ignore: start */
+              delete params.patientUuid;
+              delete params.rep;
+              /* jshint ignore: end */
+
+              //Copy other fields.
+              params.patient = objParams.patient;
+              params.v = objParams.v;
+
+              // Assign params to objParams
+              objParams = params;
+          }
+
+          Restangular.one('visit').get(objParams).then(function(data) {
+              if(angular.isDefined(data.results)) data = data.results.reverse();
+              _successCallbackHandler(successCallback, data);
+          }, function(error) {
+              if(typeof errorCallBack === 'function') {
+                  errorCallBack(error);
+              }
+          });
+      }
+
+      function saveOrUpdateVisit(payload, successCallback, errorCallBack) {
+          if(angular.isDefined(payload.uuid)) {
+              var visitUuid = payload.uuid;
+              delete payload.uuid;
+
+              Restangular.one('visit', visitUuid).customPOST(
+                  JSON.stringify(payload)).then(function(data) {
+                      _successCallbackHandler(successCallback, data);
+                  }, function (error) {
+                      if(typeof errorCallBack === 'function') {
+                          errorCallBack(error);
+                      }
+                  })
+          } else {
+              // It is a new visit.
+              Restangular.service('visit').post(payload).then(function(data) {
+                  _successCallbackHandler(successCallback, data);
+              }, function(error) {
+                  if(typeof errorCallBack === 'function') {
+                      errorCallBack(error);
+                  }
+              });
+          }
+      }
+
+      //Get encounters for a given Visit
+      function getVisitEncounters(params, successCallback, errorCallBack) {
+          var rep = 'custom:(encounters:(obs,uuid,patient:(uuid,uuid),' +
+                  'encounterDatetime,form:(uuid,name),encounterType:(uuid,name),' +
+                  'encounterProviders:(uuid,uuid,provider:(uuid,name),' +
+                  'encounterRole:(uuid,name)),location:(uuid,name),' +
+                  'visit:(uuid,visitType:(uuid,name))))';
+
+          var visitUuid=null;
+          if(angular.isDefined(params) && typeof params === 'object') {
+              visitUuid = params.visitUuid;
+          } else {
+              //Assume string passed
+              visitUuid = params;
+          }
+
+          Restangular.one('visit', visitUuid).get({v:rep}).then(function(data) {
+              if(angular.isDefined(data.encounters)) {
+                  data = data.encounters.reverse();
+              }
+              _successCallbackHandler(successCallback, data);
+          }, function(error) {
+              if(typeof errorCallBack === 'function') {
+                  errorCallBack(error);
+              }
+          });
+      }
+
+      function getVisitTypes(rep, successCallback, errorCallback) {
+          var params = {};
+          if(angular.isDefined(rep)) {
+              if(typeof rep === 'string')params.v = rep;
+              else if(typeof rep === 'object')params = rep;
+              else {
+                  errorCallback = successCallback;
+                  successCallback = rep;
+              }
+          }
+          params.v = params.v || 'custom:(uuid,name,description)';
+
+          Restangular.one('visittype').get(params).then(function(data) {
+              if(angular.isDefined(data.results)) data = data.results.reverse();
+              _successCallbackHandler(successCallback, data);
+          }, function(error) {
+              if(typeof errorCallBack === 'function') {
+                  errorCallBack(error);
+              }
+          });
+      }
+
+      function DefaultCustomRep() {
+         var _defaultCustomRep = 'custom:(uuid,patient:(uuid,uuid),' +
+            'visitType:(uuid,name),location:ref,startDatetime,encounters:(' +
+            'uuid,encounterDatetime,form:(uuid,name),encounterType:ref,' +
+            'encounterProviders:ref,' +
+            'obs:(uuid,obsDatetime,concept:(uuid,uuid),value:ref,groupMembers)))';
+
+        this.getterSetter = function(value) {
+              if(angular.isDefined(value)) {
+                  _defaultCustomRep = value;
+              } else {
+                  return _defaultCustomRep;
+              }
+         };
+      }
+
+      function _successCallbackHandler(successCallback, data) {
+        if (typeof successCallback !== 'function') {
+          console.log('Warning: You need a callback function to process' +
+          ' results');
+          return;
+        }
+
+        successCallback(data);
+      }
+  }
+})();
+
+/*
+jshint -W098, -W003, -W068, -W004, -W033, -W026, -W030, -W117
+*/
+/*
+jscs:disable disallowQuotedKeysInObjects, safeContextKeyword, requireDotNotation, requirePaddingNewLinesBeforeLineComments, requireTrailingComma
+*/
+
+(function () {
+  'use strict';
+
+  angular
+    .module('openmrs-ngresource.utils')
+    .factory('SearchDataService', SearchDataService);
+
+  SearchDataService.$inject = ['ProviderResService', 'CachedDataService',
+    'LocationModel', 'ProviderModel', 'ConceptResService', 'ConceptModel',
+    'DrugResService', 'DrugModel', '$rootScope'];
+
+  function SearchDataService(ProviderResService, CachedDataService,
+    LocationModelFactory, ProviderModelFactory, ConceptResService,
+    ConceptModelFactory, DrugResService, DrugModelFactory, $rootScope, FormRestService) {
+
+    var problemConceptClassesArray = ['Diagnosis', 'Symptom',
+      'Symptom/Finding', 'Finding'];
+    var drugConceptClassesArray = ['Drug'];
+    var service = {
+      findProvider: findProvider,
+      getProviderByUuid: getProviderByPersonUuid,
+      getProviderByProviderUuid: getProviderByProviderUuid,
+      findLocation: findLocation,
+      getLocationByUuid: getLocationByUuid,
+      findProblem: findProblem,
+      getProblemByUuid: getProblemByUuid,
+      findDrugConcepts: findDrugConcepts,
+      getDrugConceptByUuid: getDrugConceptByUuid,
+      findDrugs: findDrugs,
+      findDrugByUuid: findDrugByUuid,
+      getConceptAnswers: getConceptAnswers
+    };
+
+    return service;
+
+    function findLocation(searchText, onSuccess, onError) {
+      CachedDataService.getCachedLocations(searchText, function (results) {
+        var wrapped = wrapLocations(results);
+        onSuccess(wrapped);
+      });
+    }
+
+    function getLocationByUuid(uuid, onSuccess, onError) {
+      CachedDataService.getCachedLocationByUuid(uuid, function (results) {
+        var wrapped = wrapLocation(results);
+        onSuccess(wrapped);
+      });
+    }
+
+    function findProblem(searchText, onSuccess, onError) {
+      ConceptResService.findConcept(searchText,
+        function (concepts) {
+          var filteredConcepts = ConceptResService.filterResultsByConceptClassesName(concepts,
+            problemConceptClassesArray);
+          var wrapped = wrapConcepts(filteredConcepts);
+          onSuccess(wrapped);
+        },
+
+        function (error) {
+          onError(onError);
+        });
+    }
+
+    function getProblemByUuid(uuid, onSuccess, onError) {
+      ConceptResService.getConceptByUuid(uuid,
+        function (concept) {
+          var wrapped = wrapConcept(concept);
+          onSuccess(wrapped);
+        },
+
+        function (error) {
+          onError(onError);
+        });
+    }
+
+    function findProvider(searchText, onSuccess, onError) {
+      ProviderResService.findProvider(searchText,
+        function (providers) {
+          var wrapped = wrapProviders(providers);
+          onSuccess(wrapped);
+        },
+
+        function (error) {
+          onError(onError);
+        });
+    }
+
+    function getProviderByPersonUuid(uuid, onSuccess, onError) {
+      ProviderResService.getProviderByPersonUuid(uuid,
+        function (provider) {
+          var wrapped = wrapProvider(provider);
+          onSuccess(wrapped);
+        },
+
+        function (error) {
+          onError(onError);
+        });
+    }
+
+    function getProviderByProviderUuid(uuid, onSuccess, onError) {
+      ProviderResService.getProviderByUuid(uuid,
+        function (provider) {
+          var wrapped = wrapProvider(provider);
+          onSuccess(wrapped);
+        },
+
+        function (error) {
+          onError(onError);
+        });
+    }
+
+    function findDrugConcepts(searchText, onSuccess, onError) {
+      ConceptResService.findConcept(searchText,
+        function (concepts) {
+          var filteredConcepts = ConceptResService.filterResultsByConceptClassesName(concepts,
+            drugConceptClassesArray);
+          var wrapped = wrapConcepts(filteredConcepts);
+          onSuccess(wrapped);
+        },
+
+        function (error) {
+          onError(onError);
+        });
+    }
+
+    function getDrugConceptByUuid(uuid, onSuccess, onError) {
+      ConceptResService.getConceptByUuid(uuid,
+        function (concept) {
+          var wrapped = wrapConcept(concept);
+          onSuccess(wrapped);
+        },
+
+        function (error) {
+          onError(onError);
+        });
+    }
+
+    function findDrugs(searchText, onSuccess, onError) {
+      DrugResService.findDrugs(searchText,
+        function (drugs) {
+          var wrapped = wrapDrugs(drugs);
+          onSuccess(wrapped);
+        },
+
+        function (error) {
+          onError(onError);
+        });
+    }
+
+    function findDrugByUuid(uuid, onSuccess, onError) {
+      DrugResService.findDrugByUuid(uuid,
+        function (drug) {
+          var wrapped = wrapDrug(drug);
+          onSuccess(wrapped);
+        },
+
+        function (error) {
+          onError(onError);
+        });
+    }
+
+    function getConceptAnswers(uuid, onSuccess, onError) {
+      ConceptResService.getConceptAnswers(uuid,
+        function (concept) {
+          var wrapped = wrapConceptsWithLabels(concept.answers);
+          onSuccess(wrapped);
+        },
+
+        function (error) {
+          onError(onError);
+        });
+    }
+    
+    function wrapDrug(drug) {
+      return DrugModelFactory.toWrapper(drug);
+    }
+
+    function wrapDrugs(drugs) {
+      var wrappedDrugs = [];
+      for (var i = 0; i < drugs.length; i++) {
+        wrappedDrugs.push(wrapDrug(drugs[i]));
+      }
+
+      return wrappedDrugs;
+    }
+
+    function wrapProvider(provider) {
+      return ProviderModelFactory.toWrapper(provider);
+    }
+
+    function wrapProviders(providers) {
+      var wrappedProviders = [];
+      for (var i = 0; i < providers.length; i++) {
+        wrappedProviders.push(wrapProvider(providers[i]));
+      }
+
+      return wrappedProviders;
+    }
+
+    function wrapLocations(locations) {
+      var wrappedLocations = [];
+      for (var i = 0; i < locations.length; i++) {
+        wrappedLocations.push(wrapLocation(locations[i]));
+      }
+
+      return wrappedLocations;
+    }
+
+    function wrapLocation(location) {
+      return LocationModelFactory.toWrapper(location);
+    }
+
+    function wrapConcept(concept) {
+      return ConceptModelFactory.toWrapper(concept);
+    }
+
+    function wrapConcepts(concepts) {
+      var wrappedObjects = [];
+      for (var i = 0; i < concepts.length; i++) {
+        wrappedObjects.push(wrapConcept(concepts[i]));
+      }
+
+      return wrappedObjects;
+    }
+
+    function wrapConceptsWithLabels(concepts) {
+      var wrappedObjects = [];
+      for (var i = 0; i < concepts.length; i++) {
+        var concept = {
+          'concept': concepts[i].uuid,
+          'label': concepts[i].display
+        };
+        wrappedObjects.push(concept);
+      }
+
+      return wrappedObjects;
+    }
+
+  }
+
+})();
+
+/*
+ jshint -W098, -W003, -W068, -W004, -W033, -W026, -W030, -W117
+ */
+/*jscs:disable safeContextKeyword, requireDotNotation, requirePaddingNewLinesBeforeLineComments, requireTrailingComma*/
+(function(){
+    'use strict';
+
+    angular
+            .module('openmrs-ngresource.utils')
+            .factory('CachedDataService',CachedDataService);
+
+    CachedDataService.$inject=['$rootScope'];
+
+    function CachedDataService($rootScope){
+        var service={
+            //locations retrieved  from the  etl server
+            getCachedEtlLocations:getCachedEtlLocations,
+            getCachedEtlLocationsByUuid:getCachedEtlLocationsByUuid,
+            getCachedLocations:getCachedLocations,
+            getCachedLocationByUuid:getCachedLocationByUuid,
+            getCachedPocForms:getCachedPocForms,
+            getCachedPatient:getCachedPatient
+        };
+
+        return service;
+
+        function getCachedEtlLocationsByUuid(locationUuid,callback){
+            var result=[];
+            angular.forEach($rootScope.cachedEtlLocations,function(value,key){
+                if(value.uuid===locationUuid){
+                    result=value
+                }
+            });
+            callback(result);
+        }
+
+        function getCachedLocations(searchText,callback){
+            var results=_.filter($rootScope.cachedLocations,
+                    function(l){
+                        // console.log('location ', l);
+                        if(l.description!==null||l.description!=='null'){
+                            return (_.contains(l.name.toLowerCase(),searchText.toLowerCase())||
+                                    _.contains(l.description.toLowerCase(),searchText.toLowerCase()));
+                        }else{
+                            return (_.contains(l.name.toLowerCase(),searchText.toLowerCase()));
+                        }
+
+                    });
+
+            callback(results);
+        }
+
+        function getCachedLocationByUuid(uuid,callback){
+            var results=_.find($rootScope.cachedLocations,
+                    function(l){
+                        // console.log('location ', l);
+                        return (l.uuid===uuid);
+                    });
+
+            callback(results);
+        }
+
+        function getCachedFormByUuid(uuid,callback){
+            var results=_.find($rootScope.cachedPocForms,
+                    function(f){
+                        // console.log('location ', l);
+                        return (f.uuid===uuid);
+                    });
+
+            callback(results);
+        }
+
+        function getCachedPocForms(){
+            return $rootScope.cachedPocForms;
+        }
+
+        function getCachedPatient(){
+            return $rootScope.broadcastPatient;
+        }
+        function getCachedEtlLocations(){
+            return $rootScope.cachedEtlLocations;
+
+        }
+
+    }
+})();
+
+/*jshint -W003, -W098, -W117, -W026, -W040, -W004 */
+(function() {
+    'use strict';
+
+    angular
+        .module('openmrs-ngresource.models')
+        .factory('ConceptClassModel', factory);
+
+    factory.$inject = [];
+
+    function factory() {
+        var service = {
+            conceptClass: ConceptClass,
+            toWrapper:toWrapper
+        };
+
+        return service;
+       
+        function ConceptClass(display_, uuId_, name_, description_, retired_) {
+            var modelDefinition = this;
+
+            //initialize private members
+            var _display = display_? display_: '';
+            var _uuId = uuId_ ? uuId_: '';
+            var _name = name_ ? name_: '';
+            var _description = description_ ? description_: '';
+            var _retired = retired_;
+
+
+            modelDefinition.display = function(value){
+                return _display;
+            };
+
+            modelDefinition.uuId = function(value){
+              if(angular.isDefined(value)){
+                _uuId = value;
+              }
+              else{
+                return _uuId;
+              }
+            };
+
+            modelDefinition.name = function(value){
+              if(angular.isDefined(value)){
+                _name = value;
+              }
+              else{
+                return _name;
+              }
+            };
+
+            modelDefinition.description = function(value){
+              if(angular.isDefined(value)){
+                _description = value;
+              }
+              else{
+                return _description;
+              }
+            };
+            
+            modelDefinition.retired = function(value){
+              if(angular.isDefined(value)){
+                _retired = value;
+              }
+              else{
+                return _retired;
+              }
+            };            
+
+            modelDefinition.openmrsModel = function(value){
+              return {display:_display,
+                      uuid:_uuId,
+                      name:_name,
+                      description:_description,
+                      retired: _retired
+              };
+            };
+        }
+
+        function toWrapper(openmrsModel){
+            return new ConceptClass(openmrsModel.display, openmrsModel.uuid, openmrsModel.name,
+              openmrsModel.description, openmrsModel.retired);
+        }
+
+    }
+})();
+
+/*jshint -W003, -W098, -W117, -W026, -W040, -W004 */
+(function() {
+  'use strict';
+
+  angular
+      .module('openmrs-ngresource.models')
+      .factory('ConceptNameModel', factory);
+
+  factory.$inject = [];
+
+  function factory() {
+    var service = {
+      conceptName: ConceptName,
+      toWrapper: toWrapper
+    };
+
+    return service;
+
+    function ConceptName(display_, uuId_, name_, conceptNameType_) {
+      var modelDefinition = this;
+
+      // initialize private members
+      var _display = display_? display_ : '';
+      var _uuId = uuId_ ? uuId_: '';
+      var _name = name_ ? name_: '';
+      var _conceptNameType = conceptNameType_ ? conceptNameType_: '';
+
+
+      modelDefinition.display = function(value){
+        return _display;
+      };
+
+      modelDefinition.uuId = function(value) {
+        if(angular.isDefined(value)) {
+          _uuId = value;
+        }
+        else {
+          return _uuId;
+        }
+      };
+
+      modelDefinition.name = function(value) {
+        if(angular.isDefined(value)) {
+          _name = value;
+        }
+        else {
+          return _name;
+        }
+      };
+
+      modelDefinition.conceptNameType = function(value) {
+        if(angular.isDefined(value)) {
+          _conceptNameType = value;
+        }
+        else {
+          return _conceptNameType;
+        }
+      };
+
+      modelDefinition.openmrsModel = function(value) {
+        return {display:_display,
+                uuid:_uuId,
+                name:_name,
+                conceptNameType:_conceptNameType
+        };
+      };
+    }
+
+    function toWrapper(openmrsModel) {
+      return new ConceptName(openmrsModel.display, openmrsModel.uuid, openmrsModel.name,
+          openmrsModel.conceptNameType);
+    }
+
+  }
+})();
+
+/* global angular */
+/*jshint -W003, -W098, -W117, -W026, -W040, -W055 */
+(function() {
+  'use strict';
+
+  angular
+        .module('openmrs-ngresource.models')
+        .factory('ConceptModel', factory);
+
+  factory.$inject = ['ConceptNameModel', 'ConceptClassModel'];
+
+  function factory(ConceptNameModel, ConceptClassModel) {
+    var service = {
+      concept: concept,
+      toWrapper: toWrapper
+    };
+
+    return service;
+
+    function concept(name_, uuId_, conceptClass_) {
+      var modelDefinition = this;
+
+      //initialize private members
+      var _uuId = uuId_ ? uuId_ : '' ;
+      var _name = name_ ? ConceptNameModel.toWrapper(name_) : undefined;
+      var _conceptClass = conceptClass_ ? ConceptClassModel.toWrapper(conceptClass_): undefined;
+
+      modelDefinition.name = function(value) {
+        if (angular.isDefined(value)) {
+          _name = value;
+        }
+        else {
+          return _name;
+        }
+      };
+
+      modelDefinition.uuId = function(value) {
+        if (angular.isDefined(value)) {
+          _uuId = value;
+        }
+        else {
+          return _uuId;
+        }
+      };
+
+      modelDefinition.conceptClass = function(value) {
+              if (angular.isDefined(value)) {
+                _conceptClass = value;
+              }
+              else {
+                return _conceptClass;
+              }
+       };
+       
+      modelDefinition.display = function(value) {
+             
+              return _name?_name.display(): undefined;
+       };
+
+      modelDefinition.openmrsModel = function(value) {
+              return {name: _name? _name.openmrsModel():undefined,
+                      uuid: _uuId,
+                      conceptClass: _conceptClass? _conceptClass.openmrsModel():undefined
+              };
+       };
+    }
+
+    function toWrapper(openmrsModel){
+        return new concept(openmrsModel.name, openmrsModel.uuid, openmrsModel.conceptClass);
+    }
+  }
+})();
+
+/* global angular */
+/*jshint -W003, -W098, -W117, -W026, -W040, -W055 */
+(function() {
+  'use strict';
+
+  angular
+        .module('openmrs-ngresource.models')
+        .factory('DrugModel', factory);
+
+  factory.$inject = ['ConceptModel'];
+
+  function factory(ConceptModel) {
+    var service = {
+      drug: drug,
+      toWrapper: toWrapper
+    };
+
+    return service;
+
+    function drug(name_, uuId_, description_, dosageForm_, doseStrength_, maximumDailyDose_, minimumDailyDose_, units_,concept_) {
+      var modelDefinition = this;
+
+      //initialize private members
+      var _uuId = uuId_ ? uuId_ : '' ;
+      var _name = name_ ? name_ : '';
+      var _description = description_ ? description_ : '';
+      var _dosageForm = dosageForm_ ? dosageForm_ : '';
+      var _doseStrength = name_ ? doseStrength_ : '';
+      var _maximumDailyDose = name_ ? maximumDailyDose_ : '';
+      var _minimumDailyDose = minimumDailyDose_ ? minimumDailyDose_ : '';
+      var _units = units_ ? units_ : '';
+      var _concept = concept_ ? ConceptModel.toWrapper(concept_): undefined;
+
+      modelDefinition.name = function(value) {
+        if (angular.isDefined(value)) {
+          _name = value;
+        }
+        else {
+          return _name;
+        }
+      };
+
+      modelDefinition.uuId = function(value) {
+        if (angular.isDefined(value)) {
+          _uuId = value;
+        }
+        else {
+          return _uuId;
+        }
+      };
+
+
+      modelDefinition.description = function(value) {
+        if (angular.isDefined(value)) {
+          _description = value;
+        }
+        else {
+          return _description;
+        }
+      };
+
+
+      modelDefinition.dosageForm = function(value) {
+        if (angular.isDefined(value)) {
+          _dosageForm = value;
+        }
+        else {
+          return _dosageForm;
+        }
+      };
+
+
+      modelDefinition.doseStrength = function(value) {
+        if (angular.isDefined(value)) {
+          _doseStrength = value;
+        }
+        else {
+          return _doseStrength;
+        }
+      };
+
+      modelDefinition.maximumDailyDose = function(value) {
+        if (angular.isDefined(value)) {
+          _maximumDailyDose = value;
+        }
+        else {
+          return _maximumDailyDose;
+        }
+      };
+
+      modelDefinition.minimumDailyDose = function(value) {
+        if (angular.isDefined(value)) {
+          _minimumDailyDose = value;
+        }
+        else {
+          return _minimumDailyDose;
+        }
+      };
+
+      modelDefinition.units = function(value) {
+        if (angular.isDefined(value)) {
+          _units = value;
+        }
+        else {
+          return _units;
+        }
+      };
+
+      modelDefinition.concept = function(value) {
+              if (angular.isDefined(value)) {
+                _concept = value;
+              }
+              else {
+                return _concept;
+              }
+       };
+
+      modelDefinition.openmrsModel = function(value) {
+              return {name: _name? _name.openmrsModel():undefined,
+                      uuid: _uuId,
+                      description:_description,
+                      dosageForm:_dosageForm,
+                      doseStrength:_doseStrength,
+                      maximumDailyDose:_maximumDailyDose,
+                      minimumDailyDose:_minimumDailyDose,
+                      units:_units,
+                      concept: _concept? _concept.openmrsModel():undefined
+              };
+       };
+    }
+
+    function toWrapper(openmrsModel){
+        return new drug(openmrsModel.name, openmrsModel.uuid, openmrsModel.description, openmrsModel.dosageForm, openmrsModel.doseStrength, openmrsModel.maximumDailyDose, openmrsModel.minimumDailyDose, openmrsModel.units, openmrsModel.concept);
+    }
+  }
+})();
+
+/*jshint -W003, -W098, -W117, -W026, -W040 */
+(function() {
+  'use strict';
+
+  angular
+        .module('openmrs-ngresource.models')
+        .factory('EncounterModel', EncounterModel);
+
+  EncounterModel.$inject = [];
+
+  function EncounterModel() {
+    var service = {
+      model: Model,
+      toArrayOfModels: toArrayOfModels
+    };
+
+    return service;
+
+    function Model(openmrsModel) {
+      var modelDefinition = this;
+
+      //Evaluate the passed models for non-existent propertis.
+      // Take care of provider special case
+      if(openmrsModel.encounterProviders !== undefined) {
+          if(openmrsModel.encounterProviders.length > 0) {
+              openmrsModel.provider = 
+                            openmrsModel.encounterProviders[0].provider;
+          } else {
+              openmrsModel.provider = {};
+          }
+      } else {
+          openmrsModel.provider = openmrsModel.provider || {};
+      }
+      
+      openmrsModel.encounterType = openmrsModel.encounterType || {};
+      openmrsModel.patient = openmrsModel.patient || {};
+      openmrsModel.location = openmrsModel.location || {};
+      openmrsModel.form = openmrsModel.form || {};
+
+      //initialize private members
+      var _uuid = openmrsModel.uuid || '' ;
+      var _patientUuid = openmrsModel.patient.uuid || '';
+      var _encounterTypeName = openmrsModel.encounterType.display ||
+                                openmrsModel.encounterType.name || '';
+                                
+      var _encounterTypeUuid = openmrsModel.encounterType.uuid || '';
+      var _providerName = openmrsModel.provider.display || 
+                                openmrsModel.provider.name || '';
+                                
+      var _providerUuid = openmrsModel.provider.uuid || '';
+      var _encounterDate = openmrsModel.encounterDatetime || '';
+      
+      var _locationName = openmrsModel.location.display || 
+                                    openmrsModel.location.name || '';
+                                    
+      var _locationUuid = openmrsModel.location.uuid || '';
+      var _formUuid = openmrsModel.form.uuid || '';
+      var _formName = openmrsModel.form.name || '';
+
+      modelDefinition.uuid = function(value) {
+        if (angular.isDefined(value)) {
+          _uuid = value;
+        } else {
+          return _uuid;
+        }
+      };
+
+      modelDefinition.patientUuid = function(value) {
+        if(angular.isDefined(value)) {
+          _patientUuid = value;
+        } else {
+          return _patientUuid;
+        }
+      };
+
+      modelDefinition.encounterTypeName = function(value) {
+        if (angular.isDefined(value)) {
+          _encounterTypeName = value;
+        } else {
+          return _encounterTypeName;
+        }
+      };
+
+      modelDefinition.encounterTypeUuid = function(value) {
+        if (angular.isDefined(value)) {
+          _encounterTypeUuid = value;
+        } else {
+          return _encounterTypeUuid;
+        }
+      };
+
+      modelDefinition.providerName = function(value) {
+        if (angular.isDefined(value)) {
+          _providerName = value;
+        } else {
+          return _providerName;
+        }
+      };
+
+      modelDefinition.providerUuid = function(value) {
+        if (angular.isDefined(value)) {
+          _providerUuid = value;
+        } else {
+          return _providerUuid;
+        }
+      };
+
+      modelDefinition.encounterDate = function(value) {
+        if (angular.isDefined(value)) {
+          _encounterDate = value;
+        } else {
+          return _encounterDate;
+        }
+      };
+
+      modelDefinition.locationName = function(value) {
+        if (angular.isDefined(value)) {
+          _locationName = value;
+        } else {
+          return _locationName;
+        }
+      };
+      modelDefinition.locationUuid = function(value) {
+        if (angular.isDefined(value)) {
+          _locationUuid = value;
+        } else {
+          return _locationUuid;
+        }
+      };
+
+      modelDefinition.formUuid = function(value) {
+        if (angular.isDefined(value)) {
+            _formUuid = value;
+        } else {
+          return _formUuid;
+        }
+      };
+
+      modelDefinition.formName = function(value) {
+        if(angular.isDefined(value)) {
+          _formName = value;
+        } else {
+          return _formName;
+        }
+      };
+
+      modelDefinition.openmrsModel = function() {
+        /* jshint ignore:start */
+        return {
+            "uuid" : _uuid,
+            "patient" : _patientUuid,
+            "encounterDatetime" : _encounterDate,
+            "encounterType" : _encounterTypeUuid,
+            "provider" : _providerUuid,
+            "location" : _locationUuid,
+            "form" : _formUuid
+        };
+        /* jshint ignore:end */
+      };
+    }
+
+    function toArrayOfModels(encounterArray) {
+      var modelArray = [];
+      for(var i=0; i<encounterArray.length; i++) {
+        modelArray.push(new Model(encounterArray[i]));
+      }
+      return modelArray;
+    }
+  }
+})();
+
+/* global angular */
+/* jshint -W003, -W098, -W117, -W026, -W040 */
+(function() {
+  'use strict';
+
+  angular
+        .module('openmrs-ngresource.models')
+        .factory('LocationModel', factory);
+
+  factory.$inject = [];
+
+  function factory() {
+    var service = {
+      location: Location,
+      toWrapper: toWrapper,
+      toArrayOfWrappers: toArrayOfWrappers,
+      fromArrayOfWrappers:fromArrayOfWrappers
+    };
+
+    return service;
+
+    function Location(name_, uuId_, description_, address1_,  address2_,
+      cityVillage_, stateProvince_, country_, postalCode_, latitude_,
+      longitude_, countyDistrict_, address3_, address4_, address5_, address6_,
+      tags_, parentLocation_, childLocations_, attributes_) {
+      var modelDefinition = this;
+
+      // initialize private members
+      var _uuId = uuId_ ? uuId_ : '' ;
+      var _name = name_ ? name_ : '' ;
+      var _description = description_ ? description_ : '' ;
+      var _address1 = address1_ ? address1_ : '' ;
+      var _address2 = address2_ ? address2_ : '' ;
+      var _cityVillage = cityVillage_ ? cityVillage_ : '';
+      var _stateProvince = stateProvince_ ? stateProvince_ : '';
+      var _country = country_ ? country_ : '';
+      var _postalCode = postalCode_ ? postalCode_ : '';
+      var _latitude = latitude_ ? latitude_ : '';
+      var _longitude = longitude_ ? longitude_ : '';
+      var _address3 = address3_ ? address3_ : '';
+      var _address4 = address4_ ? address4_ : '';
+      var _address5 = address5_ ? address5_ : '';
+      var _address6 = address6_ ? address6_ : '';
+      var _tags = tags_ ? tags_ : '';
+
+      var _parentLocation = parentLocation_ ? toWrapper( parentLocation_) :undefined;
+      var _childLocations = childLocations_ ? toArrayOfWrappers(childLocations_): [];
+      var _attributes = attributes_ ? attributes_ : '' ;
+
+      modelDefinition.uuId = function(value) {
+        if (angular.isDefined(value)) {
+          _uuId = value;
+        }
+        else {
+          return _uuId;
+        }
+      };
+
+
+      modelDefinition.name = function(value) {
+        if (angular.isDefined(value)) {
+          _name = value;
+        }
+        else {
+          return _name;
+        }
+      };
+
+      modelDefinition.description = function(value) {
+        if (angular.isDefined(value)) {
+          _description = value;
+        }
+        else {
+          return _description;
+        }
+      };
+
+      modelDefinition.address1 = function(value) {
+        if (angular.isDefined(value)) {
+          _address1 = value;
+        }
+        else {
+          return _address1;
+        }
+      };
+
+      modelDefinition.address2 = function(value) {
+        if (angular.isDefined(value)) {
+          _address2 = value;
+        }
+        else {
+          return _address2;
+        }
+      };
+
+      modelDefinition.cityVillage = function(value) {
+        if (angular.isDefined(value)) {
+          _cityVillage = value;
+        }
+        else {
+          return _cityVillage;
+        }
+      };
+
+      modelDefinition.stateProvince = function(value) {
+        if (angular.isDefined(value)) {
+          _stateProvince = value;
+        }
+        else {
+          return _stateProvince;
+        }
+      };
+
+      modelDefinition.country = function(value) {
+        if (angular.isDefined(value)) {
+          _country = value;
+        }
+        else {
+          return _country;
+        }
+      };
+
+      modelDefinition.postalCode = function(value) {
+        if (angular.isDefined(value)) {
+          _postalCode = value;
+        }
+        else {
+          return _postalCode;
+        }
+      };
+
+      modelDefinition.latitude = function(value) {
+        if (angular.isDefined(value)) {
+          _latitude = value;
+        }
+        else {
+          return _latitude;
+        }
+      };
+
+      modelDefinition.longitude = function(value) {
+        if (angular.isDefined(value)) {
+          _longitude = value;
+        }
+        else {
+          return _longitude;
+        }
+      };
+
+      modelDefinition.address3 = function(value) {
+        if (angular.isDefined(value)) {
+          _address3 = value;
+        }
+        else {
+          return _address3;
+        }
+      };
+
+      modelDefinition.address4 = function(value) {
+        if (angular.isDefined(value)) {
+          _address4 = value;
+        }
+        else {
+          return _address4;
+        }
+      };
+
+      modelDefinition.address5 = function(value) {
+        if (angular.isDefined(value)) {
+          _address5 = value;
+        }
+        else {
+          return _address5;
+        }
+      };
+
+      modelDefinition.address6 = function(value) {
+        if (angular.isDefined(value)) {
+          _address6 = value;
+        }
+        else {
+          return _address6;
+        }
+      };
+
+      modelDefinition.tags = function(value) {
+        if (angular.isDefined(value)) {
+          _tags = value;
+        }
+        else {
+          return _tags;
+        }
+      };
+
+      modelDefinition.parentLocation = function(value) {
+        if (angular.isDefined(value)) {
+          _parentLocation = value;
+        }
+        else {
+          return _parentLocation;
+        }
+      };
+
+      modelDefinition.childLocations = function (value) {
+        if (angular.isDefined(value)) {
+          _childLocations = value;
+        }
+        else {
+          return _childLocations;
+        }
+      };
+
+      modelDefinition.attributes = function (value) {
+        if (angular.isDefined(value)) {
+          _attributes = value;
+        }
+        else {
+          return _attributes;
+        }
+      };
+
+      modelDefinition.display = function (value) {
+        return _name + ' [' + _description + ']';
+      };
+
+      modelDefinition.openmrsModel = function(value) {
+        return {name: _name,
+                description: _description,
+                address1: _address1,
+                address2: _address2,
+                cityVillage: _cityVillage,
+                stateProvince: _stateProvince,
+                country: _country,
+                postalCode: _postalCode,
+                latitude: _latitude,
+                longitude: _longitude,
+                address3: _address3,
+                address4: _address4,
+                address5: _address5,
+                address6: _address6,
+                tags: _tags,
+                parentLocation:_parentLocation? _parentLocation.openmrsModel():undefined,
+                childLocations: fromArrayOfWrappers(_childLocations),
+                attributes: _attributes};
+      };
+    }
+
+    function toWrapper(openmrsModel){
+      if(openmrsModel!==undefined){
+            var obj = new Location(openmrsModel.name, openmrsModel.uuid,
+        openmrsModel.description, openmrsModel.address1, openmrsModel.address2,
+        openmrsModel.cityVillage, openmrsModel.stateProvince,
+        openmrsModel.country, openmrsModel.postalCode, openmrsModel.latitude,
+        openmrsModel.longitude, openmrsModel.countyDistrict,
+        openmrsModel.address3, openmrsModel.address4,
+        openmrsModel.address5, openmrsModel.address6, openmrsModel.tags,
+        openmrsModel.parentLocation, openmrsModel.childLocations,
+        openmrsModel.attributes
+      );
+
+      return obj;
+
+      }
+
+    }
+
+    function toArrayOfWrappers(openmrsLocationArray) {
+      var array = [];
+      for(var i = 0; i<openmrsLocationArray.length;i++) {
+        array.push(toWrapper(openmrsLocationArray[i]));
+      }
+
+      return array;
+    }
+
+    function fromArrayOfWrappers(locationWrappersArray) {
+      var array = [];
+      for(var i = 0; i< locationWrappersArray.length; i++) {
+        array.push(locationWrappersArray[i].openmrsModel());
+      }
+
+      return array;
+    }
+  }
+})();
+
+/*jshint -W003, -W098, -W117, -W026, -W040, -W004 */
+(function() {
+    'use strict';
+
+    angular
+        .module('openmrs-ngresource.models')
+        .factory('NameModel', factory);
+
+    factory.$inject = [];
+
+    function factory() {
+        var service = {
+            name: name,
+            toWrapper:toWrapper,
+            toArrayOfWrappers: toArrayOfWrappers,
+            fromArrayOfWrappers:fromArrayOfWrappers
+        };
+
+        return service;
+
+        //madnatory fields givenName, familyName
+        function name(givenName_, middleName_, familyName_, familyName2_, voided_, uuId_) {
+            var modelDefinition = this;
+
+            //initialize private members
+            var _givenName = givenName_? givenName_: '';
+            var _middleName = middleName_ ? middleName_: '';
+            var _familyName = familyName_ ? familyName_: '';
+            var _familyName2 = familyName2_ ? familyName2_: '';
+            var _voided = voided_ ? voided_: false;
+            var _uuId = uuId_ ? uuId_: '';
+
+
+            modelDefinition.givenName = function(value){
+              if(angular.isDefined(value)){
+                _givenName = value;
+              }
+              else{
+                return _givenName;
+              }
+            };
+
+            modelDefinition.middleName = function(value){
+              if(angular.isDefined(value)){
+                _middleName = value;
+              }
+              else{
+                return _middleName;
+              }
+            };
+
+            modelDefinition.familyName = function(value){
+              if(angular.isDefined(value)){
+                _familyName = value;
+              }
+              else{
+                return _familyName;
+              }
+            };
+
+            modelDefinition.familyName2 = function(value){
+              if(angular.isDefined(value)){
+                _familyName2 = value;
+              }
+              else{
+                return _familyName2;
+              }
+            };
+
+            modelDefinition.voided = function(value){
+              if(angular.isDefined(value)){
+                _voided = value;
+              }
+              else{
+                return _voided;
+              }
+            };
+
+            modelDefinition.uuId = function(value){
+              if(angular.isDefined(value)){
+                _uuId = value;
+              }
+              else{
+                return _uuId;
+              }
+            };
+
+            modelDefinition.openmrsModel = function(value){
+              return {givenName:_givenName,
+                      middleName:_middleName,
+                      familyName:_familyName,
+                      familyName2:_familyName2,
+                      voided:_voided,
+                      uuId:_uuId};
+            };
+        }
+
+        function toWrapper(openmrsModel){
+            return new name(openmrsModel.givenName, openmrsModel.middleName, openmrsModel.familyName,
+              openmrsModel.familyName2, openmrsModel.voided, openmrsModel.uuId );
+        }
+
+        function toArrayOfWrappers(openmrsNameArray){
+            var array = [];
+            for(var i = 0; i<openmrsNameArray.length;i++){
+              array.push(toWrapper(openmrsNameArray[i]));
+            }
+            return array;
+        }
+
+        function fromArrayOfWrappers(nameWrappersArray){
+            var array = [];
+            for(var i = 0; i< nameWrappersArray.length; i++){
+              array.push(nameWrappersArray[i].openmrsModel());
+            }
+            return array;
+        }
+    }
+})();
+
+/*jshint -W003, -W098, -W117, -W026, -W040, -W004, -W093 */
+(function() {
+  'use strict';
+
+  angular
+    .module('openmrs-ngresource.models')
+    .factory('PatientModel', factory);
+
+  factory.$inject = [];
+
+  function factory() {
+    var patient = {
+      patient: patient
+    };
+
+    return patient;
+
+    //this is the contructor for the patient object
+    //call this using the new function
+    //e.g. var p = new Patient(openmrsPatient);
+    //get the members for ses using p.uuid();
+    //set the members for ses using ses.sessionId(newValue);
+
+    function patient(openmrsPatient) {
+      //initialize private members by first checking whether the openmrPatient properties are set before assigning default values
+    //  console.log('patient value from the promise(REST SERVICE)');
+    //  console.log(openmrsPatient);
+
+      var modelDefinition = this;
+      var _uuid = openmrsPatient.uuid || '';
+      var _identifier = openmrsPatient.identifiers || '';
+      var _givenName = openmrsPatient.person.preferredName.givenName || '';
+      var _middleName = openmrsPatient.person.preferredName.middleName  || '';
+      var _familyName = openmrsPatient.person.preferredName.familyName || '';
+      //var _preferredName=openmrsPatient.preferredName.display||'';
+      var _age = openmrsPatient.person.age||0;
+      var _birthdate =openmrsPatient.person.birthdate|| '';
+      //var _birthdateEstimated =openmrsPatient.birthdateEstimated|| false;
+      var _gender = openmrsPatient.person.gender||'';
+      var _address =mapAddress(openmrsPatient.person.preferredAddress)||[];
+      var _dead = openmrsPatient.person.dead||'';
+      var _deathDate = formatDate(openmrsPatient.person.deathDate)||'';
+      var _attributes = openmrsPatient.person.attributes||[];
+      //var _causeOfDeath = openmrsPatient.causeOfDeath||'';
+      /*
+       Below are getters and setters for private properties
+       The convention is usually to name private properties starting with _
+       e.g _uuid is the private member and accessed via the setter below
+      */
+
+      modelDefinition.identifier = function(value){
+        if(angular.isDefined(value)){
+          _identifier = value;
+        }
+        else{
+          return _identifier;
+        }
+      };
+      modelDefinition.identifierFormatted = function(value){
+
+        if(_identifier.length > 0) {
+          //return _identifier[0].display.split('=')[1];
+          return _identifier[0].identifier;
+        }
+        else{
+          return _identifier = '';
+        }
+
+      };
+      modelDefinition.commonIdentifiers = function(value){
+
+        if(_identifier.length > 0) {
+          //return _identifier[0].display.split('=')[1];
+          var filteredIdentifiers;
+          var identifier =_identifier;
+          var kenyaNationalId =getIdentifierByType(identifier, 'KENYAN NATIONAL ID NUMBER');
+          var amrsMrn =getIdentifierByType(identifier, 'AMRS Medical Record Number');
+          var ampathMrsUId=getIdentifierByType(identifier, 'AMRS Universal ID');
+          var cCC=getIdentifierByType(identifier, 'CCC');
+          if(angular.isUndefined(kenyaNationalId) && angular.isUndefined(amrsMrn) &&
+            angular.isUndefined(ampathMrsUId) && angular.isUndefined(cCC))
+          {
+            if (angular.isDefined(_identifier[0].identifier)) {
+              filteredIdentifiers = {'default': _identifier[0].identifier};
+            }
+            else{
+              filteredIdentifiers = {'default': ''};
+            }
+          }
+          else {
+            filteredIdentifiers = {
+              'kenyaNationalId': kenyaNationalId,
+              'amrsMrn': amrsMrn,
+              'ampathMrsUId': ampathMrsUId,
+              'cCC': cCC
+            };
+          }
+          return filteredIdentifiers;
+        }
+        else{
+          return _identifier = '';
+        }
+
+      };
+
+
+      modelDefinition.uuid = function(value){
+        if(angular.isDefined(value)){
+          _uuid = value;
+        }
+        else{
+          return _uuid;
+        }
+      };
+
+      modelDefinition.givenName = function(value){
+        if(angular.isDefined(value)){
+          _givenName = value;
+        }
+        else{
+          return _givenName;
+        }
+      };
+
+      modelDefinition.middleName = function(value){
+        if(angular.isDefined(value)){
+          _middleName = value;
+        }
+        else{
+          return _middleName;
+        }
+      };
+
+      modelDefinition.fullNames = function(value){
+
+          return _givenName + ' ' + _middleName + ' '+  _familyName;
+
+      };
+
+      modelDefinition.familyName = function(value){
+        if(angular.isDefined(value)){
+          _familyName = value;
+        }
+        else{
+          return _familyName;
+        }
+      };
+
+      modelDefinition.age = function(value){
+        if(angular.isDefined(value)){
+          _age = value;
+        }
+        else{
+          return _age;
+        }
+      };
+
+      modelDefinition.birthdate = function(value){
+        if(angular.isDefined(value)){
+          _birthdate = value;
+        }
+        else{
+          return _birthdate;
+        }
+      };
+
+      // modelDefinition.birthdateEstimated = function(value){
+      //   if(angular.isDefined(value)){
+      //     _birthdateEstimated = value;
+      //   }
+      //   else{
+      //     return _birthdateEstimated;
+      //   }
+      // };
+
+      modelDefinition.gender  = function(value){
+        if(angular.isDefined(value)){
+          _gender  = value;
+        }
+        else{
+          return _gender ;
+        }
+      };
+
+      modelDefinition.genderFull  = function(value){
+          return _gender === 'M' ? 'Male':'Female';
+      };
+
+      modelDefinition.address = function(value){
+        if(angular.isDefined(value)){
+          _address = value;
+        }
+        else{
+          return _address;
+        }
+      };
+
+      // modelDefinition.preferredName = function(value){
+      //   if(angular.isDefined(value)){
+      //     _preferredName = value;
+      //   }
+      //   else{
+      //     return _preferredName;
+      //   }
+      // };
+      //
+      // modelDefinition.attributes = function(value){
+      //   if(angular.isDefined(value)){
+      //     _attributes = value;
+      //   }
+      //   else{
+      //     return _attributes;
+      //   }
+      // };
+      //
+      // modelDefinition.causeOfDeath = function(value){
+      //   if(angular.isDefined(value)){
+      //     _causeOfDeath = value;
+      //   }
+      //   else{
+      //     return _causeOfDeath;
+      //   }
+      // };
+      modelDefinition.phoneNumber = function(value) {
+        var phoneNumberPersonAttributeTypeUuid='72a759a8-1359-11df-a1f1-0026b9348838';
+        return getPersonAttribute(phoneNumberPersonAttributeTypeUuid);
+      };
+      modelDefinition.healthCenter = function(value) {
+        var healthCenterPersonAttributeTypeUuid='8d87236c-c2cc-11de-8d13-0010c6dffd0f';
+        var location =getPersonAttribute(healthCenterPersonAttributeTypeUuid);
+        if(angular.isDefined(location)){
+          return location.display;
+        }
+        else{
+          return '';
+        }
+      };
+      modelDefinition.isTestorFakePatient = function(value) {
+        var testPatientPersonAttributeTypeUuid='1e38f1ca-4257-4a03-ad5d-f4d972074e69';
+        var isTestPatient=getPersonAttribute(testPatientPersonAttributeTypeUuid);
+        if(isTestPatient==='true'){
+          return 'Test Patient';
+        }
+        else{
+          return '';
+        }
+
+      };
+      var _convertedAttributes = [];
+      modelDefinition.getPersonAttributes = function(value) {
+        _convertedAttributes.length = 0;
+        if(_attributes.length>0){
+          for(var i in _attributes) {
+            var attr = _attributes[i];
+            _convertedAttributes.push(
+              { uuid:attr.uuid,
+                attributeType:attr.attributeType.uuid,
+                name:attr.attributeType.display,
+                value:attr.value,
+                size:_attributes.length
+              }
+            );
+          }
+        }
+        return _convertedAttributes;
+      };
+      modelDefinition.deathDate = function(value){
+        if(angular.isDefined(value)){
+          _deathDate = value;
+        }
+        else{
+          return _deathDate;
+        }
+      };
+
+      modelDefinition.dead = function(value){
+        if(angular.isDefined(value)){
+          _dead = value;
+        }
+        else{
+          return _dead;
+        }
+      };
+
+      modelDefinition.openmrsModel = function(value){
+        return {
+          uuid:_uuid,
+          identifier: _identifier,
+          givenName:_givenName,
+          familyName: _familyName,
+          middleName:_middleName,
+
+      //    preferredName:_preferredName,
+          age:_age,
+          birthdate:_birthdate,
+          gender:_gender,
+        //  address:_address,
+          dead:_dead,
+          deathDate:_deathDate
+          //causeOfDeath:_causeOfDeath,
+          //attributes:_attributes,
+          //birthdateEstimated:_birthdateEstimated
+
+        };
+      };
+
+      // get the person attribute value from a list of attributes using the person attribute type uuid
+      function getPersonAttribute(personAttributeTypeUuid){
+        if(_attributes.length>0) {
+          for(var i in _attributes) {
+            var attr = _attributes[i];
+            if(attr.attributeType.uuid === personAttributeTypeUuid) {
+              return attr.value;
+            }
+          }
+        }
+
+      }
+
+    }
+
+    //Other Util Functions
+    function mapAddress(preferredAddress) {
+      return preferredAddress ? {
+        'county': preferredAddress.address1,
+        'subCounty': preferredAddress.address2,
+        'estateLandmark': preferredAddress.address3,
+        'townVillage': preferredAddress.cityVillage,
+        'stateProvince': preferredAddress.stateProvince
+
+        //Added the noAddress to aid in creating logic for hiding when the patient has no address
+      } : {noAddress:'None'};
+    }
+    function getIdentifierByType(identifierObject, type ) {
+      for (var e in identifierObject) {
+        if (angular.isDefined(identifierObject[e].identifierType)) {
+          var idType = identifierObject[e].identifierType.name;
+          var id = identifierObject[e].identifier;
+          if (idType === type) {
+            return id;
+          }
+        }
+      }
+    }
+    //format dates
+    function formatDate(dateString){
+      var formattedDate='';
+      if(dateString!==null) {
+          var date = new Date(dateString);
+          var day = date.getDate();
+          var monthIndex = date.getMonth() + 1;
+          var year = date.getFullYear();
+
+          if (10 > monthIndex) {
+            monthIndex = '0' + monthIndex;
+          }
+          if (10 > day) {
+            day = '0' + day;
+          }
+          formattedDate = day + '-' + monthIndex + '-' +year ;
+      }
+
+      return formattedDate;
+    }
+
+  }
+})();
+
+/*jshint -W003, -W098, -W117, -W026, -W040, -W055 */
+(function() {
+  'use strict';
+
+  angular
+        .module('openmrs-ngresource.models')
+        .factory('PersonModel', factory);
+
+  factory.$inject = ['NameModel'];
+
+  function factory(NameModel) {
+    var service = {
+      person: person,
+      toWrapper: toWrapper
+    };
+
+    return service;
+
+    function person(names_, gender_, uuId_, age_, birthdate_,
+      birthdateEstimated_, dead_, deathDate_, causeOfDeath_, addresses_,
+      attributes_, preferredName_, preferredAddress_ ) {
+      var modelDefinition = this;
+
+      //initialize private members
+      var _names = names_ ? NameModel.toArrayOfWrappers(names_)  : [] ;
+      var _gender = gender_ ? gender_ : '' ;
+      var _uuId = uuId_ ? uuId_ : '' ;
+      var _age = age_ ? age_ : null ;
+      var _birthdate = birthdate_ ? birthdate_ : null ;
+      var _birthdateEstimated = birthdateEstimated_ ? birthdateEstimated_ : null ;
+      var _dead = dead_ ? dead_ : false ;
+      var _deathDate = deathDate_ ? deathDate_ : null ;
+      var _causeOfDeath = causeOfDeath_ ? causeOfDeath_ : '' ;
+      var _addresses = addresses_ ? addresses_ : [] ;
+      var _attributes = attributes_ ? attributes_ : [] ;
+      var _preferredName = preferredName_ ? NameModel.toWrapper(preferredName_) : {} ;
+      var _preferredAddress = preferredAddress_  ? preferredAddress_  : {} ;
+
+      modelDefinition.names = function(value) {
+        if (angular.isDefined(value)) {
+          _names = value;
+        }
+        else {
+          return _names;
+        }
+      };
+
+      modelDefinition.gender = function(value) {
+        if (angular.isDefined(value)) {
+          _gender = value;
+        }
+        else {
+          return _gender;
+        }
+      };
+
+      modelDefinition.uuId = function(value) {
+        if (angular.isDefined(value)) {
+          _uuId = value;
+        }
+        else {
+          return _uuId;
+        }
+      };
+
+      modelDefinition.age = function(value) {
+              if (angular.isDefined(value)) {
+                _age = value;
+              }
+              else {
+                return _age;
+              }
+       };
+
+       modelDefinition.birthdate = function(value) {
+               if (angular.isDefined(value)) {
+                 _birthdate = value;
+               }
+               else {
+                 return _birthdate;
+               }
+        };
+
+        modelDefinition.birthdateEstimated = function(value) {
+                if (angular.isDefined(value)) {
+                  _birthdateEstimated = value;
+                }
+                else {
+                  return _birthdateEstimated;
+                }
+         };
+
+         modelDefinition.dead = function(value) {
+                 if (angular.isDefined(value)) {
+                   _dead = value;
+                 }
+                 else {
+                   return _dead;
+                 }
+          };
+
+         modelDefinition.deathDate = function(value) {
+                  if (angular.isDefined(value)) {
+                    _deathDate = value;
+                  }
+                  else {
+                    return _deathDate;
+                  }
+           };
+
+          modelDefinition.causeOfDeath = function(value) {
+                    if (angular.isDefined(value)) {
+                      _causeOfDeath = value;
+                    }
+                    else {
+                      return _causeOfDeath;
+                    }
+            };
+
+          modelDefinition.addresses = function(value) {
+                      if (angular.isDefined(value)) {
+                        _addresses = value;
+                      }
+                      else {
+                        return _addresses;
+                      }
+            };
+
+          modelDefinition.attributes = function(value) {
+                        if (angular.isDefined(value)) {
+                          _attributes = value;
+                        }
+                        else {
+                          return _attributes;
+                        }
+            };
+
+            modelDefinition.preferredName = function(value) {
+                          if (angular.isDefined(value)) {
+                            _preferredName = value;
+                          }
+                          else {
+                            return _preferredName;
+                          }
+              };
+
+              modelDefinition.preferredAddress = function(value) {
+                            if (angular.isDefined(value)) {
+                              _preferredAddress = value;
+                            }
+                            else {
+                              return _preferredAddress;
+                            }
+                };
+
+      modelDefinition.openmrsModel = function(value) {
+              return {names: NameModel.fromArrayOfWrappers(_names),
+                      gender: _gender,
+                      uuid: _uuId,
+                      age: _age,
+                      birthdate: _birthdate,
+                      birthdateEstimated: _birthdateEstimated,
+                      dead: _dead,
+                      deathDate: _deathDate,
+                      causeOfDeath: _causeOfDeath,
+                      addresses: _addresses,
+                      preferredName: _preferredName.openmrsModel(),
+                      preferredAddress: _preferredAddress,
+                      attributes: _attributes};
+            };
+    }
+
+    function toWrapper(openmrsModel){
+        return new person(openmrsModel.names, openmrsModel.gender, openmrsModel.uuid, openmrsModel.age,
+          openmrsModel.birthdate, openmrsModel.birthdateEstimated, openmrsModel.dead, openmrsModel.deathDate,
+          openmrsModel.causeOfDeath, openmrsModel.addresses, openmrsModel.attributes, openmrsModel.preferredName, openmrsModel.preferredAddress);
+    }
+  }
+})();
+
+/* global angular */
+/*jshint -W003, -W098, -W117, -W026, -W040, -W055 */
+(function() {
+  'use strict';
+
+  angular
+        .module('openmrs-ngresource.models')
+        .factory('ProviderModel', factory);
+
+  factory.$inject = ['PersonModel'];
+
+  function factory(PersonModel) {
+    var service = {
+      provider: provider,
+      toWrapper: toWrapper
+    };
+
+    return service;
+
+    function provider(person_, identifier_, uuId_,  display_, attributes_, retired_) {
+      var modelDefinition = this;
+
+      //initialize private members
+      var _identifier = identifier_ ? identifier_ : '';
+      var _person = person_ ? PersonModel.toWrapper(person_) :undefined;
+      var _uuId = uuId_ ? uuId_ : '';
+      var _display = display_ ? display_  : '' ;
+      var _attributes = attributes_ ? attributes_ : null;
+      var _retired = retired_ ? retired_ : null ;
+
+      modelDefinition.display = function(value) {
+        if (angular.isDefined(value)) {
+          _display = value;
+        }
+        else {
+          return _display;
+        }
+      };
+      
+     modelDefinition.person = function(value) {
+        if (angular.isDefined(value)) {
+          _person = value;
+        }
+        else {
+          return _person;
+        }
+      };
+      
+     modelDefinition.personUuid = function(value) {
+         var ret = _person? _person.uuId():null;
+          return ret;
+      };
+
+      modelDefinition.identifier = function(value) {
+        if (angular.isDefined(value)) {
+          _identifier = value;
+        }
+        else {
+          return _identifier;
+        }
+      };
+
+      modelDefinition.uuId = function(value) {
+        if (angular.isDefined(value)) {
+          _uuId = value;
+        }
+        else {
+          return _uuId;
+        }
+      };
+
+      modelDefinition.attributes = function(value) {
+              if (angular.isDefined(value)) {
+                _attributes = value;
+              }
+              else {
+                return _attributes;
+              }
+      };
+       
+      modelDefinition.retired = function(value) {
+              if (angular.isDefined(value)) {
+                _retired = value;
+              }
+              else {
+                return _retired;
+              }
+       };
+
+      modelDefinition.openmrsModel = function(value) {
+              return {identifier: _identifier,
+                      person: _person.openmrsModel(),
+                      attributes: _attributes,
+                      retired: _retired};
+            };
+    }
+
+    function toWrapper(openmrsModel) {
+      //provider(person_, identifier_, uuId_,  display_, attributes_)
+        return new provider(openmrsModel.person, openmrsModel.identifier, openmrsModel.uuid, openmrsModel.display,
+          openmrsModel.attributes, openmrsModel.retired);
+    }
+  }
+})();
+
+/*jshint -W003, -W098, -W117, -W026, -W040 */
+(function() {
+    'use strict';
+
+    angular
+        .module('openmrs-ngresource.models')
+        .factory('SessionModel', factory);
+
+    factory.$inject = [];
+
+    function factory() {
+        var service = {
+            session: session
+        };
+
+        return service;
+
+        //this is the contructor for the session object
+        //call this using the new function
+        //e.g. var ses = new session(sessionId,isAuthenticated);
+        //get the members for ses using ses.sessionId();
+        //set the members for ses using ses.sessionId(newValue);
+
+        function session(sessionId_, isAuthenticated_) {
+            var modelDefinition = this;
+
+            //initialize private members
+            var _sessionId = '';
+            var _isAuthenticated = false;
+
+            //assign values
+            if(sessionId_){
+              _sessionId = sessionId_;
+            }
+            if(isAuthenticated_){
+              _isAuthenticated = isAuthenticated_;
+            }
+
+            //this is a getter and setter for _sessionId.
+            //convetion is usually to name private properties starting with _
+            //so _sessionId is the private member and accessed via the setter below
+            modelDefinition.sessionId = function(value){
+              if(angular.isDefined(value)){
+                //you can modify the value here before assigning it to _sessionId.
+                //e.g _sessionId = trim(value);
+                _sessionId = value;
+              }
+              else{
+                //you can change _sessionId before returning it
+                //e.g. return 'prefix' + _sessionId;
+                return _sessionId;
+              }
+            };
+
+            modelDefinition.isAuthenticated = function(value){
+              if(angular.isDefined(value)){
+                _isAuthenticated = value;
+              }
+              else{
+                return _isAuthenticated;
+              }
+            };
+            modelDefinition.openmrsModel = function(value){
+              return {sessionId:_sessionId, authenticated:_isAuthenticated};
+            };
+        }
+    }
+})();
+
+/*jshint -W003, -W098, -W117, -W026, -W040 */
+(function() {
+  'use strict';
+
+  angular
+        .module('openmrs-ngresource.models')
+        .factory('UserModel', factory);
+
+  factory.$inject = [];
+
+  function factory() {
+    var service = {
+      user: user
+    };
+
+    return service;
+
+    function user(userName_, personUuId_, password_, uuId_, systemId_, userRole_) {
+      var modelDefinition = this;
+
+      //initialize private members
+      var _uuId = uuId_ ? uuId_ : '' ;
+      var _systemId = systemId_ ? systemId_ : '' ;
+      var _userName = userName_ ? userName_ : '' ;
+      var _personUuId = personUuId_ ? personUuId_ : '' ;
+      var _password = password_ ? password_ : '' ;
+      var _userRole = userRole_ ? userRole_ : [] ;
+
+      modelDefinition.uuId = function(value) {
+        if (angular.isDefined(value)) {
+          _uuId = value;
+        }
+        else {
+          return _uuId;
+        }
+      };
+
+      modelDefinition.systemId = function(value) {
+              if (angular.isDefined(value)) {
+                _systemId = value;
+              }
+              else {
+                return _systemId;
+              }
+            };
+
+      modelDefinition.userName = function(value) {
+              if (angular.isDefined(value)) {
+                _userName = value;
+              }
+              else {
+                return _userName;
+              }
+            };
+
+      modelDefinition.personUuId = function(value) {
+              if (angular.isDefined(value)) {
+                _personUuId = value;
+              }
+              else {
+                return _personUuId;
+              }
+            };
+
+      modelDefinition.password = function(value) {
+              if (angular.isDefined(value)) {
+                _password = value;
+              }
+              else {
+                return _password;
+              }
+            };
+
+      modelDefinition.userRole = function(value) {
+                    if (angular.isDefined(value)) {
+                      _userRole = value;
+                    }
+                    else {
+                      return _userRole;
+                    }
+                  };
+
+      modelDefinition.openmrsModel = function(value) {
+              return {username: _userName,
+                      password: _password,
+                      person: _personUuId,
+                      systemId: _systemId,
+                      userRole: _userRole};
+            };
+    }
+  }
+})();
+
+/*jshint -W098, -W030 */
+(function() {
+  'use strict';
+  
+  angular
+    .module('openmrs-ngresource.utils')
+      .filter('titlecase', titleCaseFilter);
+      
+  function titleCaseFilter() {
+    return function(s) {
+        s = ( s === undefined || s === null ) ? '' : s;
+        return s.toString().toLowerCase().replace( /\b([a-z])/g, function(ch) {
+            return ch.toUpperCase();
+        });
+    };
+  } 
+})();

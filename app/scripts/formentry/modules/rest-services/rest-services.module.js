@@ -4,10 +4,8 @@
 
   angular
         .module('openmrs.RestServices', [
-            // 'base64',
             'ngResource',
-            // 'ngCookies',
-            'models'
-            // 'restangular',
+            'openmrs-ngresource.models',
+            'openmrs-ngresource.restServices'
         ]);
 })();
