@@ -627,7 +627,7 @@ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106, -W026
 jscs:disable disallowMixedSpacesAndTabs, requireDotNotation 
 jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 */
-(function () {
+(function() {
     'use strict';
 
     angular
@@ -635,11 +635,13 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
         .factory('FormEntry', FormEntry);
 
     FormEntry.$inject = ['CreateFormService', '$log', 'FormentryConfig',
-        'FormProcessorService', 'CurrentLoadedFormService', 'moment'
+        'FormProcessorService', 'CurrentLoadedFormService', 'moment',
+        'FormSchemaCompilerService'
     ];
 
     function FormEntry(createFormService, $log, FormentryConfig,
-        formProcessorService, CurrentLoadedFormService, moment) {
+        formProcessorService, CurrentLoadedFormService, moment,
+        FormSchemaCompilerService) {
 
         var service = {
             createForm: createForm,
@@ -647,7 +649,8 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
             getFormPayload: getFormPayload,
             updateFormWithExistingObs: updateFormWithExistingObs,
             getPersonAttributesPayload: getPersonAttributesPayload,
-            updateExistingPersonAttributeToForm:updateExistingPersonAttributeToForm
+            updateExistingPersonAttributeToForm: updateExistingPersonAttributeToForm,
+            compileFormSchema: compileFormSchema
         };
 
         return service;
@@ -681,9 +684,14 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
             formProcessorService.addExistingDataSetToObsForm(restObs, model);
             formProcessorService.addExistingDataSetToEncounterForm(restObs, model);
         }
-        
-        function updateExistingPersonAttributeToForm(restDataset,model){
-              return formProcessorService.addExistingPersonAttributesToForm(restDataset,model);
+
+        function updateExistingPersonAttributeToForm(restDataset, model) {
+            return formProcessorService.addExistingPersonAttributesToForm(restDataset, model);
+        }
+
+        function compileFormSchema(formSchema, referencedForms) {
+            FormSchemaCompilerService.
+                fillAllPlaceholderObjectsInForm(formSchema, referencedForms);
         }
     }
 })();
@@ -3761,131 +3769,158 @@ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106, -W026
 jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 */
 (function() {
-  'use strict';
+    'use strict';
 
-  angular
+    angular
         .module('openmrs.angularFormentry')
         .factory('FormentryUtilService', FormentryUtilService);
 
-  FormentryUtilService.$inject = ['$http', '$log', '$resource', '$filter'];
+    FormentryUtilService.$inject = ['$http', '$log', '$resource', '$filter'];
 
-  function FormentryUtilService($http, $log, $resource, $filter) {
-    var service = {
-          formatDate: formatDate,
-          getLocalTimezone: getLocalTimezone,
-          getFormSchema: getFormSchema,
-          getTestEncounterData:getTestEncounterData,
-          getServerUrl:getServerUrl
+    function FormentryUtilService($http, $log, $resource, $filter) {
+        var service = {
+            formatDate: formatDate,
+            getLocalTimezone: getLocalTimezone,
+            getFormSchema: getFormSchema,
+            getTestEncounterData: getTestEncounterData,
+            getServerUrl: getServerUrl,
+            getFormSchemaReferences: getFormSchemaReferences
         };
 
-    return service;
+        return service;
 
-    function getFormSchema(formName, callback) {
-      var schema = {};
-      // formName = createValidFormName(formName);
-      // this should de dropped once we align all forms related issues
-      if (formName !== undefined) {
-        formName = formName + '.json';
-      } else {
-        formName = 'test.json';
-      }
+        function getFormSchema(formName, onSuccess, onError) {
+            var schema = {};
+            // formName = createValidFormName(formName);
+            // this should de dropped once we align all forms related issues
+            if (formName !== undefined) {
+                formName = formName + '.json';
+            } else {
+                formName = 'test.json';
+            }
 
-      var url = 'scripts/formentry/schema/' + formName;
-      $http.get(url, {cache: true})
-            .success(function(response) {
-              $log.info('getting schema', response);
-              callback(response);
-            })
-              .error(function(data, status, headers, config) {
-                if (status === 404) {alert('Form Resource not Available');}
-              });
-    }
-
-    function _getResource() {
-      var _server = 'https://test1.ampath.or.ke:8443/amrs/ws/rest/v1/';
-      var _customDefaultRep = 'custom:(uuid,encounterDatetime,' +
-                        'patient:(uuid,uuid),form:(uuid,name),' +
-                        'location:ref,encounterType:ref,provider:ref,' +
-                        'obs:(uuid,obsDatetime,concept:(uuid,uuid),value:ref,groupMembers))';
-
-      return $resource(_server + 'encounter/:uuid?v=' + _customDefaultRep,
-        { uuid: '@uuid' },
-        { query: { method: 'GET', isArray: false } });
-    }
-
-    function getTestEncounterData(uuid, successCallback, failedCallback) {
-      var testUuid = '2b863113-1996-4562-b246-d23766175d73';
-      var resource = _getResource();
-      return resource.get({ uuid: testUuid }).$promise
-        .then(function(response) {
-          successCallback(response);
-        })
-        .catch(function(error) {
-          failedCallback('Error processing request', error);
-          $log.error(error);
-        });
-    }
-    
-    function getServerUrl() {
-      return 'http://localhost:8080/amrs/ws/rest/v1';
-    }
-    
-    // Return local timezone in format +0300 for EAT
-    function getLocalTimezone() {
-      var offset = new Date().getTimezoneOffset();
-      var sign;
-      if (offset < 0) {
-        sign = '+';
-      } else {
-        sign = '-';
-      }
-
-      offset = Math.abs(offset);
-      var hours = Math.floor(offset / 60);
-      var mins = offset % 60;
-      var ret = '';
-
-      if (hours < 10) {
-        hours = '0' + hours;
-      }
-
-      if (mins < 10) {
-        mins = '0' + mins;
-      }
-
-      return ret.concat(sign).concat(hours).concat(mins);
-    }
-
-    /**
-     * Takes three parameters.
-     * date: a valid javascript date or string representing a date
-     * format: a valid angular date filter format
-     * timezone: a timezone in form +0300
-     * Return a formatted date.
-     */
-    function formatDate(date, format, timezone) {
-      if (typeof date === 'string') {
-        //Try to parse
-        date = new Date(date);
-        if (date === undefined) {
-          var message = 'Bad date ' + date + ' passed as parameter';
-          throw new Error(message);
+            var url = 'scripts/formentry/schema/' + formName;
+            $http.get(url, { cache: true })
+                .success(function(response) {
+                    $log.info('getting schema', response);
+                    onSuccess(response);
+                })
+                .error(function(data, status, headers, config) {
+                    if (status === 404) { alert('Form Resource not Available. Form name: ' + formName); }
+                    onError(data);
+                });
         }
-      }
 
-      if (!(date instanceof Date)) {
-        throw new ReferenceError('Invalid type passed as date!');
-      }
 
-      var format = format || 'yyyy-MM-dd HH:mm:ss';
-      var timezone = timezone || getLocalTimezone();
-      
-      console.log('timezone', timezone);
-       console.log('date', date);
+        function getFormSchemaReferences(arrayFormNames, onSuccess, onError) {
+            var numberOfRequests = arrayFormNames.length;
+            var formSchemas = [];
+            var hasReturned = false;
+            for (var i = 0; i < arrayFormNames.length; i++) {
+                var formName = arrayFormNames[i];
 
-      return $filter('date')(date, format, timezone);
+                getFormSchema(formName,
+                    function(formSchema) {
+                        formSchemas.push(formSchema);
+                        numberOfRequests--;
+                        if (numberOfRequests === 0 && !hasReturned) {
+                            hasReturned = true;
+                            onSuccess(formSchemas);
+                        }
+                    }, function(error) {
+                        if (!hasReturned) {
+                            hasReturned = true;
+                            onError(error);
+                        }
+                    });
+            }
+        }
+
+        function _getResource() {
+            var _server = 'https://test1.ampath.or.ke:8443/amrs/ws/rest/v1/';
+            var _customDefaultRep = 'custom:(uuid,encounterDatetime,' +
+                'patient:(uuid,uuid),form:(uuid,name),' +
+                'location:ref,encounterType:ref,provider:ref,' +
+                'obs:(uuid,obsDatetime,concept:(uuid,uuid),value:ref,groupMembers))';
+
+            return $resource(_server + 'encounter/:uuid?v=' + _customDefaultRep,
+                { uuid: '@uuid' },
+                { query: { method: 'GET', isArray: false } });
+        }
+
+        function getTestEncounterData(uuid, successCallback, failedCallback) {
+            var testUuid = '2b863113-1996-4562-b246-d23766175d73';
+            var resource = _getResource();
+            return resource.get({ uuid: testUuid }).$promise
+                .then(function(response) {
+                    successCallback(response);
+                })
+                .catch(function(error) {
+                    failedCallback('Error processing request', error);
+                    $log.error(error);
+                });
+        }
+
+        function getServerUrl() {
+            return 'http://localhost:8080/amrs/ws/rest/v1';
+        }
+
+        // Return local timezone in format +0300 for EAT
+        function getLocalTimezone() {
+            var offset = new Date().getTimezoneOffset();
+            var sign;
+            if (offset < 0) {
+                sign = '+';
+            } else {
+                sign = '-';
+            }
+
+            offset = Math.abs(offset);
+            var hours = Math.floor(offset / 60);
+            var mins = offset % 60;
+            var ret = '';
+
+            if (hours < 10) {
+                hours = '0' + hours;
+            }
+
+            if (mins < 10) {
+                mins = '0' + mins;
+            }
+
+            return ret.concat(sign).concat(hours).concat(mins);
+        }
+
+        /**
+         * Takes three parameters.
+         * date: a valid javascript date or string representing a date
+         * format: a valid angular date filter format
+         * timezone: a timezone in form +0300
+         * Return a formatted date.
+         */
+        function formatDate(date, format, timezone) {
+            if (typeof date === 'string') {
+                //Try to parse
+                date = new Date(date);
+                if (date === undefined) {
+                    var message = 'Bad date ' + date + ' passed as parameter';
+                    throw new Error(message);
+                }
+            }
+
+            if (!(date instanceof Date)) {
+                throw new ReferenceError('Invalid type passed as date!');
+            }
+
+            var format = format || 'yyyy-MM-dd HH:mm:ss';
+            var timezone = timezone || getLocalTimezone();
+
+            console.log('timezone', timezone);
+            console.log('date', date);
+
+            return $filter('date')(date, format, timezone);
+        }
     }
-  }
 })();
 
 /*
@@ -4245,6 +4280,271 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
         function getformlyConfig() {
             return formlyConfig;
         }
+    }
+})();
+
+/*
+jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106, -W026
+*/
+/*
+jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLinesBeforeLineComments, requireTrailingComma
+*/
+(function() {
+    'use strict';
+
+    angular
+        .module('openmrs.angularFormentry')
+        .factory('FormSchemaCompilerService', FormSchemaCompilerService);
+
+    FormSchemaCompilerService.$inject = [];
+
+    function FormSchemaCompilerService(ObsProcessorService, PersonAttributesProcessorService,
+        EncounterProcessorService) {
+        var service = {
+            findSchemaByName: findSchemaByName,
+            getReferencedForms: getReferencedForms,
+            getPageInSchemaByLabel: getPageInSchemaByLabel,
+            getSectionInSchemaByPageLabelBySectionLabel: getSectionInSchemaByPageLabelBySectionLabel,
+            getQuestionByIdInSchema: getQuestionByIdInSchema,
+            getAllPlaceholderObjects: getAllPlaceholderObjects,
+            fillPlaceholderObject: fillPlaceholderObject,
+            deleteReferenceMember: deleteReferenceMember,
+            fillAllPlaceholderObjectsInForm: fillAllPlaceholderObjectsInForm
+        };
+
+        return service;
+
+        function findSchemaByName(schemaArray, nameOfSchema) {
+            if (_.isEmpty(schemaArray) || _.isEmpty(nameOfSchema)) {
+                return;
+            }
+
+            var foundSchema;
+            _.each(schemaArray, function(schema) {
+                if (schema.name === nameOfSchema) {
+                    foundSchema = schema;
+                }
+            });
+            return foundSchema;
+        }
+
+        function getPageInSchemaByLabel(schema, pageLabel) {
+            if (_.isEmpty(schema) || _.isEmpty(pageLabel)) {
+                return;
+            }
+
+            var foundPage;
+            _.each(schema.pages, function(page) {
+                if (page.label === pageLabel) {
+                    foundPage = page;
+                }
+            });
+            return foundPage;
+        }
+
+        function getSectionInSchemaByPageLabelBySectionLabel(schema, pageLabel, sectionLabel) {
+            if (_.isEmpty(schema) || _.isEmpty(pageLabel) || _.isEmpty(sectionLabel)) {
+                return;
+            }
+
+            var foundPage = getPageInSchemaByLabel(schema, pageLabel);
+            if (_.isEmpty(foundPage)) {
+                return;
+            }
+
+            var foundSection;
+
+            _.each(foundPage.sections, function(section) {
+                if (section.label === sectionLabel) {
+                    foundSection = section;
+                }
+            });
+            return foundSection;
+        }
+
+        function getQuestionByIdInSchema(schema, questionId) {
+            if (_.isEmpty(schema) || _.isEmpty(questionId)) {
+                return;
+            }
+            return _getQuestionByIdInSchema(schema, questionId);
+        }
+
+        function _getQuestionByIdInSchema(object, questionId) {
+            if (Array.isArray(object)) {
+                //console.debug('is array', object);
+                var question;
+                for (var i = 0; i < object.length; i++) {
+                    if (!_.isEmpty(object[i])) {
+                        question = _getQuestionByIdInSchema(object[i], questionId);
+                    }
+                    if (!_.isEmpty(question)) {
+                        break;
+                    }
+                }
+                return question;
+            } else if (typeof object === 'object') {
+                //console.debug('is object', object);
+                if (_isQuestionObjectWithId(object, questionId)) {
+                    return object;
+                } else if (_isSchemaSubObjectExpandable(object)) {
+                    var toExpand = (object.pages || object.sections || object.questions);
+                    //console.log('toExpand', toExpand);
+                    return _getQuestionByIdInSchema(toExpand, questionId);
+                } else {
+                    return;
+                }
+            } else {
+                return;
+            }
+        }
+
+        //object is page or section or question
+        function _isSchemaSubObjectExpandable(object) {
+            if (typeof object === 'object') {
+                var objectKeys = Object.keys(object);
+                if (_.contains(objectKeys, 'pages') ||
+                    _.contains(objectKeys, 'sections') ||
+                    _.contains(objectKeys, 'questions')) {
+                    //console.log('isExpandable', object);
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function _isQuestionObjectWithId(object, id) {
+            //console.log('is Question', object);
+            if (object.id === id) {
+                return true;
+            }
+            return false;
+        }
+
+        function getAllPlaceholderObjects(schema) {
+            var referencedObjects = [];
+            _getAllPlaceholderObjects(schema, referencedObjects);
+            return referencedObjects;
+        }
+
+        function _getAllPlaceholderObjects(subSchema, objectsArray) {
+            if (_.isEmpty(subSchema)) {
+                return;
+            }
+            if (Array.isArray(subSchema)) {
+                for (var i = 0; i < subSchema.length; i++) {
+                    if (!_.isEmpty(subSchema[i])) {
+                        _getAllPlaceholderObjects(subSchema[i], objectsArray);
+                    }
+                }
+            } else if (typeof subSchema === 'object') {
+                //console.log('Examining object', subSchema);
+                if (!_.isEmpty(subSchema.reference)) {
+                    objectsArray.push(subSchema);
+                } else if (_isSchemaSubObjectExpandable(subSchema)) {
+                    var toExpand = (subSchema.pages || subSchema.sections || subSchema.questions);
+                    _getAllPlaceholderObjects(toExpand, objectsArray);
+                }
+            }
+        }
+
+        function fillPlaceholderObject(placeHolderObject, referenceObject) {
+
+            for (var member in referenceObject) {
+                //console.log('examining member', member);
+                if (_.isEmpty(placeHolderObject[member])) {
+                    //console.log('filling member', placeHolderObject[member]);
+                    placeHolderObject[member] = referenceObject[member];
+                }
+            }
+        }
+
+        function deleteReferenceMember(placeHolderObject) {
+            delete placeHolderObject['reference'];
+        }
+
+        function fillAllPlaceholderObjectsInForm(formSchema, referencedForms) {
+            //get all referenced forms 
+            var referencedForms = getReferencedForms(formSchema, referencedForms);
+            if (_.isEmpty(referencedForms)) {
+                return;
+            }
+
+            //get all place-holders from the form schema
+            var placeHolders = getAllPlaceholderObjects(formSchema);
+            if (_.isEmpty(placeHolders)) {
+                return;
+            }
+
+            //replace all placeHolders
+            _replaceAllPlaceholdersWithActualObjects(formSchema, referencedForms, placeHolders);
+            
+        }
+
+        function _replaceAllPlaceholdersWithActualObjects(formSchema, keyValReferencedForms, placeHoldersArray) {
+            _.each(placeHoldersArray, function(placeHolder) {
+                var referencedObject = _getReferencedObject(formSchema, placeHolder.reference, keyValReferencedForms);
+
+                if (_.isEmpty(referencedObject)) {
+                    console.error('Form compile: Error finding referenced object', placeHolder.reference);
+                } else {
+                    //console.log('Form compile: filling placeholder object', placeHolder);
+                    //console.log('Form compile: filling placeholder object with', referencedObject);
+                    fillPlaceholderObject(placeHolder, referencedObject);
+                    deleteReferenceMember(placeHolder);
+                }
+            });
+        }
+
+        function _getReferencedObject(formSchema, referenceData, keyValReferencedForms) {
+            if(_.isEmpty(referenceData.form)) {
+                console.error('Form compile: reference missing form attribute', referenceData);
+                return;
+            }
+            if(_.isEmpty(keyValReferencedForms[referenceData.form])) {
+                console.error('Form compile: referenced form alias not found', referenceData);
+                return;
+            }
+            if (!_.isEmpty(referenceData.questionId)) {
+                return getQuestionByIdInSchema(keyValReferencedForms[referenceData.form], referenceData.questionId);
+            }
+
+            if (!_.isEmpty(referenceData.page) && !_.isEmpty(referenceData.section)) {
+                return getSectionInSchemaByPageLabelBySectionLabel(
+                    keyValReferencedForms[referenceData.form],
+                    referenceData.page,
+                    referenceData.section
+                );
+            }
+            if(!_.isEmpty(referenceData.page)) {
+                return getPageInSchemaByLabel(
+                    keyValReferencedForms[referenceData.form],
+                    referenceData.page
+                );
+            }
+            console.error('Form compile: Unsupported reference type', referenceData.reference);
+        }
+
+        function getReferencedForms(formSchema, formSchemasLookupArray) {
+            var referencedForms = formSchema.referencedForms;
+
+            if (_.isEmpty(referencedForms)) {
+                return;
+            }
+
+            var keyValReferencedForms = {};
+
+            _.each(referencedForms, function(reference) {
+                var referencedFormSchema =
+                    findSchemaByName(formSchemasLookupArray, reference.formName);
+                keyValReferencedForms[reference.alias] = referencedFormSchema;
+            });
+
+            return keyValReferencedForms;
+        }
+
+
+
+
     }
 })();
 
