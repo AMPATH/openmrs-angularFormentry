@@ -55,11 +55,8 @@
             function (error) {
                 console.log(JSON.stringify(error));
             });
-
-
-        FormentryUtilService.getFormSchema(testSchema, function (data) {
-            schema = data;
-
+            
+        var createForm = function() {
             //set up historical data for triage form
             setUpHistoricalData();
 
@@ -71,6 +68,28 @@
             $scope.vm.questionMap = formObject.questionMap;
             console.log('final question map', $scope.vm.questionMap);
             FormEntry.updateFormWithExistingObs($scope.vm.model,restObs);
+        };
+
+
+        FormentryUtilService.getFormSchema(testSchema, function (data) {
+            schema = data;
+            
+            if(_.isEmpty(schema.referencedForms)) {
+                createForm();
+            } else {
+                var referencedFormNames = [];
+                _.each(schema.referencedForms, function(reference) {
+                    referencedFormNames.push(reference.formName);
+                });
+                
+                FormentryUtilService.getFormSchemaReferences(referencedFormNames, function(formSchemas) {
+                    FormEntry.compileFormSchema(schema, formSchemas);
+                    createForm();
+                }, function(error) {
+                    console.error('Could not load referenced forms', error);
+                });
+            }
+            
         });
 
 
