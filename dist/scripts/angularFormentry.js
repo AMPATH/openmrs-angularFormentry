@@ -1550,6 +1550,11 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                 } else {
                     obsField['type'] = 'radio';
                 }
+            } else if(_question.questionOptions.rendering === 'textarea') {
+                obsField['type'] = _question.questionOptions.rendering;
+                obsField['templateOptions']['rows'] = _question.questionOptions.rows || 15;
+                obsField['templateOptions']['columns'] = _question.questionOptions.columns;
+                obsField['templateOptions']['placeholder'] = _question.questionOptions.placeholder;
             }
 
             obsField['templateOptions']['createModelBluePrint'] = function (parentModel, value) {
