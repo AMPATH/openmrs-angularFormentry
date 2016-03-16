@@ -69,12 +69,14 @@
                             "type": "obs",
                             "label": "question1",
                             "id": "q1",
-                            "required": "false",
+                            "required": "true",
                             "default": "",
                             "historicalExpression": "'previous test'",
                             "questionOptions": {
-                                "rendering": "text",
-                                "concept": "1232"
+                                "rendering": "textarea",
+                                "concept": "1232",
+                                "rows": 15,
+                                "placeholder" : "Enter the question 1"
                             }
                         },
                         {
