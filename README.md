@@ -1,3 +1,4 @@
+[![Build Status](https://travis-ci.org/AMPATH/openmrs-angularFormentry.svg?branch=master)](https://travis-ci.org/AMPATH/openmrs-angularFormentry)
 # angular-formentry
 
 This project is generated with [yo angular generator](https://github.com/yeoman/generator-angular)
