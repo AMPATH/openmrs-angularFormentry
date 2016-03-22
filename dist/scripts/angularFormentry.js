@@ -1084,7 +1084,7 @@ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106, -W026
 jscs:disable disallowMixedSpacesAndTabs, requireDotNotation
 jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 */
-(function () {
+(function() {
     'use strict';
 
     angular
@@ -1210,7 +1210,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
             var obsDateField;
             if (_question.questionOptions.showDate === 'true') {
                 obsDateField = angular.copy(field);
-                _handleShowDate(obsDateField);
+                _handleShowDate(obsDateField, _question, questionMap);
                 fieldArray.push(field);
                 fieldArray.push(obsDateField);
                 return fieldArray;
@@ -1232,8 +1232,8 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
             var fKey;
             var id;
             if (_question.type === 'obs') {
-              id = _id + 1;
-              obsId = id;
+                id = _id + 1;
+                obsId = id;
                 fKey = _question.questionOptions.concept;
                 key = 'obs' + id + '_' + fKey.replace(/-/gi, 'n'); // $$ Inserts a "$".
             } else if (_question.type === 'personAttribute') {
@@ -1251,7 +1251,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
             var required = _isBoolean(_required) ? _required : _required ? FormValidator.getConditionalRequiredExpressionFunction(_required) : 'false';
             var disabled = _isBoolean(_disabled) ? _required : _disabled ? FormValidator.getHideDisableExpressionFunction_JS(_disabled) : 'false';
             var listener = _listener || '';
-            var calculated = _calculated? FormValidator.getCalculateExpressionFunction_JS(_calculated) : '';
+            var calculated = _calculated ? FormValidator.getCalculateExpressionFunction_JS(_calculated) : '';
             field['expressionProperties'] = {
                 'templateOptions.required': required,
                 'templateOptions.disabled': disabled,
@@ -1266,7 +1266,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                 return true;
             }
 
-            if(value === 'true' || value === 'false') {
+            if (value === 'true' || value === 'false') {
                 return true;
             }
             return false;
@@ -1282,7 +1282,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
             var field = _field || {};
             //set the validator to default validator
             var defaultValidator = {
-                expression: function (viewValue, modelValue, scope) {
+                expression: function(viewValue, modelValue, scope) {
                     return true;
                 },
                 message: ''
@@ -1297,16 +1297,16 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
             //handle external value setters
             if (typeof field['templateOptions']['setFieldValue'] !== 'function') {
                 field['templateOptions']['setFieldValue'] =
-                HistoricalFieldHelperService.fillPrimitiveValue;
+                    HistoricalFieldHelperService.fillPrimitiveValue;
             }
         }
 
         function _handleFieldModelBlueprintCreators(field, question) {
             //handle external model blue print creators
-            field['templateOptions']['createModelBluePrint'] = function (parentModel) {
+            field['templateOptions']['createModelBluePrint'] = function(parentModel) {
                 return HistoricalFieldHelperService.
                     createModelForRegularField(parentModel, field.key,
-                        question, question.questionOptions.concept, 20);
+                    question, question.questionOptions.concept, 20);
             };
         }
 
@@ -1324,7 +1324,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
             // answerList.push({name:'unselect', value:undefined});
             // get the anserq options for radio/select options/multicheckbox
             if (angular.isArray(_answers)) {
-                _.each(_answers, function (answer) {
+                _.each(_answers, function(answer) {
                     var item = {
                         name: answer.label,
                         value: answer.concept
@@ -1357,7 +1357,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
             field['templateOptions']['options'] = [];
         }
 
-        function _handleShowDate(_field) {
+        function _handleShowDate(_field, question, questionMap) {
             var field = _field || {};
             field.templateOptions = {};
             var key = field.key;
@@ -1366,6 +1366,19 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
             field['templateOptions']['datepickerPopup'] = 'dd-MMMM-yyyy';
             field['templateOptions']['label'] = 'Date';
             field['templateOptions']['type'] = 'text';
+
+            if (_.isEmpty(question.questionOptions.shownDateOptions.id)) {
+                question.questionOptions.shownDateOptions.id = field.key;
+            }
+
+            field.data = {};
+            field.data.id = field.key;
+
+            _handleValidators(field,
+                question.questionOptions.shownDateOptions ? question.questionOptions.shownDateOptions.validators : [],
+                questionMap);
+
+            _addToQuestionMap(question.questionOptions.shownDateOptions, field, questionMap);
         }
 
         function _updateModelObsDateField(_question, model, field) {
@@ -1420,7 +1433,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                     label: _question.label
                 },
                 modelOptions: {
-                    debounce:1000
+                    debounce: 1000
                 }
                 // ,
                 // validation: {
@@ -1468,15 +1481,15 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 
                 if (typeof obsField['templateOptions']['setFieldValue'] !== 'function') {
                     obsField['templateOptions']['setFieldValue'] =
-                    HistoricalFieldHelperService.fillPrimitiveValue;
+                        HistoricalFieldHelperService.fillPrimitiveValue;
                 }
 
                 if (typeof obsField['templateOptions']['getDisplayValue'] !== 'function') {
                     obsField['templateOptions']['getDisplayValue'] =
-                    function (value, callback) {
-                        HistoricalFieldHelperService.
-                            getDisplayText(value, callback, _question.label);
-                    };
+                        function(value, callback) {
+                            HistoricalFieldHelperService.
+                                getDisplayText(value, callback, _question.label);
+                        };
                 }
 
             } else if (_question.questionOptions.rendering === 'number') {
@@ -1486,14 +1499,14 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 
                 if (typeof obsField['templateOptions']['setFieldValue'] !== 'function') {
                     obsField['templateOptions']['setFieldValue'] =
-                    HistoricalFieldHelperService.fillPrimitiveValue;
+                        HistoricalFieldHelperService.fillPrimitiveValue;
                 }
 
                 if (typeof obsField['templateOptions']['getDisplayValue'] !== 'function') {
                     obsField['templateOptions']['getDisplayValue'] =
-                    function (value, callback) {
-                        HistoricalFieldHelperService.getDisplayText(value, callback, _question.label);
-                    };
+                        function(value, callback) {
+                            HistoricalFieldHelperService.getDisplayText(value, callback, _question.label);
+                        };
                 }
 
             } else if (_question.questionOptions.rendering === 'problem') {
@@ -1503,7 +1516,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 
                 if (typeof obsField['templateOptions']['setFieldValue'] !== 'function') {
                     obsField['templateOptions']['setFieldValue'] =
-                    HistoricalFieldHelperService.fillPrimitiveValue;
+                        HistoricalFieldHelperService.fillPrimitiveValue;
                 }
             } else if (_question.questionOptions.rendering === 'drug') {
                 _handleFieldUiSelect(obsField);
@@ -1512,7 +1525,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 
                 if (typeof obsField['templateOptions']['setFieldValue'] !== 'function') {
                     obsField['templateOptions']['setFieldValue'] =
-                    HistoricalFieldHelperService.fillPrimitiveValue;
+                        HistoricalFieldHelperService.fillPrimitiveValue;
                 }
             } else if (_question.questionOptions.rendering === 'select-concept-answers') {
                 obsField['type'] = 'concept-search-select';
@@ -1524,7 +1537,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                 obsField['templateOptions']['fetchOptionsFunction'] = SearchDataService.getConceptAnswers;
                 if (typeof obsField['templateOptions']['setFieldValue'] !== 'function') {
                     obsField['templateOptions']['setFieldValue'] =
-                    HistoricalFieldHelperService.fillPrimitiveValue;
+                        HistoricalFieldHelperService.fillPrimitiveValue;
                 }
             } else if ((_question.questionOptions.rendering === 'radio') ||
                 (_question.questionOptions.rendering === 'select') ||
@@ -1533,15 +1546,15 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 
                 if (typeof obsField['templateOptions']['setFieldValue'] !== 'function') {
                     obsField['templateOptions']['setFieldValue'] =
-                    HistoricalFieldHelperService.fillArrayOfPrimitives;
+                        HistoricalFieldHelperService.fillArrayOfPrimitives;
                 }
 
                 obsField['templateOptions']['getDisplayValue'] =
-                function (value, callback) {
-                    HistoricalFieldHelperService.
-                        getDisplayTextFromOptions(value, _question.questionOptions.answers,
+                    function(value, callback) {
+                        HistoricalFieldHelperService.
+                            getDisplayTextFromOptions(value, _question.questionOptions.answers,
                             'concept', 'label', callback, _question.label);
-                };
+                    };
 
                 if (_question.questionOptions.rendering === 'multiCheckbox') {
                     obsField['type'] = 'kendo-select-multiple';
@@ -1550,25 +1563,25 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                 } else {
                     obsField['type'] = 'radio';
                 }
-            } else if(_question.questionOptions.rendering === 'textarea') {
+            } else if (_question.questionOptions.rendering === 'textarea') {
                 obsField['type'] = _question.questionOptions.rendering;
                 obsField['templateOptions']['rows'] = _question.questionOptions.rows || 15;
                 obsField['templateOptions']['columns'] = _question.questionOptions.columns;
                 obsField['templateOptions']['placeholder'] = _question.questionOptions.placeholder;
             }
 
-            obsField['templateOptions']['createModelBluePrint'] = function (parentModel, value) {
+            obsField['templateOptions']['createModelBluePrint'] = function(parentModel, value) {
                 return HistoricalFieldHelperService.
                     createModelForRegularField(parentModel, obsField.key,
-                        _question, _question.questionOptions.concept, value);
+                    _question, _question.questionOptions.concept, value);
             };
 
             //finally, ensure all fields have getDisplayValue
             if (typeof obsField['templateOptions']['getDisplayValue'] !== 'function') {
                 obsField['templateOptions']['getDisplayValue'] =
-                function (value, callback) {
-                    HistoricalFieldHelperService.getDisplayText(value, callback, _question.label);
-                };
+                    function(value, callback) {
+                        HistoricalFieldHelperService.getDisplayText(value, callback, _question.label);
+                    };
             }
 
             _addToQuestionMap(_question, obsField, questionMap);
@@ -1578,7 +1591,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
             if (_question.questionOptions.showDate === 'true') {
                 var key = angular.copy(obsField.key);
                 obsDateField.key = key;
-                _handleShowDate(obsDateField);
+                _handleShowDate(obsDateField, _question, questionMap);
                 _updateModelObsDateField(angular.copy(_question), _model, obsDateField);
                 fieldArray.push(obsField);
                 fieldArray.push(obsDateField);
