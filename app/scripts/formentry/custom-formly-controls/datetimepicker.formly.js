@@ -5,15 +5,15 @@ jshint -W106, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W069, -W0
 jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 */
 (function() {
-  'use strict';
+    'use strict';
 
-  angular
+    angular
         .module('openmrs.angularFormentry')
-            .run(createDatetimePickerType);
+        .run(createDatetimePickerType);
 
-  function createDatetimePickerType(formlyConfig, $filter, $log) {
-    $log.info('A new type is being created!!');
-    var attributes = [
+    function createDatetimePickerType(formlyConfig, $filter, $log) {
+        $log.info('A new type is being created!!');
+        var attributes = [
             'hour-step',
             'minute-step',
             'show-meridian',
@@ -29,7 +29,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             'close-on-date-selection',
         ];
 
-    var bindings = [
+        var bindings = [
             'datepicker-mode',
             'min-date',
             'max-date',
@@ -38,53 +38,55 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             'show-meridian'
         ];
 
-    var ngModelAttrs = {};
+        var ngModelAttrs = {};
 
-    angular.forEach(attributes, function(attr) {
-      ngModelAttrs[camelize(attr)] = { attribute: attr };
-    });
+        angular.forEach(attributes, function(attr) {
+            ngModelAttrs[camelize(attr)] = { attribute: attr };
+        });
 
-    angular.forEach(bindings, function(binding) {
-      ngModelAttrs[camelize(binding)] = { bound: binding };
-    });
+        angular.forEach(bindings, function(binding) {
+            ngModelAttrs[camelize(binding)] = { bound: binding };
+        });
 
-    formlyConfig.setType({
-          name: 'datetimepicker',
-          extends: 'input',
-          template: '<input class="form-control" ng-model="model[options.key]" ' +
-                    'is-open="to.isOpen" ng-click="open($event)"  ' +
-                    'datetime-picker="dd-MMM-yyyy hh:mm:ss a" ' +
-                    'datepicker-options="to.datepickerOptions"></input>',
-          wrapper: ['bootstrapLabel', 'bootstrapHasError'],
-          overwriteOk: true,
-          defaultOptions: {
-              ngModelAttrs: ngModelAttrs,
-              templateOptions: {
-                addonLeft: {
-                  class: 'glyphicon glyphicon-calendar',
-                  onClick: function(options, scope) {
-                    options.templateOptions.isOpen = !options.templateOptions.isOpen;
-                  }
-                },
-                onFocus: function($viewValue, $modelValue, scope) {
-                  scope.to.isOpen = !scope.to.isOpen;
-                  $log.log('View value: ', $viewValue, 'Model value: ', $modelValue);
-                },
+        formlyConfig.setType({
+            name: 'datetimepicker',
+            extends: 'input',
+            template: '<input class="form-control" ng-model="model[options.key]" ' +
+            'is-open="to.isOpen" ng-click="open($event)"  ' +
+            'datetime-picker="dd-MMM-yyyy hh:mm:ss a" ' +
+            'datepicker-options="to.datepickerOptions"></input>',
+            wrapper: ['bootstrapLabel', 'bootstrapHasError'],
+            overwriteOk: true,
+            defaultOptions: {
+                ngModelAttrs: ngModelAttrs,
+                templateOptions: {
+                    addonLeft: {
+                        class: 'glyphicon glyphicon-calendar',
+                        onClick: function(options, scope) {
+                            if (options.templateOptions.disabled !== true) {
+                                options.templateOptions.isOpen = !options.templateOptions.isOpen;
+                            }
+                        }
+                    },
+                    onFocus: function($viewValue, $modelValue, scope) {
+                        scope.to.isOpen = !scope.to.isOpen;
+                        $log.log('View value: ', $viewValue, 'Model value: ', $modelValue);
+                    },
 
-                datepickerOptions: {},
-                timepickerOptions: {},
-              }
+                    datepickerOptions: {},
+                    timepickerOptions: {},
+                }
             }
         });
 
-    function camelize(string) {
-          string = string.replace(/[\-_\s]+(.)?/g, function(match, chr) {
-            return chr ? chr.toUpperCase() : '';
-          });
-          // Ensure 1st char is always lowercase
-          return string.replace(/^([A-Z])/, function(match, chr) {
-            return chr ? chr.toLowerCase() : '';
-          });
+        function camelize(string) {
+            string = string.replace(/[\-_\s]+(.)?/g, function(match, chr) {
+                return chr ? chr.toUpperCase() : '';
+            });
+            // Ensure 1st char is always lowercase
+            return string.replace(/^([A-Z])/, function(match, chr) {
+                return chr ? chr.toLowerCase() : '';
+            });
         }
-  }
+    }
 })();
