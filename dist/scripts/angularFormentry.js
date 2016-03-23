@@ -1367,7 +1367,8 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
             field['templateOptions']['label'] = 'Date';
             field['templateOptions']['type'] = 'text';
 
-            if (_.isEmpty(question.questionOptions.shownDateOptions.id)) {
+            if (question.questionOptions.shownDateOptions &&
+                _.isEmpty(question.questionOptions.shownDateOptions.id)) {
                 question.questionOptions.shownDateOptions.id = field.key;
             }
 
@@ -1375,10 +1376,21 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
             field.data.id = field.key;
 
             _handleValidators(field,
-                question.questionOptions.shownDateOptions ? question.questionOptions.shownDateOptions.validators : [],
+                question.questionOptions.shownDateOptions ? 
+                question.questionOptions.shownDateOptions.validators : [],
                 questionMap);
+                
+           _handleExpressionProperties(field, 
+           question.questionOptions.shownDateOptions ? 
+                question.questionOptions.shownDateOptions.required : undefined,
+                 question.questionOptions.shownDateOptions ? 
+                question.questionOptions.shownDateOptions.disable: undefined, 
+           undefined, question.questionOptions.shownDateOptions ? 
+                question.questionOptions.shownDateOptions.calculate: undefined);
 
-            _addToQuestionMap(question.questionOptions.shownDateOptions, field, questionMap);
+            if (question.questionOptions.shownDateOptions) {
+                _addToQuestionMap(question.questionOptions.shownDateOptions, field, questionMap);
+            }
         }
 
         function _updateModelObsDateField(_question, model, field) {
@@ -4574,103 +4586,105 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 */
 (function() {
 
-  'use strict';
+    'use strict';
 
-  var mod =
-    angular
-      .module('openmrs.angularFormentry');
+    var mod =
+        angular
+            .module('openmrs.angularFormentry');
 
-  mod.run(function(formlyConfig) {
-    var attributes = [
-      'date-disabled',
-      'custom-class',
-      'show-weeks',
-      'starting-day',
-      'init-date',
-      'min-mode',
-      'max-mode',
-      'format-day',
-      'format-month',
-      'format-year',
-      'format-day-header',
-      'format-day-title',
-      'format-month-title',
-      'year-range',
-      'shortcut-propagation',
-      'datepicker-popup',
-      'show-button-bar',
-      'current-text',
-      'clear-text',
-      'close-text',
-      'close-on-date-selection',
-      'datepicker-append-to-body'
-    ];
+    mod.run(function(formlyConfig) {
+        var attributes = [
+            'date-disabled',
+            'custom-class',
+            'show-weeks',
+            'starting-day',
+            'init-date',
+            'min-mode',
+            'max-mode',
+            'format-day',
+            'format-month',
+            'format-year',
+            'format-day-header',
+            'format-day-title',
+            'format-month-title',
+            'year-range',
+            'shortcut-propagation',
+            'datepicker-popup',
+            'show-button-bar',
+            'current-text',
+            'clear-text',
+            'close-text',
+            'close-on-date-selection',
+            'datepicker-append-to-body'
+        ];
 
-    var bindings = [
-      'datepicker-mode',
-      'min-date',
-      'max-date'
-    ];
+        var bindings = [
+            'datepicker-mode',
+            'min-date',
+            'max-date'
+        ];
 
-    var ngModelAttrs = {};
+        var ngModelAttrs = {};
 
-    angular.forEach(attributes, function(attr) {
-      ngModelAttrs[camelize(attr)] = { attribute: attr };
-    });
+        angular.forEach(attributes, function(attr) {
+            ngModelAttrs[camelize(attr)] = { attribute: attr };
+        });
 
-    angular.forEach(bindings, function(binding) {
-      ngModelAttrs[camelize(binding)] = { bound: binding };
-    });
+        angular.forEach(bindings, function(binding) {
+            ngModelAttrs[camelize(binding)] = { bound: binding };
+        });
 
-    formlyConfig.setType({
-      name: 'datepicker',
-      template: '<input class="form-control" ng-model="model[options.key]"  ' +
-      'is-open="to.isOpen" ng-click="open($event)"  ' +
-      'datepicker-options="to.datepickerOptions" />',
+        formlyConfig.setType({
+            name: 'datepicker',
+            template: '<input class="form-control" ng-model="model[options.key]"  ' +
+            'is-open="to.isOpen" ng-click="open($event)"  ' +
+            'datepicker-options="to.datepickerOptions" />',
 
-      wrapper: ['bootstrapLabel', 'bootstrapHasError'],
+            wrapper: ['bootstrapLabel', 'bootstrapHasError'],
 
-      controller: ['$scope','$log', function($scope, $log) {
-        $scope.open = function($event) {
-          $event.preventDefault();
-          $event.stopPropagation();
-          $log.info('controller does a good job!');
-          $scope.opened = true;
-        };
+            controller: ['$scope', '$log', function($scope, $log) {
+                $scope.open = function($event) {
+                    $event.preventDefault();
+                    $event.stopPropagation();
+                    $log.info('controller does a good job!');
+                    $scope.opened = true;
+                };
 
-      }],
+            }],
 
-      overwriteOk: true,
+            overwriteOk: true,
 
-      defaultOptions: {
-        ngModelAttrs: ngModelAttrs,
-        templateOptions: {
+            defaultOptions: {
+                ngModelAttrs: ngModelAttrs,
+                templateOptions: {
 
-          addonLeft: {
-            class: 'glyphicon glyphicon-calendar',
-            onClick: function(options, scope) {
-              options.templateOptions.isOpen = !options.templateOptions.isOpen;
+                    addonLeft: {
+                        class: 'glyphicon glyphicon-calendar',
+                        onClick: function(options, scope) {
+                            if (options.templateOptions.disabled !== true) {
+                                options.templateOptions.isOpen = !options.templateOptions.isOpen;
+                            }
+                        }
+                    },
+                    onFocus: function($viewValue, $modelValue, scope) {
+                        scope.to.isOpen = !scope.to.isOpen;
+                    },
+
+                    datepickerOptions: {}
+                }
             }
-          },
-          onFocus: function($viewValue, $modelValue, scope) {
-            scope.to.isOpen = !scope.to.isOpen;
-          },
+        });
 
-          datepickerOptions: {}
+        function camelize(string) {
+            string = string.replace(/[\-_\s]+(.)?/g, function(match, chr) {
+                return chr ? chr.toUpperCase() : '';
+            });
+            // Ensure 1st char is always lowercase
+            return string.replace(/^([A-Z])/, function(match, chr) {
+                return chr ? chr.toLowerCase() : '';
+            });
         }
-      }
     });
-
-    function camelize(string) {
-      string = string.replace(/[\-_\s]+(.)?/g, function(match, chr) {
-        return chr ? chr.toUpperCase() : '';
-      });
-      // Ensure 1st char is always lowercase
-      return string.replace(/^([A-Z])/, function(match, chr) {
-        return chr ? chr.toLowerCase() : '';
-      });
-    }
-  });
 
 })();
 
@@ -4681,15 +4695,15 @@ jshint -W106, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W069, -W0
 jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 */
 (function() {
-  'use strict';
+    'use strict';
 
-  angular
+    angular
         .module('openmrs.angularFormentry')
-            .run(createDatetimePickerType);
+        .run(createDatetimePickerType);
 
-  function createDatetimePickerType(formlyConfig, $filter, $log) {
-    $log.info('A new type is being created!!');
-    var attributes = [
+    function createDatetimePickerType(formlyConfig, $filter, $log) {
+        $log.info('A new type is being created!!');
+        var attributes = [
             'hour-step',
             'minute-step',
             'show-meridian',
@@ -4705,7 +4719,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             'close-on-date-selection',
         ];
 
-    var bindings = [
+        var bindings = [
             'datepicker-mode',
             'min-date',
             'max-date',
@@ -4714,55 +4728,57 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             'show-meridian'
         ];
 
-    var ngModelAttrs = {};
+        var ngModelAttrs = {};
 
-    angular.forEach(attributes, function(attr) {
-      ngModelAttrs[camelize(attr)] = { attribute: attr };
-    });
+        angular.forEach(attributes, function(attr) {
+            ngModelAttrs[camelize(attr)] = { attribute: attr };
+        });
 
-    angular.forEach(bindings, function(binding) {
-      ngModelAttrs[camelize(binding)] = { bound: binding };
-    });
+        angular.forEach(bindings, function(binding) {
+            ngModelAttrs[camelize(binding)] = { bound: binding };
+        });
 
-    formlyConfig.setType({
-          name: 'datetimepicker',
-          extends: 'input',
-          template: '<input class="form-control" ng-model="model[options.key]" ' +
-                    'is-open="to.isOpen" ng-click="open($event)"  ' +
-                    'datetime-picker="dd-MMM-yyyy hh:mm:ss a" ' +
-                    'datepicker-options="to.datepickerOptions"></input>',
-          wrapper: ['bootstrapLabel', 'bootstrapHasError'],
-          overwriteOk: true,
-          defaultOptions: {
-              ngModelAttrs: ngModelAttrs,
-              templateOptions: {
-                addonLeft: {
-                  class: 'glyphicon glyphicon-calendar',
-                  onClick: function(options, scope) {
-                    options.templateOptions.isOpen = !options.templateOptions.isOpen;
-                  }
-                },
-                onFocus: function($viewValue, $modelValue, scope) {
-                  scope.to.isOpen = !scope.to.isOpen;
-                  $log.log('View value: ', $viewValue, 'Model value: ', $modelValue);
-                },
+        formlyConfig.setType({
+            name: 'datetimepicker',
+            extends: 'input',
+            template: '<input class="form-control" ng-model="model[options.key]" ' +
+            'is-open="to.isOpen" ng-click="open($event)"  ' +
+            'datetime-picker="dd-MMM-yyyy hh:mm:ss a" ' +
+            'datepicker-options="to.datepickerOptions"></input>',
+            wrapper: ['bootstrapLabel', 'bootstrapHasError'],
+            overwriteOk: true,
+            defaultOptions: {
+                ngModelAttrs: ngModelAttrs,
+                templateOptions: {
+                    addonLeft: {
+                        class: 'glyphicon glyphicon-calendar',
+                        onClick: function(options, scope) {
+                            if (options.templateOptions.disabled !== true) {
+                                options.templateOptions.isOpen = !options.templateOptions.isOpen;
+                            }
+                        }
+                    },
+                    onFocus: function($viewValue, $modelValue, scope) {
+                        scope.to.isOpen = !scope.to.isOpen;
+                        $log.log('View value: ', $viewValue, 'Model value: ', $modelValue);
+                    },
 
-                datepickerOptions: {},
-                timepickerOptions: {},
-              }
+                    datepickerOptions: {},
+                    timepickerOptions: {},
+                }
             }
         });
 
-    function camelize(string) {
-          string = string.replace(/[\-_\s]+(.)?/g, function(match, chr) {
-            return chr ? chr.toUpperCase() : '';
-          });
-          // Ensure 1st char is always lowercase
-          return string.replace(/^([A-Z])/, function(match, chr) {
-            return chr ? chr.toLowerCase() : '';
-          });
+        function camelize(string) {
+            string = string.replace(/[\-_\s]+(.)?/g, function(match, chr) {
+                return chr ? chr.toUpperCase() : '';
+            });
+            // Ensure 1st char is always lowercase
+            return string.replace(/^([A-Z])/, function(match, chr) {
+                return chr ? chr.toLowerCase() : '';
+            });
         }
-  }
+    }
 })();
 
 /*
@@ -4986,77 +5002,94 @@ jshint -W106, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W069, -W0
 jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 */
 (function() {
-  'use strict';
+    'use strict';
 
-  var mod =
-          angular
-              .module('openmrs.angularFormentry');
+    var mod =
+        angular
+            .module('openmrs.angularFormentry');
 
-  mod.run(function config(formlyConfig) {
-    formlyConfig.setType({
-      name: 'repeatSection',
-      template: '<div class="panel panel-default"> ' +
-      '<div class="panel-heading"> ' +
-      '{{to.label}}' +
-      '</div> ' +
-      '<div class="panel-body"> ' +
-      // <!--loop through each element in model array-->
-      '<div class="{{hideRepeat}}"> ' +
-        '<div class="repeatsection" ng-repeat="element in model[options.key]" ' +
-        'ng-init="fields = copyFields(to.fields)"> ' +
-          '<formly-form fields="fields" '  +
-                       'model="element" bind-name="\'formly_ng_repeat\' + index + $parent.$index"> ' +
-          '</formly-form> ' +
-          '<p> ' +
+    mod.run(function config(formlyConfig) {
+        formlyConfig.setType({
+            name: 'repeatSection',
+            template: '<div class="panel panel-default"> ' +
+            '<div class="panel-heading"> ' +
+            '{{to.label}}' +
+            '</div> ' +
+            '<div class="panel-body"> ' +
+            // <!--loop through each element in model array-->
+            '<div class="{{hideRepeat}}"> ' +
+            '<div class="repeatsection" ng-repeat="element in model[options.key]" ' +
+            'ng-init="fields = copyFields(to.fields)"> ' +
+            '<formly-form fields="fields" ' +
+            'model="element" bind-name="\'formly_ng_repeat\' + index + $parent.$index"> ' +
+            '</formly-form> ' +
+            '<p> ' +
             '<button type="button" class="btn btn-sm btn-danger" ng-click="model[options.key].splice($index, 1)"> ' +
-              'Remove ' +
+            'Remove ' +
             '</button> ' +
-          '</p> ' +
-          '<hr> ' +
-      '</div> ' +
-      '<p class="AddNewButton"> ' +
-        '<button type="button" class="btn btn-primary" ng-click="addNew()" >{{to.btnText}}</button> ' +
-      '</p> ' +
-      '</div> ' +
-      '</div>',
-      controller: function($scope, $log) {
-        $scope.formOptions = {formState: $scope.formState};
-        $scope.addNew = addNew;
+            '</p> ' +
+            '<hr> ' +
+            '</div> ' +
+            '<p class="AddNewButton"> ' +
+            '<button type="button" class="btn btn-primary" ng-click="addNew()" >{{to.btnText}}</button> ' +
+            '</p> ' +
+            '</div> ' +
+            '</div>',
+            controller: function($scope, $log, CurrentLoadedFormService) {
+                $scope.formOptions = { formState: $scope.formState };
+                $scope.addNew = addNew;
 
-        $scope.copyFields = copyFields;
+                $scope.copyFields = copyFields;
 
-        function copyFields(fields) {
-          return angular.copy(fields);
-        }
+                function copyFields(fields) {
+                    var copy = angular.copy(fields);
+                    addFieldsToQuestionMap(copy);
+                    return copy;
+                }
 
-        function addNew() {
-          $scope.model[$scope.options.key] = $scope.model[$scope.options.key] || [];
-          $log.log('Repeat section');
-          // $log.log($scope);
-          // $log.log($scope.to.createModelBluePrint(null,[{}]));
-          var repeatsection = $scope.model[$scope.options.key];
-          // $log.log('Repeat section Val');
-          // $log.log(repeatsection);
-          var lastSection = repeatsection[repeatsection.length - 1];
-          // $log.log('Model blueprint');
-          // $log.log($scope.to.createModelBluePrint(null,[{}]));
-          var currentModel = $scope.to.createModelBluePrint(null,[{}])
-          var revisedModel = angular.copy(currentModel);
-          var newsection = revisedModel[0];
-          delete newsection['schemaQuestion']
-          // if (lastSection) {
-          //   newsection = angular.copy(lastSection);
-          // }
-        //   newsection.obs1_a894b1ccn1350n11dfna1f1n0026b9348838 = {
-        //       value: 'a893516a-1350-11df-a1f1-0026b9348838'
-        //   };
-        // $log.log('New Section blueprint');
-        // $log.log($scope.originalModel);
-          repeatsection.push(newsection);
-        }
-      }
+                function addFieldsToQuestionMap(groups) {
+                    _.each(groups, function(group) {
+                        _.each(group.fieldGroup, function(field) {
+                            var id = field.data.id;
+                            if (!_.isEmpty(id)) {
+                                if (id in CurrentLoadedFormService.questionMap) {
+                                    CurrentLoadedFormService.questionMap[id].push(field);
+                                } else {
+                                    CurrentLoadedFormService.questionMap[id] = [field];
+                                }
+                            }
+                        });
+                    });
+                }
+
+                function addNew() {
+                    $scope.model[$scope.options.key] = $scope.model[$scope.options.key] || [];
+                    $log.log('Repeat section');
+                    // $log.log($scope);
+                    // $log.log($scope.to.createModelBluePrint(null,[{}]));
+                    var repeatsection = $scope.model[$scope.options.key];
+                    // $log.log('Repeat section Val');
+                    // $log.log(repeatsection);
+                    var lastSection = repeatsection[repeatsection.length - 1];
+                    // $log.log('Model blueprint');
+                    // $log.log($scope.to.createModelBluePrint(null,[{}]));
+                    var currentModel = $scope.to.createModelBluePrint(null, [{}])
+                    var revisedModel = angular.copy(currentModel);
+                    var newsection = revisedModel[0];
+                    delete newsection['schemaQuestion']
+                    // if (lastSection) {
+                    //   newsection = angular.copy(lastSection);
+                    // }
+                    //   newsection.obs1_a894b1ccn1350n11dfna1f1n0026b9348838 = {
+                    //       value: 'a893516a-1350-11df-a1f1-0026b9348838'
+                    //   };
+                    // $log.log('New Section blueprint');
+                    // $log.log($scope.originalModel);
+                    repeatsection.push(newsection);
+                }
+            }
+        });
     });
-  });
 })();
 
 /*
