@@ -85798,14 +85798,14 @@ jshint -W026, -W116, -W098, -W003, -W068, -W069, -W004, -W033, -W030, -W117
 
         return service;
 
-        function getResource() {
+        function getResource(cachingEnabled) {
             var v = 'custom:(uuid,encounterDatetime,' +
                 'patient:(uuid,uuid),form:(uuid,name),' +
                 'location:ref,encounterType:ref,provider:ref,' +
                 'obs:(uuid,obsDatetime,concept:(uuid,uuid),value:ref,groupMembers))';
             return $resource(OpenmrsSettings.getCurrentRestUrlBase().trim() + 'encounter/:uuid',
                 { uuid: '@uuid', v: v },
-                { query: { method: 'GET', isArray: false } });
+                { query: { method: 'GET', isArray: false, cache: cachingEnabled? true: false } });
         }
 
         function voidEncounter(uuid, successCallback, errorCallback) {
@@ -85820,7 +85820,7 @@ jshint -W026, -W116, -W098, -W003, -W068, -W069, -W004, -W033, -W030, -W117
             });
         }
 
-        function getEncounterByUuid(params, successCallback, errorCallback) {
+        function getEncounterByUuid(params, successCallback, errorCallback, cachingEnabled) {
             var objParams = {};
             var _customDefaultRep = 'custom:(uuid,encounterDatetime,' +
                 'patient:(uuid,uuid),form:(uuid,name),' +
@@ -85836,7 +85836,7 @@ jshint -W026, -W116, -W098, -W003, -W068, -W069, -W004, -W033, -W030, -W117
                     'v': params.rep || _customDefaultRep
                 };
             }
-            Restangular.one('encounter', objParams.encounter).get({ v: objParams.v }).then(function (data) {
+            Restangular.one('encounter', objParams.encounter).withHttpConfig({ cache: cachingEnabled? true: false}).get({ v: objParams.v }).then(function (data) {
                 _successCallbackHandler(successCallback, data);
             },
                 function (error) {
@@ -85901,7 +85901,7 @@ jshint -W026, -W116, -W098, -W003, -W068, -W069, -W004, -W033, -W030, -W117
             }
         }
 
-        function getPatientEncounters(params, successCallback, errorCallback) {
+        function getPatientEncounters(params, successCallback, errorCallback, cachingEnabled) {
             var objParams = {};
 
             // Don't include obs by default
@@ -85931,7 +85931,7 @@ jshint -W026, -W116, -W098, -W003, -W068, -W069, -W004, -W033, -W030, -W117
                 objParams = params;
             }
 
-            Restangular.one('encounter').get(objParams).then(function (data) {
+            Restangular.one('encounter').withHttpConfig({ cache: cachingEnabled? true: false}).get(objParams).then(function (data) {
                 if (angular.isDefined(data.results)) data = data.results;
                 _successCallbackHandler(successCallback, data.reverse());
             },
@@ -86399,7 +86399,7 @@ jshint -W117, -W098, -W116, -W003, -W026
 
   function OpenmrsRestService(session, authService, PatientResService,
               UserResService, EncounterResService, LocationResService,
-              ProviderResService, ObsResService, DrugResService, UserDefaultPropertiesService) {
+              ProviderResService, ObsResService, DrugResService) {
     var service = {
           getSession: getSession,
           getAuthService: getAuthService,
@@ -86409,8 +86409,7 @@ jshint -W117, -W098, -W116, -W003, -W026
           getEncounterResService: getEncounterService,
           getProviderResService:getProviderResService,
           getObsResService:getObsResService,
-          getDrugResService:getDrugResService,
-          getUserDefaultPropertiesService:getUserDefaultPropertiesService
+          getDrugResService:getDrugResService
         };
 
     return service;
@@ -86708,7 +86707,7 @@ jshint -W003, -W026, -W098
         function (data) {
           console.log('userData');
           console.log(data.results);
-          var result = data.results;
+          var result = data.results || [data];
           if (result.length > 0) {
             //user(userName_, personUuId_, password_, uuId_, systemId_, userRole_)
             service.user = new UserModel.user(result[0].username, result[0].person.uuid, '', result[0].uuid, result[0].systemId, result[0].roles);
@@ -86806,8 +86805,16 @@ jshint -W026, -W116, -W098, -W003, -W068, -W069, -W004, -W033, -W030, -W117
                 }
             });
       }
-
+      
+      /**
+       * fetches patient visits.
+       * @params is an object which can have the following properties
+       *    patient: patient's uuid
+       *    v: desired data representation from OpenMRS
+       *    caching: Whether to cache or not (true/false) - default is false
+       */
       function getPatientVisits(params, successCallback, errorCallBack) {
+          var caching = false;
           var objParams = {};
           if(angular.isDefined(params) && typeof params === 'string') {
               // params is a patient uuid
@@ -86817,6 +86824,7 @@ jshint -W026, -W116, -W098, -W003, -W068, -W069, -W004, -W033, -W030, -W117
               }
           } else {
               var v = params.rep || params.v;
+              caching = params.caching || false;
               objParams = {
                   'patient': params.patientUuid,
                   'v': v || new DefaultCustomRep().getterSetter()
@@ -86834,7 +86842,8 @@ jshint -W026, -W116, -W098, -W003, -W068, -W069, -W004, -W033, -W030, -W117
               objParams = params;
           }
 
-          Restangular.one('visit').get(objParams).then(function(data) {
+          Restangular.one('visit').withHttpConfig({cache: caching})
+            .get(objParams).then(function(data) {
               if(angular.isDefined(data.results)) data = data.results.reverse();
               _successCallbackHandler(successCallback, data);
           }, function(error) {
@@ -86878,14 +86887,17 @@ jshint -W026, -W116, -W098, -W003, -W068, -W069, -W004, -W033, -W030, -W117
                   'visit:(uuid,visitType:(uuid,name))))';
 
           var visitUuid=null;
+          var caching = false;
           if(angular.isDefined(params) && typeof params === 'object') {
               visitUuid = params.visitUuid;
+              caching = params.caching || false;
           } else {
               //Assume string passed
               visitUuid = params;
           }
 
-          Restangular.one('visit', visitUuid).get({v:rep}).then(function(data) {
+          Restangular.one('visit', visitUuid).withHttpConfig({cache: caching})
+            .get({v:rep}).then(function(data) {
               if(angular.isDefined(data.encounters)) {
                   data = data.encounters.reverse();
               }
