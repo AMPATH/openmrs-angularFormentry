@@ -58,16 +58,27 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             name: 'datepicker',
             template: '<input class="form-control" ng-model="model[options.key]"  ' +
             'is-open="to.isOpen" ng-click="open($event)"  ' +
-            'datepicker-options="to.datepickerOptions" />',
+            'datepicker-options="to.datepickerOptions" />'+
+            '<div ng-if="to.weeksList && to.weeksList.length > 0" class="input-group-btn">' +
+            '<button type="button" ng-disabled="to.disabled" class="btn btn-default dropdown-toggle" data-toggle="dropdown" >'+
+            'Weeks <span class="caret"></span></button>'+
+            '<ul class="dropdown-menu dropdown-menu-right">' +
+             '<li ng-repeat="week in to.weeksList"><a ng-click="setByWeeks(week)">{{week}} Weeks</a></li>'+
+            '</ul>'+
+            '</div>',
 
             wrapper: ['bootstrapLabel', 'bootstrapHasError'],
 
-            controller: ['$scope', '$log', function($scope, $log) {
+            controller: ['$scope', '$log', 'moment', function($scope, $log, moment) {
                 $scope.open = function($event) {
                     $event.preventDefault();
                     $event.stopPropagation();
-                    $log.info('controller does a good job!');
                     $scope.opened = true;
+                };
+                
+                $scope.setByWeeks = function(week) {
+                    var oneMonth = new moment().add(week, 'weeks');
+                    $scope.options.value(oneMonth.toDate());
                 };
 
             }],
