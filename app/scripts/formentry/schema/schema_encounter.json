@@ -157,7 +157,8 @@
                             "default": "",
                             "questionOptions": {
                                 "rendering": "date",
-                                "concept": "1234"
+                                "concept": "1234",
+                                "weeksList" :[4,8,12]
                             },
                             "validators": []
                         },

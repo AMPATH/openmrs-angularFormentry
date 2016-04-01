@@ -409,7 +409,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
             if (_question.questionOptions.rendering === 'date') {
                 obsField['type'] = 'datepicker';
                 obsField['templateOptions']['datepickerPopup'] = 'dd-MMMM-yyyy';
-
+                obsField['templateOptions']['weeksList'] = _question.questionOptions.weeksList || [];
                 if (typeof obsField['templateOptions']['setFieldValue'] !== 'function') {
                     obsField['templateOptions']['setFieldValue'] =
                         HistoricalFieldHelperService.fillPrimitiveValue;
