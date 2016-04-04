@@ -55,6 +55,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
                 attribute = {
                     attributeType: field.attributeType,
+                    hydratedObject:value,
                     value: value
                 };
 
@@ -107,7 +108,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
                field.value = existingPersonAttribute[0].value.uuid;
                field.initialUuid = existingPersonAttribute.uuid;
             }
-                    
+
             return field;
         }
 
