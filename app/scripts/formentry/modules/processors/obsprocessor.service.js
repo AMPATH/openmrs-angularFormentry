@@ -418,10 +418,11 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       var initialValue = field.initialValue;
       var value = field.value;
       if (field.schemaQuestion.questionOptions.rendering === 'date') {
-        if (_.isDate(value)) {
+        if (_.isDate(value) || (!_.isUndefined(value) && !_.isNull(value) && value !== '')) {
           value = _parseDate(field.value);
+          console.log('test value', value, field.value);
         }
-        if (_.isDate(initialValue)) {
+        if (_.isDate(initialValue) || (!_.isUndefined(initialValue) && !_.isNull(initialValue))) {
           initialValue = _parseDate(field.initialValue);
         }
       }

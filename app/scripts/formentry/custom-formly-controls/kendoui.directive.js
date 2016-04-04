@@ -15,6 +15,39 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
   mod.run(function(formlyConfig) {
     // Configure custom types
     formlyConfig.setType({
+      name: 'kendo-date-picker',
+      // extends:"select",
+      wrapper: ['bootstrapLabel', 'bootstrapHasError', 'validation'],
+      template: '<div> ' +
+        '<input style="width: 100%" kendo-date-picker="myPicker" k-options="datePickerConfig" '+
+        'ng-model="$scope.selectModel" ng-click="open()"/> ' +
+        '</div> ',
+
+      controller: function($scope, $log, $timeout) {
+        var x = $scope.model[$scope.options.key.split('.')[0]];
+        
+        if(!_.isUndefined(x.value)) {
+          //format the date
+          x.value = kendo.toString(x.value, "yyyy-MM-dd HH:mm:ss+0300");
+        }
+        $scope.datePickerConfig = {
+          format : "dd-MM-yyyy",
+          parseFormats: ["yyyy-MM-ddTHH:mm:ss+0300", "yyyy-MM-dd HH:mm:ss+0300", "yyyy-MM-ddTHH:mm:ss.000Z", "yyyy-MM-ddTHH:mm:ss", "dd-MM-yyyy", "yyyy-MM-dd", "dd/MM/yyyy", "yyyy/MM/dd"],
+          change : function() {
+            var datePickerVal = this.value();
+            x.value = $scope.options.value(kendo.toString(datePickerVal, "yyyy-MM-dd HH:mm:ss+0300"));
+            console.log('test kendo', datePickerVal)
+            $scope.$digest();
+          }
+        };
+
+        $scope.open = function() {
+            $scope.myPicker.open();
+        };
+      }
+    });
+
+    formlyConfig.setType({
       name: 'kendo-select-multiple',
       // extends:"select",
       wrapper: ['bootstrapLabel', 'bootstrapHasError', 'validation'],

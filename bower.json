@@ -25,7 +25,7 @@
     "angular-cookies": "~1.4.8",
     "moment": "~2.10.6",
     "angular-moment": "~0.10.3",
-    "kendo-ui": "kendo-ui-core#~2016.1.212",
+    "kendo-ui": "kendo-ui-core#~2016.1.226",
     "openmrs-ngresource": "https://github.com/AMPATH/openmrs-ngresource.git#0.0.4"
   },
   "resolutions": {
