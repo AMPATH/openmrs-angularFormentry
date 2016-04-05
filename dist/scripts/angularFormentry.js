@@ -3095,7 +3095,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
                 attribute = {
                     attributeType: field.attributeType,
-                    value: value
+                    hydratedObject:value
                 };
 
             } else if (initialValue !== value && (!_.isNull(value) &&
@@ -3103,7 +3103,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
                 attribute = {
                     uuid: field.initialUuid,
                     attributeType: field.attributeType,
-                    value: value
+                    hydratedObject:value
                 };
             }
 
@@ -3147,7 +3147,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
                field.value = existingPersonAttribute[0].value.uuid;
                field.initialUuid = existingPersonAttribute.uuid;
             }
-                    
+
             return field;
         }
 
