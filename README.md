@@ -13,9 +13,13 @@ Run `grunt` for building and `grunt serve` for preview.
 Running `grunt test` will run the unit tests with karma.
 
 Introduction
+
 Angular OpenMRS formentry is a module that aims at using angular framework to create a standalone module that can be used by the community and angular AMRS project to create forms.
 This Module will require a schema in a given format. This schema will be passed to this module which will generate a form based on the schema specification.
+
+
 Module Components
+
 This module will have the following key components:
 Field Handlers
 Form Processors
@@ -25,6 +29,8 @@ Payload generators
 Schema
 
 FORM SCHEMA FORMAT
+
+
 The form schema to be consumed with angular formentry module should be in this format
 A form schema is a json document made up of the following main properties:
 a) name - name of the form,
@@ -34,6 +40,7 @@ d) referencedForms - Other forms that can be used to build the current form
 e) pages - Holds the form contents organized into page. A page is made up of several sections and the section contains various field.
 
 FIELDS
+
 The fields are supposed to be used to represent the questions on form. The module supports a wide range of field types namely:
 a) encounterProvider,
 b) encounterLocation,
@@ -68,6 +75,8 @@ hide: "expression to hide the field"
 }
 
 Structure of a Page:
+
+
 A page is a way of grouping related fields/questions on the a given page on the form. A page can have several sections. Page structure:
 {
 label : "page label",
