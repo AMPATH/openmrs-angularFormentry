@@ -55,8 +55,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
                 attribute = {
                     attributeType: field.attributeType,
-                    hydratedObject:value,
-                    value: value
+                    hydratedObject:value
                 };
 
             } else if (initialValue !== value && (!_.isNull(value) &&
@@ -64,7 +63,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
                 attribute = {
                     uuid: field.initialUuid,
                     attributeType: field.attributeType,
-                    value: value
+                    hydratedObject:value
                 };
             }
 
