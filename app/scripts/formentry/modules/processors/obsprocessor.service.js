@@ -471,7 +471,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
         if (Object.keys(obs).length > 0) {
           obsRestPayload.push(obs);
         }
-      } else if (_.isArray(field.value)) {
+      } else if (_.isArray(field.value) || _.isArray(field.initialValue)) {
         var initialValue = field.initialValue;
         var initialUuid = field.initialUuid;
         var value = field.value;
