@@ -29,6 +29,7 @@
         $scope.vm.hasClickedSubmit = false;
         var schema;
         var newForm;
+        
         // var testSchema = 'schema_encounter';
         var testSchema = 'adult';
 
