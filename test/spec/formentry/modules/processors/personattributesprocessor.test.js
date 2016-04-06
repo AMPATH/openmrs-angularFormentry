@@ -61,14 +61,14 @@
             it('should create person attributes payload which should be an array', function () {
                 expect(personAttributesPayload).to.be.an('array');
                 expect(personAttributesPayload[0]).to.have.property('attributeType');
-                expect(personAttributesPayload[0]).to.have.property('value');
+                expect(personAttributesPayload[0]).to.have.property('hydratedObject');
             });
 
             it('should create person attributes payload for simple questions', function () {
                 var sampleSection = model['section_Section_Name'];
                 var sampleField1 = sampleSection['personAttribute_1233'];
                 expect(personAttributesPayload[0].attributeType).to.equal(sampleField1.attributeType);
-                expect(personAttributesPayload[0].value).to.equal(sampleField1.value);
+                expect(personAttributesPayload[0].hydratedObject).to.equal(sampleField1.value);
 
             });
 
