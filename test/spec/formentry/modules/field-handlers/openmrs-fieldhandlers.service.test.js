@@ -125,7 +125,7 @@
       function() {
         var mockQuestion = mockSchema.pages[1].sections[0].questions[1];
         var field = handlerMethod(mockQuestion, model, questionMap);
-        expect(field).to.have.deep.property('type', 'datepicker');
+        expect(field).to.have.deep.property('type', 'kendo-date-picker');
         expect(field).to.have.deep.property('templateOptions.label',
         '7b. If Unscheduled, actual scheduled date');
         expect(field).to.have.property('templateOptions').that.is.an('object');
@@ -150,7 +150,7 @@
         expect(field[1]).to.have.deep
         .property('templateOptions.datepickerPopup', 'dd-MMMM-yyyy');
         expect(field[0]).not.to.have.ownProperty('templateOptions.datepickerPopup');
-        expect(field[1]).to.have.deep.property('type', 'datepicker');
+        expect(field[1]).to.have.deep.property('type', 'kendo-date-picker');
         expect(field[0]).to.have.deep.property('type', 'input');
         expect(field[0].key).to.match(/(value)/);
         expect(field[1].key).to.match(/^obsDate/);
@@ -205,7 +205,7 @@
         expect(field[1]).to.have.deep
         .property('templateOptions.datepickerPopup', 'dd-MMMM-yyyy');
         expect(field[0]).not.to.have.ownProperty('templateOptions.datepickerPopup');
-        expect(field[1]).to.have.deep.property('type', 'datepicker');
+        expect(field[1]).to.have.deep.property('type', 'kendo-date-picker');
         expect(field[0]).to.have.deep.property('type', 'input');
       });
     });

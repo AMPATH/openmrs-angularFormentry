@@ -1362,7 +1362,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
             field.templateOptions = {};
             var key = field.key;
             field['key'] = key.replace(/obs/gi, 'obsDate');;
-            field['type'] = 'datepicker';
+            field['type'] = 'kendo-date-picker';
             field['templateOptions']['datepickerPopup'] = 'dd-MMMM-yyyy';
             field['templateOptions']['label'] = 'Date';
             field['templateOptions']['type'] = 'text';
@@ -1376,16 +1376,16 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
             field.data.id = field.key;
 
             _handleValidators(field,
-                question.questionOptions.shownDateOptions ? 
+                question.questionOptions.shownDateOptions ?
                 question.questionOptions.shownDateOptions.validators : [],
                 questionMap);
-                
-           _handleExpressionProperties(field, 
-           question.questionOptions.shownDateOptions ? 
+
+           _handleExpressionProperties(field,
+           question.questionOptions.shownDateOptions ?
                 question.questionOptions.shownDateOptions.required : undefined,
-                 question.questionOptions.shownDateOptions ? 
-                question.questionOptions.shownDateOptions.disable: undefined, 
-           undefined, question.questionOptions.shownDateOptions ? 
+                 question.questionOptions.shownDateOptions ?
+                question.questionOptions.shownDateOptions.disable: undefined,
+           undefined, question.questionOptions.shownDateOptions ?
                 question.questionOptions.shownDateOptions.calculate: undefined);
 
             if (question.questionOptions.shownDateOptions) {
@@ -1488,7 +1488,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
             var obsField = {};
             obsField = _createFormlyFieldHelper(_question, _model, obsId);
             if (_question.questionOptions.rendering === 'date') {
-                obsField['type'] = 'datepicker';
+                obsField['type'] = 'kendo-date-picker';
                 obsField['templateOptions']['datepickerPopup'] = 'dd-MMMM-yyyy';
                 obsField['templateOptions']['weeksList'] = _question.questionOptions.weeksList || [];
                 if (typeof obsField['templateOptions']['setFieldValue'] !== 'function') {
@@ -2103,10 +2103,11 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       var initialValue = field.initialValue;
       var value = field.value;
       if (field.schemaQuestion.questionOptions.rendering === 'date') {
-        if (_.isDate(value)) {
+        if (_.isDate(value) || (!_.isUndefined(value) && !_.isNull(value) && value !== '')) {
           value = _parseDate(field.value);
+          console.log('test value', value, field.value);
         }
-        if (_.isDate(initialValue)) {
+        if (_.isDate(initialValue) || (!_.isUndefined(initialValue) && !_.isNull(initialValue))) {
           initialValue = _parseDate(field.initialValue);
         }
       }
@@ -5371,6 +5372,39 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
   mod.run(function(formlyConfig) {
     // Configure custom types
+    formlyConfig.setType({
+      name: 'kendo-date-picker',
+      // extends:"select",
+      wrapper: ['bootstrapLabel', 'bootstrapHasError', 'validation'],
+      template: '<div> ' +
+        '<input style="width: 100%" kendo-date-picker="myPicker" k-options="datePickerConfig" '+
+        'ng-model="$scope.selectModel" ng-click="open()"/> ' +
+        '</div> ',
+
+      controller: function($scope, $log, $timeout) {
+        var x = $scope.model[$scope.options.key.split('.')[0]];
+        
+        if(!_.isUndefined(x.value)) {
+          //format the date
+          x.value = kendo.toString(x.value, "yyyy-MM-dd HH:mm:ss+0300");
+        }
+        $scope.datePickerConfig = {
+          format : "dd-MM-yyyy",
+          parseFormats: ["yyyy-MM-ddTHH:mm:ss+0300", "yyyy-MM-dd HH:mm:ss+0300", "yyyy-MM-ddTHH:mm:ss.000Z", "yyyy-MM-ddTHH:mm:ss", "dd-MM-yyyy", "yyyy-MM-dd", "dd/MM/yyyy", "yyyy/MM/dd"],
+          change : function() {
+            var datePickerVal = this.value();
+            x.value = $scope.options.value(kendo.toString(datePickerVal, "yyyy-MM-dd HH:mm:ss+0300"));
+            console.log('test kendo', datePickerVal)
+            $scope.$digest();
+          }
+        };
+
+        $scope.open = function() {
+            $scope.myPicker.open();
+        };
+      }
+    });
+
     formlyConfig.setType({
       name: 'kendo-select-multiple',
       // extends:"select",

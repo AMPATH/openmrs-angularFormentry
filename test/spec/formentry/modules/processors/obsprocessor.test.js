@@ -68,10 +68,12 @@
                 var sampleSection = model['section_Section_Name'];
                 var sampleField1 = sampleSection['obs1_1232'];
                 var sampleField2 = sampleSection['obs1_1234'];
+                var testDate = filter('date')(sampleField2.value, 'yyyy-MM-dd HH:mm:ss', '+0300');
+                var payloadDate = filter('date')(obsPayload[1].value, 'yyyy-MM-dd HH:mm:ss', '+0300');
                 expect(obsPayload[0].concept).to.equal(sampleField1.concept);
                 expect(obsPayload[0].value).to.equal(sampleField1.value);
                 expect(obsPayload[1].concept).to.equal(sampleField2.concept);
-                expect(obsPayload[1].value).to.equal(sampleField2.value);
+                expect(payloadDate).to.equal(testDate);
             });
 
             it('should create obs payload for obsGroup questions', function () {
@@ -86,9 +88,13 @@
                     var sampleField1 = sampleSection['obs1_1232'];
                     var sampleField2 = sampleSection['obs1_1234'];
                     var sampleField3 = sampleSection['obs1_1233'];
+
+                    var testDate = filter('date')(sampleField2.value, 'yyyy-MM-dd HH:mm:ss', '+0300');
+                    var payloadDate = filter('date')(obsPayload[1].value, 'yyyy-MM-dd HH:mm:ss', '+0300');
+                    testDate = testDate.split('+')[0];
                     expect(obsPayload[0].value).to.equal(sampleField1.value).that.is.a('string');
-                    expect(new Date(obsPayload[1].value)).to.eql(new Date(sampleField2.value)).that.is.a('Date');
-                    expect(obsPayload[1].value).to.equal(sampleField2.value).that.is.a('string');
+                    expect(payloadDate).to.eql(testDate).that.is.a('string');
+                    expect(new Date(payloadDate)).to.eql(new Date(testDate)).that.is.a('Date');
                     expect(obsPayload[2].value).to.equal(sampleField3.value).that.is.a('number');
                 });
 

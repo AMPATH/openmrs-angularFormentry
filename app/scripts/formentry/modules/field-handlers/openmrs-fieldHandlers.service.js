@@ -281,7 +281,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
             field.templateOptions = {};
             var key = field.key;
             field['key'] = key.replace(/obs/gi, 'obsDate');;
-            field['type'] = 'datepicker';
+            field['type'] = 'kendo-date-picker';
             field['templateOptions']['datepickerPopup'] = 'dd-MMMM-yyyy';
             field['templateOptions']['label'] = 'Date';
             field['templateOptions']['type'] = 'text';
@@ -295,16 +295,16 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
             field.data.id = field.key;
 
             _handleValidators(field,
-                question.questionOptions.shownDateOptions ? 
+                question.questionOptions.shownDateOptions ?
                 question.questionOptions.shownDateOptions.validators : [],
                 questionMap);
-                
-           _handleExpressionProperties(field, 
-           question.questionOptions.shownDateOptions ? 
+
+           _handleExpressionProperties(field,
+           question.questionOptions.shownDateOptions ?
                 question.questionOptions.shownDateOptions.required : undefined,
-                 question.questionOptions.shownDateOptions ? 
-                question.questionOptions.shownDateOptions.disable: undefined, 
-           undefined, question.questionOptions.shownDateOptions ? 
+                 question.questionOptions.shownDateOptions ?
+                question.questionOptions.shownDateOptions.disable: undefined,
+           undefined, question.questionOptions.shownDateOptions ?
                 question.questionOptions.shownDateOptions.calculate: undefined);
 
             if (question.questionOptions.shownDateOptions) {
@@ -407,7 +407,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
             var obsField = {};
             obsField = _createFormlyFieldHelper(_question, _model, obsId);
             if (_question.questionOptions.rendering === 'date') {
-                obsField['type'] = 'datepicker';
+                obsField['type'] = 'kendo-date-picker';
                 obsField['templateOptions']['datepickerPopup'] = 'dd-MMMM-yyyy';
                 obsField['templateOptions']['weeksList'] = _question.questionOptions.weeksList || [];
                 if (typeof obsField['templateOptions']['setFieldValue'] !== 'function') {
