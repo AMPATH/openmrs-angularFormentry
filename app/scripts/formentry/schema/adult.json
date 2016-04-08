@@ -531,6 +531,7 @@
             "sections": [
                 {
                     "label": "ART History",
+                    "isExpanded" : true,
                     "questions": [
                         {
                             "label": "Is patient currently on ART?",
