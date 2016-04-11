@@ -19,20 +19,17 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             // extends:"select",
             wrapper: ['bootstrapLabel', 'bootstrapHasError', 'validation'],
             template:
-            '<div style="margin-right: 27px;">' +
-            '<div class="col-xs-11" style="margin: 0px; padding: 0px;">'+
-            '<input style="width:100%" kendo-date-picker="myPicker" k-options="datePickerConfig" ' +
-            'ng-model="$scope.selectModel" ng-click="open()"/> ' +
-            '</div>' +
-            '<div style="margin: 0px; padding: 0px;" ng-if="to.weeksList && to.weeksList.length > 0" class="col-xs-1">' +
-            '<button type="button" ng-disabled="to.disabled" class="btn btn-sm btn-default dropdown-toggle" data-toggle="dropdown" >'+
-            '<span class=""> Weeks </span> <span class="caret"></span></button>'+
-            '<ul class="dropdown-menu dropdown-menu-right">' +
-             '<li ng-repeat="week in to.weeksList"><a ng-click="setByWeeks(week)">{{week}} Weeks</a></li>'+
-            '</ul>'+
-            '</div>' +
-            '</div>' + 
-            '</br>',
+            '<div class="input-group" style="width:100%">' +
+                '<input style="width:100%" kendo-date-picker="myPicker" k-options="datePickerConfig" ' +
+                'ng-model="$scope.selectModel" ng-click="open()"/> ' +
+                '<div ng-if="to.weeksList && to.weeksList.length > 0" class="input-group-btn">' +
+                    '<button type="button" ng-disabled="to.disabled" class="btn btn-sm btn-default dropdown-toggle" data-toggle="dropdown" >'+
+                    '<span class=""> Weeks </span> <span class="caret"></span></button>'+
+                    '<ul class="dropdown-menu dropdown-menu-right">' +
+                    '<li ng-repeat="week in to.weeksList"><a ng-click="setByWeeks(week)">{{week}} Weeks</a></li>'+
+                    '</ul>'+
+                '</div>' +
+            '</div>',
 
             controller: function($scope, $log, $timeout, moment) {
                 var x = $scope.model[$scope.options.key.split('.')[0]];

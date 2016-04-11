@@ -62,7 +62,8 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                         key: 'section_' + sectionId,
                         type: 'section',
                         templateOptions: {
-                            label: section.label
+                            label: section.label,
+                            expanded: section.isExpanded
                         },
                         data: {
                             fields: fields
