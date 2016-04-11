@@ -350,7 +350,8 @@
                 templateOptions: {
                     parentFieldKey: 'somekey',
                     parentFieldModel: {},
-                    parentField: regularSchemaQuestion
+                    parentField: regularSchemaQuestion,
+                    prepopulate: undefined
                 }
              };
              
