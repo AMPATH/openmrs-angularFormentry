@@ -1,0 +1,469 @@
+{
+    "name": "LabResults",
+    "uuid": "xxxx",
+    "processor": "EncounterFormProcessor",
+    "pages": [
+        {
+            "label": "Test Results",
+            "sections": [
+                {
+                    "label": "Tests Results and Test Date (Please record date sample was drawn, rather than date test was run)",
+                    "questions": [
+                        {
+                            "type": "obsGroup",
+                            "label": "Test Results",
+                            "questionOptions": {
+                                "concept": "af46861e-597a-48a3-b3d4-a134d0b1c5fa",
+                                "rendering": "group"
+                            },
+                            "questions": [
+                                {
+                                    "label": "WBC/mm3",
+                                    "questionOptions": {
+                                        "concept": "a896dea2-1350-11df-a1f1-0026b9348838",
+                                        "max": "500",
+                                        "min": "0",
+                                        "showDate": "true",
+                                        "rendering": "number"
+                                    },
+                                    "type": "obs",
+                                    "validators": [
+                                        {
+                                            "type": "date"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "label": "Hgb g/dL",
+                                    "questionOptions": {
+                                        "concept": "a8908a16-1350-11df-a1f1-0026b9348838",
+                                        "max": "50",
+                                        "min": "0",
+                                        "showDate": "true",
+                                        "rendering": "number"
+                                    },
+                                    "type": "obs",
+                                    "validators": [
+                                        {
+                                            "type": "date"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "label": "MCV",
+                                    "questionOptions": {
+                                        "concept": "a898201e-1350-11df-a1f1-0026b9348838",
+                                        "max": "500",
+                                        "min": "0",
+                                        "showDate": "true",
+                                        "rendering": "number"
+                                    },
+                                    "type": "obs",
+                                    "validators": [
+                                        {
+                                            "type": "date"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "label": "ALC/ mm3",
+                                    "questionOptions": {
+                                        "concept": "a898b20e-1350-11df-a1f1-0026b9348838",
+                                        "max": "500",
+                                        "min": "0",
+                                        "showDate": "true",
+                                        "rendering": "number"
+                                    },
+                                    "type": "obs",
+                                    "validators": [
+                                        {
+                                            "type": "date"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "type": "obs",
+                                    "questionOptions": {
+                                        "concept": "a8a8bb18-1350-11df-a1f1-0026b9348838",
+                                        "showDate": "true",
+                                        "rendering": "number"
+                                    },
+                                    "label": "CD4:",
+                                    "validators": [
+                                        {
+                                            "type": "date"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "type": "obs",
+                                    "label": "CD4%:",
+                                    "questionOptions": {
+                                        "rendering": "number",
+                                        "max": "100",
+                                        "min": "0",
+                                        "showDate": "true",
+                                        "concept": "a8970a26-1350-11df-a1f1-0026b9348838"
+                                    },
+                                    "validators": [
+                                        {
+                                            "type": "date"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "type": "obs",
+                                    "label": "Viral Load:",
+                                    "questionOptions": {
+                                        "concept": "a8982474-1350-11df-a1f1-0026b9348838",
+                                        "rendering": "number",
+                                        "max": "10000000",
+                                        "min": "0",
+                                        "showDate": "true"
+                                    },
+                                    "validators": [
+                                        {
+                                            "type": "date"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "label": "Rapid HIV",
+                                    "questionOptions": {
+                                        "concept": "a8999dfe-1350-11df-a1f1-0026b9348838",
+                                        "answers": [
+                                            {
+                                                "concept": "a896f3a6-1350-11df-a1f1-0026b9348838",
+                                                "label": "Positive"
+                                            },
+                                            {
+                                                "concept": "a896d2cc-1350-11df-a1f1-0026b9348838",
+                                                "label": "Negative"
+                                            },
+                                            {
+                                                "concept": "a89a7ae4-1350-11df-a1f1-0026b9348838",
+                                                "label": "Indeterminate"
+                                            },
+                                            {
+                                                "concept": "a89c3d8e-1350-11df-a1f1-0026b9348838",
+                                                "label": "Poor sample quality"
+                                            },
+                                            {
+                                                "concept": "a899b50a-1350-11df-a1f1-0026b9348838",
+                                                "label": "Unknown"
+                                            },
+                                            {
+                                                "concept": "a899ea48-1350-11df-a1f1-0026b9348838",
+                                                "label": "Not done"
+                                            }
+                                        ],
+                                        "showDate": "true",
+                                        "rendering": "select"
+                                    },
+                                    "type": "obs",
+                                    "validators": [
+                                        {
+                                            "type": "date"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "label": "HIV DNA PCR",
+                                    "questionOptions": {
+                                        "concept": "a898fe80-1350-11df-a1f1-0026b9348838",
+                                        "answers": [
+                                            {
+                                                "concept": "a896f3a6-1350-11df-a1f1-0026b9348838",
+                                                "label": "Positive"
+                                            },
+                                            {
+                                                "concept": "a896d2cc-1350-11df-a1f1-0026b9348838",
+                                                "label": "Negative"
+                                            },
+                                            {
+                                                "concept": "a89a7ae4-1350-11df-a1f1-0026b9348838",
+                                                "label": "Indeterminate"
+                                            },
+                                            {
+                                                "concept": "a89c3d8e-1350-11df-a1f1-0026b9348838",
+                                                "label": "Poor sample quality"
+                                            },
+                                            {
+                                                "concept": "a899ea48-1350-11df-a1f1-0026b9348838",
+                                                "label": "Not done"
+                                            }
+                                        ],
+                                        "showDate": "true",
+                                        "rendering": "select"
+                                    },
+                                    "type": "obs",
+                                    "validators": [
+                                        {
+                                            "type": "date"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "label": "TB PCR",
+                                    "questionOptions": {
+                                        "concept": "a8a47094-1350-11df-a1f1-0026b9348838",
+                                        "answers": [
+                                            {
+                                                "concept": "a896f3a6-1350-11df-a1f1-0026b9348838",
+                                                "label": "Positive"
+                                            },
+                                            {
+                                                "concept": "a896d2cc-1350-11df-a1f1-0026b9348838",
+                                                "label": "Negative"
+                                            },
+                                            {
+                                                "concept": "a89a7ae4-1350-11df-a1f1-0026b9348838",
+                                                "label": "Indeterminate"
+                                            },
+                                            {
+                                                "concept": "a89c3d8e-1350-11df-a1f1-0026b9348838",
+                                                "label": "Poor sample quality"
+                                            }
+                                        ],
+                                        "showDate": "true",
+                                        "rendering": "select"
+                                    },
+                                    "type": "obs",
+                                    "validators": [
+                                        {
+                                            "type": "date"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "type": "obs",
+                                    "label": "Creatinine mmol/L:",
+                                    "questionOptions": {
+                                        "concept": "a897e450-1350-11df-a1f1-0026b9348838",
+                                        "rendering": "number",
+                                        "showDate": "true",
+                                        "max": "11050",
+                                        "min": "0"
+                                    },
+                                    "validators": [
+                                        {
+                                            "type": "date"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "type": "obs",
+                                    "label": "SGPT(ALT):",
+                                    "questionOptions": {
+                                        "concept": "a896ca48-1350-11df-a1f1-0026b9348838",
+                                        "rendering": "number",
+                                        "max": "3500",
+                                        "min": "0",
+                                        "showDate": "true"
+                                    },
+                                    "validators": [
+                                        {
+                                            "type": "date"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "type": "obs",
+                                    "label": "AST:",
+                                    "questionOptions": {
+                                        "concept": "a896c8ae-1350-11df-a1f1-0026b9348838",
+                                        "rendering": "number",
+                                        "max": "3500",
+                                        "min": "0",
+                                        "showDate": "true"
+                                    },
+                                    "validators": [
+                                        {
+                                            "type": "date"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "type": "obs",
+                                    "label": "Platelets:",
+                                    "questionOptions": {
+                                        "concept": "a8970954-1350-11df-a1f1-0026b9348838",
+                                        "rendering": "number",
+                                        "max": "1000",
+                                        "min": "0",
+                                        "showDate": "true"
+                                    },
+                                    "validators": [
+                                        {
+                                            "type": "date"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "label": "Sputum Gene xpert MTB:",
+                                    "questionOptions": {
+                                        "concept": "741517cf-8bac-4755-b289-8dd2a2df7962",
+                                        "answers": [
+                                            {
+                                                "concept": "a896f3a6-1350-11df-a1f1-0026b9348838",
+                                                "label": "Positive"
+                                            },
+                                            {
+                                                "concept": "a896d2cc-1350-11df-a1f1-0026b9348838",
+                                                "label": "Negative"
+                                            },
+                                            {
+                                                "concept": "a89a7ae4-1350-11df-a1f1-0026b9348838",
+                                                "label": "Indeterminate"
+                                            },
+                                            {
+                                                "concept": "a89c3d8e-1350-11df-a1f1-0026b9348838",
+                                                "label": "Poor sample quality"
+                                            }
+                                        ],
+                                        "showDate": "true",
+                                        "rendering": "select"
+                                    },
+                                    "type": "obs",
+                                    "validators": [
+                                        {
+                                            "type": "date"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "label": "Sputum AFB Smear:",
+                                    "questionOptions": {
+                                        "concept": "a8945d4e-1350-11df-a1f1-0026b9348838",
+                                        "answers": [
+                                            {
+                                                "concept": "a8a45ab4-1350-11df-a1f1-0026b9348838",
+                                                "label": "1+"
+                                            },
+                                            {
+                                                "concept": "a8a45bd6-1350-11df-a1f1-0026b9348838",
+                                                "label": "2+"
+                                            },
+                                            {
+                                                "concept": "a8a45ca8-1350-11df-a1f1-0026b9348838",
+                                                "label": "3+"
+                                            },
+                                            {
+                                                "concept": "a896f3a6-1350-11df-a1f1-0026b9348838",
+                                                "label": "Positive"
+                                            },
+                                            {
+                                                "concept": "a896d2cc-1350-11df-a1f1-0026b9348838",
+                                                "label": "Negative"
+                                            },
+                                            {
+                                                "concept": "a89a7ae4-1350-11df-a1f1-0026b9348838",
+                                                "label": "Indeterminate"
+                                            },
+                                            {
+                                                "concept": "a89c3d8e-1350-11df-a1f1-0026b9348838",
+                                                "label": "Poor sample quality"
+                                            }
+                                        ],
+                                        "showDate": "true",
+                                        "rendering": "select"
+                                    },
+                                    "type": "obs",
+                                    "validators": [
+                                        {
+                                            "type": "date"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "label": "Sputum Culture:",
+                                    "questionOptions": {
+                                        "concept": "a8a462a2-1350-11df-a1f1-0026b9348838",
+                                        "answers": [
+                                            {
+                                                "concept": "a896f3a6-1350-11df-a1f1-0026b9348838",
+                                                "label": "Positive"
+                                            },
+                                            {
+                                                "concept": "a896d2cc-1350-11df-a1f1-0026b9348838",
+                                                "label": "Negative"
+                                            },
+                                            {
+                                                "concept": "a89c3d8e-1350-11df-a1f1-0026b9348838",
+                                                "label": "Poor sample quality"
+                                            },
+                                            {
+                                                "concept": "0b4e9aa1-e470-46d1-9d2d-0d8a475561b9",
+                                                "label": "Mycobacterium tuberculosis"
+                                            },
+                                            {
+                                                "concept": "a01149c4-7f0e-4d27-8f42-dc019e3330ec",
+                                                "label": "NonTuberculosis mycobacteria"
+                                            }
+                                        ],
+                                        "showDate": "true",
+                                        "rendering": "select"
+                                    },
+                                    "type": "obs",
+                                    "validators": [
+                                        {
+                                            "type": "date"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "label": "CXR Code:",
+                                    "questionOptions": {
+                                        "concept": "a8908192-1350-11df-a1f1-0026b9348838",
+                                        "answers": [
+                                            {
+                                                "concept": "a899e7b4-1350-11df-a1f1-0026b9348838",
+                                                "label": "Normal"
+                                            },
+                                            {
+                                                "concept": "a8a6aa3a-1350-11df-a1f1-0026b9348838",
+                                                "label": "Cardiomegaly"
+                                            },
+                                            {
+                                                "concept": "a8ae8c1e-1350-11df-a1f1-0026b9348838",
+                                                "label": "Cavitary"
+                                            },
+                                            {
+                                                "concept": "a8ae8a66-1350-11df-a1f1-0026b9348838",
+                                                "label": "Diffuse abn/non-miliary"
+                                            },
+                                            {
+                                                "concept": "a8ae8980-1350-11df-a1f1-0026b9348838",
+                                                "label": "Infiltrate"
+                                            },
+                                            {
+                                                "concept": "a89a77ce-1350-11df-a1f1-0026b9348838",
+                                                "label": "Miliary"
+                                            },
+                                            {
+                                                "concept": "a89a76fc-1350-11df-a1f1-0026b9348838",
+                                                "label": "PI Effusion"
+                                            },
+                                            {
+                                                "concept": "a8aaf3e2-1350-11df-a1f1-0026b9348838",
+                                                "label": "Other"
+                                            }
+                                        ],
+                                        "showDate": "true",
+                                        "rendering": "select"
+                                    },
+                                    "type": "obs",
+                                    "validators": [
+                                        {
+                                            "type": "date"
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
