@@ -72,6 +72,7 @@
                             "required": "true",
                             "default": "",
                             "historicalExpression": "'previous test'",
+                            "historicalPrepopulate": true,
                             "questionOptions": {
                                 "rendering": "textarea",
                                 "concept": "1232",

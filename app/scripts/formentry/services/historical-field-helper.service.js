@@ -35,14 +35,15 @@
 
         return service;
 
-        function createHistoricalTextField(parentField, parentFieldModel, parentFieldKey) {
+        function createHistoricalTextField(parentField, parentFieldModel, parentFieldKey, prepopulateValue) {
             return {
                 key: 'historical-text-val',
                 type: 'historical-text',
                 templateOptions: {
                     parentFieldKey: parentFieldKey,
                     parentFieldModel: parentFieldModel,
-                    parentField: parentField
+                    parentField: parentField,
+                    prepopulate: prepopulateValue
                 }
             };
         }

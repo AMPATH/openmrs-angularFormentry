@@ -162,7 +162,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                             fields.push(f);
                             if (f.templateOptions.historicalExpression) {
                                 fields.push(HistoricalFieldHelperService.
-                                    createHistoricalTextField(f, model, f.key));
+                                    createHistoricalTextField(f, model, f.key, question.historicalPrepopulate));
                             }
                         });
                     } else {
@@ -170,7 +170,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                         fields.push(field);
                         if (field.templateOptions.historicalExpression) {
                             fields.push(HistoricalFieldHelperService.
-                                createHistoricalTextField(field, model, field.key));
+                                createHistoricalTextField(field, model, field.key, question.historicalPrepopulate));
                         }
                     }
 
@@ -254,7 +254,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                         fields.push(obsField);
                         if (obsField.templateOptions.historicalExpression) {
                             fields.push(HistoricalFieldHelperService.
-                                createHistoricalTextField(obsField, model, obsField.key));
+                                createHistoricalTextField(obsField, model, obsField.key, question.historicalPrepopulate));
                         }
 
                     }
