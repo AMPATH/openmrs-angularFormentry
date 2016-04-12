@@ -30,8 +30,8 @@
         var schema;
         var newForm;
         
-        // var testSchema = 'schema_encounter';
-        var testSchema = 'adult';
+        var testSchema = 'schema_encounter';
+        //var testSchema = 'adult';
 
         //connect to database
         configService.addJsonSchema('hostServer', 'http://localhost:8080/amrs/ws/rest/v1/');

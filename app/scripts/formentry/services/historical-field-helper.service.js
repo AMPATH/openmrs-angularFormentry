@@ -218,7 +218,7 @@
         }
 
         function getDisplayText(value, callback, fieldLabel) {
-            callback('"' + value + '"');
+            callback(value);
         }
 
         function getDisplayTextFromOptions(value, options, valueProperty,
@@ -246,7 +246,7 @@
 
                 });
             }
-            callback('"' + displayText + '"');
+            callback(displayText);
         }
 
         //#endregion

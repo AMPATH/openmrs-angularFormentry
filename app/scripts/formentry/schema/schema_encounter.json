@@ -53,6 +53,7 @@
                 },
                 {
                     "label": "Section Name",
+                    "isExpanded" : true,
                     "questions": [
                         {
                             "type": "personAttribute",
