@@ -1,5 +1,5 @@
 {
-    "name": "component_pcp-prophy",
+    "name": "component_pcpprop",
     "uuid": "xxxx",
     "processor": "EncounterFormProcessor",
     "pages": [
@@ -7,7 +7,7 @@
             "label": "PCP Prophylaxis",
             "sections": [
                 {
-                    "label": "PCP Prophylaxis current",
+                    "label": "PCP prophylaxis current",
                     "questions": [
                         {
                             "label": "PCP Prophylaxis:",
@@ -17,7 +17,7 @@
                                 "answers": [
                                     {
                                         "concept": "a899e0ac-1350-11df-a1f1-0026b9348838",
-                                        "label": "NONE"
+                                        "label": "None"
                                     },
                                     {
                                         "concept": "a8989396-1350-11df-a1f1-0026b9348838",
@@ -33,10 +33,15 @@
                             "required": "true",
                             "type": "obs",
                             "validators": []
-                        },
+                        }
+                    ]
+                },
+                {
+                    "label": "PCP prophylaxis adherence",
+                    "questions": [
                         {
                             "type": "obsGroup",
-                            "label": "PCP Prophylaxis Adherence",
+                            "label": "PCP prophylaxis adherence",
                             "questionOptions": {
                                 "concept": "275eee16-c358-4f3a-ac16-e8f24659df87",
                                 "rendering": "group"
@@ -71,13 +76,9 @@
                                             "message": "Patient on PCP Prophylaxis. Please provide adherence history"
                                         }
                                     ],
-                                    "hide2": {
-                                        "hideWhenExpression": "isEmpty(pcpProphylaxisCurrent) || pcpProphylaxisCurrent === 'a899e0ac-1350-11df-a1f1-0026b9348838'"
-                                    },
-                                    "hide": {
-                                      "hideWhenExpression": "!arrayContains(['a8989396-1350-11df-a1f1-0026b9348838','a890c9e0-1350-11df-a1f1-0026b9348838'],pcpProphylaxisCurrent)"
+                                    "disable": {
+                                        "disableWhenExpression": "isEmpty(pcpProphylaxisCurrent) || pcpProphylaxisCurrent === 'a899e0ac-1350-11df-a1f1-0026b9348838'"
                                     }
-
                                 },
                                 {
                                     "label": "Adherence (PCP) Reasons for Poor/Fair:",
@@ -142,8 +143,8 @@
                                     },
                                     "type": "obs",
                                     "validators": [],
-                                    "hide": {
-                                        "hideWhenExpression": "isEmpty(pcpProphylaxisCurrent) || pcpProphylaxisCurrent === 'a899e0ac-1350-11df-a1f1-0026b9348838' || !arrayContains(['a73d20b3-d721-4763-a362-14a0c41a6b5e','fdaf8b47-ea14-4d28-80fa-e1da58a30e8b'], pcpProphylaxisAdherence)"
+                                    "disable": {
+                                        "disableWhenExpression": "isEmpty(pcpProphylaxisCurrent) || pcpProphylaxisCurrent === 'a899e0ac-1350-11df-a1f1-0026b9348838' || !arrayContains(['a73d20b3-d721-4763-a362-14a0c41a6b5e','fdaf8b47-ea14-4d28-80fa-e1da58a30e8b'], pcpProphylaxisAdherence)"
                                     }
                                 },
                                 {
@@ -155,8 +156,8 @@
                                     "type": "obs",
                                     "id": "pcpOtherAdherence",
                                     "validators": [],
-                                    "hide": {
-                                        "hideWhenExpression": "isEmpty(pcpProphylaxisCurrent) || pcpProphylaxisCurrent === 'a899e0ac-1350-11df-a1f1-0026b9348838' || !arrayContains(['a73d20b3-d721-4763-a362-14a0c41a6b5e','fdaf8b47-ea14-4d28-80fa-e1da58a30e8b'], pcpProphylaxisAdherence)"
+                                    "disable": {
+                                        "disableWhenExpression": "isEmpty(pcpProphylaxisCurrent) || pcpProphylaxisCurrent === 'a899e0ac-1350-11df-a1f1-0026b9348838' || !arrayContains(['a73d20b3-d721-4763-a362-14a0c41a6b5e','fdaf8b47-ea14-4d28-80fa-e1da58a30e8b'], pcpProphylaxisAdherence)"
                                     }
                                 }
                             ]
@@ -164,7 +165,7 @@
                     ]
                 },
                 {
-                    "label": "PCP Prophylaxis Plan",
+                    "label": "PCP prophylaxis plan",
                     "questions": [
                         {
                             "required": "true",
@@ -183,7 +184,7 @@
                                     },
                                     {
                                         "concept": "a899e0ac-1350-11df-a1f1-0026b9348838",
-                                        "label": "NONE"
+                                        "label": "None"
                                     },
                                     {
                                         "concept": "a89b77aa-1350-11df-a1f1-0026b9348838",
@@ -210,7 +211,6 @@
                                 }
                             ]
                         },
-
                         {
                             "type": "obsGroup",
                             "label": "pcp Prophylaxis Change Reason",
@@ -249,8 +249,8 @@
                                             "message": "Patient has not changed drugs, please do not select a reason."
                                         }
                                     ],
-                                    "hide": {
-                                        "hideWhenExpression": "!arrayContains(['a89b7c50-1350-11df-a1f1-0026b9348838','a89b7d36-1350-11df-a1f1-0026b9348838'], pcpProphylaxisPlan)"
+                                    "disable": {
+                                        "disableWhenExpression": "!arrayContains(['a89b7c50-1350-11df-a1f1-0026b9348838','a89b7d36-1350-11df-a1f1-0026b9348838'], pcpProphylaxisPlan)"
                                     }
                                 }
                             ]
@@ -317,8 +317,8 @@
                                     "message": "You indicated patient is not changing/dose/substituting/stopping PCP due to toxicity, cause should not be selected."
                                 }
                             ],
-                            "hide": {
-                                "hideWhenExpression": "pcpProphylaxisChangeReason !== 'a890d1ba-1350-11df-a1f1-0026b9348838'"
+                            "disable": {
+                                "disableWhenExpression": "pcpProphylaxisChangeReason !== 'a890d1ba-1350-11df-a1f1-0026b9348838'"
                             }
                         },
                         {
@@ -336,11 +336,39 @@
                                     "message": "You indicated patient is changing /changing dose/substituting/stopping PCP due to other toxicity, indicate the other cause."
                                 }
                             ],
-                            "hide": {
-                                "hideWhenExpression": "pcpToxicityCause !== 'a8aaf3e2-1350-11df-a1f1-0026b9348838'"
+                            "disable": {
+                                "disableWhenExpression": "pcpToxicityCause !== 'a8aaf3e2-1350-11df-a1f1-0026b9348838'"
+                            }
+                        },
+                        {
+                            "label": "If Start/Change, regimen:",
+                            "id": "pcpPlanMedication",
+                            "questionOptions": {
+                                "concept": "a89b82cc-1350-11df-a1f1-0026b9348838",
+                                "answers": [
+                                    {
+                                        "concept": "a890c9e0-1350-11df-a1f1-0026b9348838",
+                                        "label": "Dapsone"
+                                    },
+                                    {
+                                        "concept": "a8989396-1350-11df-a1f1-0026b9348838",
+                                        "label": "Septrin"
+                                    }
+                                ],
+                                "rendering": "select"
+                            },
+                            "type": "obs",
+                            "validators": [
+                                {
+                                    "type": "js_expression",
+                                    "failsWhenExpression": "!isEmpty(pcpProphylaxisPlan) && isEmpty(myValue) && arrayContains(['a89b77aa-1350-11df-a1f1-0026b9348838', 'a89b7c50-1350-11df-a1f1-0026b9348838'], pcpProphylaxisPlan)",
+                                    "message": "You indicated patient is starting/continuing/changing PCP regimen. Please select regimen."
+                                }
+                            ],
+                            "disable": {
+                                "disableWhenExpression": "!arrayContains(['a89b77aa-1350-11df-a1f1-0026b9348838', 'a89b7908-1350-11df-a1f1-0026b9348838', 'a89b7c50-1350-11df-a1f1-0026b9348838'], pcpProphylaxisPlan)"
                             }
                         }
-
                     ]
                 }
             ]

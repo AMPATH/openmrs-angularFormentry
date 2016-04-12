@@ -1,5 +1,5 @@
 {
-    "name": "component_lab-results",
+    "name": "component_labresults",
     "uuid": "xxxx",
     "processor": "EncounterFormProcessor",
     "pages": [
@@ -7,7 +7,7 @@
             "label": "Test Results",
             "sections": [
                 {
-                    "label": "Tests Results and Test Date (Please record date sample was drawn, rather than date test was run)",
+                    "label": "Tests Results",
                     "questions": [
                         {
                             "type": "obsGroup",

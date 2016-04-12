@@ -1,0 +1,218 @@
+{
+    "name": "component_othermedication",
+    "uuid": "xxxx",
+    "processor": "EncounterFormProcessor",
+    "pages": [
+        {
+            "label": "Cryptococcal prevention",
+            "sections": [
+                {
+                    "label": "Cryptococcal secondary prevention",
+                    "questions": [
+                        {
+                            "label": "Cryptococcus Tx:",
+                            "questionOptions": {
+                                "concept": "a899e516-1350-11df-a1f1-0026b9348838",
+                                "answers": [
+                                    {
+                                        "concept": "a899e0ac-1350-11df-a1f1-0026b9348838",
+                                        "label": "None"
+                                    },
+                                    {
+                                        "concept": "a8971e12-1350-11df-a1f1-0026b9348838",
+                                        "label": "Fluconazole 200mg"
+                                    }
+                                ],
+                                "rendering": "select"
+                            },
+                            "type": "obs",
+                            "validators": []
+                        }
+                    ]
+                },
+                {
+                    "label": "Cryptococcal treatment plan",
+                    "questions": [
+                        {
+                            "label": "Cryptococcal treatment plan",
+                            "type": "obs",
+                            "questionOptions": {
+                                "concept": "a89c2790-1350-11df-a1f1-0026b9348838",
+                                "answers": [
+                                    {
+                                        "concept": "a89b7908-1350-11df-a1f1-0026b9348838",
+                                        "label": "Continue"
+                                    },
+                                    {
+                                        "concept": "a89b7c50-1350-11df-a1f1-0026b9348838",
+                                        "label": "Change Regimen"
+                                    },
+                                    {
+                                        "concept": "a899e0ac-1350-11df-a1f1-0026b9348838",
+                                        "label": "None"
+                                    },
+                                    {
+                                        "concept": "a89b77aa-1350-11df-a1f1-0026b9348838",
+                                        "label": "Start"
+                                    },
+                                    {
+                                        "concept": "a89b7d36-1350-11df-a1f1-0026b9348838",
+                                        "label": "Stop"
+                                    }
+                                ],
+                                "rendering": "select"
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "label": "Other medication",
+            "sections": [
+                {
+                    "label": "Other current medications",
+                    "questions": [
+                        {
+                            "label": "Please add any other medications the patient is taking",
+                            "type": "obsGroup",
+                            "questionOptions": {
+                                "concept": "a8a072c8-1350-11df-a1f1-0026b9348838",
+                                "rendering": "repeating"
+                            },
+                            "questions": [
+                                {
+                                    "label": "Other Drugs:",
+                                    "questionOptions": {
+                                        "concept": "a8a060c6-1350-11df-a1f1-0026b9348838",
+                                        "rendering": "drug"
+                                    },
+                                    "type": "obs",
+                                    "validators": []
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "label": "Additional medication orders",
+                    "questions": [
+                        {
+                            "type": "obsGroup",
+                            "label": "Additional medication orders",
+                            "questionOptions": {
+                                "rendering": "repeating",
+                                "concept": "a8a0654e-1350-11df-a1f1-0026b9348838"
+                            },
+                            "questions": [
+                                {
+                                    "label": "Drug",
+                                    "questionOptions": {
+                                        "concept": "a8a060c6-1350-11df-a1f1-0026b9348838",
+                                        "rendering": "drug"
+                                    },
+                                    "type": "obs",
+                                    "validators": []
+                                },
+                                {
+                                    "label": "Freq&Dura",
+                                    "questionOptions": {
+                                        "concept": "a8a06184-1350-11df-a1f1-0026b9348838",
+                                        "answers": [
+                                            {
+                                                "label": "Twice a day",
+                                                "concept": "a8a05aea-1350-11df-a1f1-0026b9348838"
+                                            },
+                                            {
+                                                "label": "Once a day",
+                                                "concept": "a8a05dc4-1350-11df-a1f1-0026b9348838"
+                                            },
+                                            {
+                                                "label": "Twice a day",
+                                                "concept": "a8a05aea-1350-11df-a1f1-0026b9348838"
+                                            },
+                                            {
+                                                "label": "Three times a day",
+                                                "concept": "a8a05b9e-1350-11df-a1f1-0026b9348838"
+                                            },
+                                            {
+                                                "label": "Four times a day",
+                                                "concept": "a8a05cfc-1350-11df-a1f1-0026b9348838"
+                                            },
+                                            {
+                                                "label": "As needed",
+                                                "concept": "9c1dcb23-dc0c-46b2-a755-875ab6d78fc2"
+                                            },
+                                            {
+                                                "label": "Other",
+                                                "concept": "a8aaf3e2-1350-11df-a1f1-0026b9348838"
+                                            }
+                                        ],
+                                        "rendering": "select"
+                                    },
+                                    "type": "obs",
+                                    "validators": []
+                                },
+                                {
+                                    "label": "New",
+                                    "questionOptions": {
+                                        "concept": "a8a07b10-1350-11df-a1f1-0026b9348838",
+                                        "answers": [
+                                            {
+                                                "label": "Yes",
+                                                "concept": "a899b35c-1350-11df-a1f1-0026b9348838"
+                                            },
+                                            {
+                                                "label": "No",
+                                                "concept": "a899b42e-1350-11df-a1f1-0026b9348838"
+                                            },
+                                            {
+                                                "label": "Do not know",
+                                                "concept": "a89e6ae6-1350-11df-a1f1-0026b9348838"
+                                            }
+                                        ],
+                                        "rendering": "select"
+                                    },
+                                    "type": "obs",
+                                    "validators": []
+                                },
+                                {
+                                    "label": "No of tabs",
+                                    "questionOptions": {
+                                        "concept": "a8a0630a-1350-11df-a1f1-0026b9348838",
+                                        "rendering": "number"
+                                    },
+                                    "type": "obs"
+                                },
+                                {
+                                    "label": "No of mg",
+                                    "questionOptions": {
+                                        "concept": "a8a063c8-1350-11df-a1f1-0026b9348838",
+                                        "rendering": "number"
+                                    },
+                                    "type": "obs"
+                                },
+                                {
+                                    "label": "No of caps",
+                                    "questionOptions": {
+                                        "concept": "ea404923-fe2b-4812-aec5-3be7fbe712f7",
+                                        "rendering": "number"
+                                    },
+                                    "type": "obs"
+                                },
+                                {
+                                    "label": "No of ml",
+                                    "questionOptions": {
+                                        "concept": "a8a08286-1350-11df-a1f1-0026b9348838",
+                                        "rendering": "number"
+                                    },
+                                    "type": "obs"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

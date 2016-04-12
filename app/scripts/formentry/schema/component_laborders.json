@@ -1,0 +1,139 @@
+{
+    "name": "component_laborders",
+    "uuid": "xxxx",
+    "processor": "EncounterFormProcessor",
+    "pages": [
+        {
+            "label": "Test ordered",
+            "sections": [
+                {
+                    "label": "Test ordered",
+                    "questions": [
+                        {
+                            "type": "obsGroup",
+                            "label": "Test Orders",
+                            "questionOptions": {
+                                "concept": "af46861e-597a-48a3-b3d4-a134d0b1c5fa",
+                                "rendering": "group"
+                            },
+                            "questions": [
+                                {
+                                    "label": "Test(s) ordered:",
+                                    "questionOptions": {
+                                        "concept": "a89c2268-1350-11df-a1f1-0026b9348838",
+                                        "answers": [
+                                            {
+                                                "concept": "a899e0ac-1350-11df-a1f1-0026b9348838",
+                                                "label": "None"
+                                            },
+                                            {
+                                                "concept": "a896dea2-1350-11df-a1f1-0026b9348838",
+                                                "label": "WBC"
+                                            },
+                                            {
+                                                "concept": "a897e450-1350-11df-a1f1-0026b9348838",
+                                                "label": "Creatinine"
+                                            },
+                                            {
+                                                "concept": "a898f50c-1350-11df-a1f1-0026b9348838",
+                                                "label": "CBC"
+                                            },
+                                            {
+                                                "concept": "a896ca48-1350-11df-a1f1-0026b9348838",
+                                                "label": "ALT"
+                                            },
+                                            {
+                                                "concept": "a896c8ae-1350-11df-a1f1-0026b9348838",
+                                                "label": "AST"
+                                            },
+                                            {
+                                                "concept": "a8970954-1350-11df-a1f1-0026b9348838",
+                                                "label": "Plateletes"
+                                            },
+                                            {
+                                                "concept": "a898201e-1350-11df-a1f1-0026b9348838",
+                                                "label": "MCV"
+                                            },
+                                            {
+                                                "concept": "a896cce6-1350-11df-a1f1-0026b9348838",
+                                                "label": "CD4"
+                                            },
+                                            {
+                                                "concept": "a8970a26-1350-11df-a1f1-0026b9348838",
+                                                "label": " CD4 %"
+                                            },
+                                            {
+                                                "concept": "a8908192-1350-11df-a1f1-0026b9348838",
+                                                "label": "CXR"
+                                            },
+                                            {
+                                                "concept": "a8999fb6-1350-11df-a1f1-0026b9348838",
+                                                "label": "Elisa"
+                                            },
+                                            {
+                                                "concept": "a8999dfe-1350-11df-a1f1-0026b9348838",
+                                                "label": "Rapid HIV "
+                                            },
+                                            {
+                                                "concept": "a898fe80-1350-11df-a1f1-0026b9348838",
+                                                "label": "HIV DNA PCR "
+                                            },
+                                            {
+                                                "concept": "a8a47094-1350-11df-a1f1-0026b9348838",
+                                                "label": "TB PCR "
+                                            },
+                                            {
+                                                "concept": "741517cf-8bac-4755-b289-8dd2a2df7962",
+                                                "label": "Gene Xpert"
+                                            },
+                                            {
+                                                "concept": "a8908a16-1350-11df-a1f1-0026b9348838",
+                                                "label": "Hgb"
+                                            },
+                                            {
+                                                "concept": "a896ca48-1350-11df-a1f1-0026b9348838",
+                                                "label": "SGPT"
+                                            },
+                                            {
+                                                "concept": "a8945d4e-1350-11df-a1f1-0026b9348838",
+                                                "label": "Sputum AFB"
+                                            },
+                                            {
+                                                "concept": "a8a462a2-1350-11df-a1f1-0026b9348838",
+                                                "label": "TB Culture"
+                                            },
+                                            {
+                                                "concept": "a8982474-1350-11df-a1f1-0026b9348838",
+                                                "label": "Viral Load"
+                                            },
+                                            {
+                                                "concept": "a8945678-1350-11df-a1f1-0026b9348838",
+                                                "label": "VDRL"
+                                            },
+                                            {
+                                                "concept": "a8aaf3e2-1350-11df-a1f1-0026b9348838",
+                                                "label": "Other"
+                                            }
+                                        ],
+                                        "rendering": "multiCheckbox"
+                                    },
+                                    "type": "obs",
+                                    "validators": []
+                                },
+                                {
+                                    "label": "Test ordered: Other (specify):",
+                                    "questionOptions": {
+                                        "concept": "a8a06fc6-1350-11df-a1f1-0026b9348838",
+                                        "rendering": "text"
+                                    },
+                                    "type": "obs",
+                                    "validators": []
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

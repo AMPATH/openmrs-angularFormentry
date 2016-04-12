@@ -1,0 +1,89 @@
+{
+    "name": "component_whostaging",
+    "uuid": "xxxx",
+    "processor": "EncounterFormProcessor",
+    "pages": [
+        {
+            "label": "Staging",
+            "sections": [
+                {
+                    "label": "Staging",
+                    "questions": [
+                        {
+                            "label": "WHO stage",
+                            "type": "obs",
+                            "id": "whoStage",
+                            "questionOptions": {
+                                "concept": "a89b3740-1350-11df-a1f1-0026b9348838",
+                                "answers": [
+                                    {
+                                        "label": "One",
+                                        "concept": "a89b33d0-1350-11df-a1f1-0026b9348838"
+                                    },
+                                    {
+                                        "label": "Two",
+                                        "concept": "a89b34ac-1350-11df-a1f1-0026b9348838"
+                                    },
+                                    {
+                                        "label": "Three",
+                                        "concept": "a89b3588-1350-11df-a1f1-0026b9348838"
+                                    },
+                                    {
+                                        "label": "Four",
+                                        "concept": "a89b3664-1350-11df-a1f1-0026b9348838"
+                                    }
+                                ],
+                                "rendering": "select"
+                            }
+                        },
+                        {
+                            "label": "Criteria",
+                            "id": "criteria",
+                            "type": "obs",
+                            "questionOptions": {
+                                "concept": "a89b2976-1350-11df-a1f1-0026b9348838",
+                                "rendering": "select-concept-answers"
+                            }
+                        },
+                        {
+                            "label": " New WHO Staging:",
+                            "type": "obs",
+                            "questionOptions": {
+                                "concept": "a8a084ca-1350-11df-a1f1-0026b9348838",
+                                "answers": [
+                                    {
+                                        "concept": "a899b35c-1350-11df-a1f1-0026b9348838",
+                                        "label": "Yes"
+                                    },
+                                    {
+                                        "concept": "a899b42e-1350-11df-a1f1-0026b9348838",
+                                        "label": "No"
+                                    }
+                                ],
+                                "rendering": "select"
+                            }
+                        },
+                        {
+                            "label": " Not applicable:",
+                            "type": "obs",
+                            "questionOptions": {
+                                "concept": "a89ad3a4-1350-11df-a1f1-0026b9348838",
+                                "answers": [
+                                    {
+                                        "concept": "a896d2cc-1350-11df-a1f1-0026b9348838",
+                                        "label": "Discontinued from HIV follow up, HIV negative (child to be seen 6 monthly till 5 yrs)"
+                                    },
+                                    {
+                                        "concept": "a897ff62-1350-11df-a1f1-0026b9348838",
+                                        "label": "HIV Exposed, status indeterminate "
+                                    }
+                                ],
+                                "rendering": "select"
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

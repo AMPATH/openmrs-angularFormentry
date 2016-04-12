@@ -1,5 +1,5 @@
 {
-    "name": "component_tb-prophy",
+    "name": "component_tbproph",
     "uuid": "xxxx",
     "processor": "EncounterFormProcessor",
     "pages": [
@@ -7,17 +7,17 @@
             "label": "TB Prophylaxis",
             "sections": [
                 {
-                    "label": "TB Prophylaxis current",
+                    "label": "TB prophylaxis current",
                     "questions": [
                         {
-                            "label": "Is patient on TB Prophylaxis?",
+                            "label": "Patient on TB rophylaxis",
                             "id": "onTbProphylaxis",
                             "questionOptions": {
                                 "concept": "a899e35e-1350-11df-a1f1-0026b9348838",
                                 "answers": [
                                     {
                                         "concept": "a899e0ac-1350-11df-a1f1-0026b9348838",
-                                        "label": "NONE"
+                                        "label": "None"
                                     },
                                     {
                                         "concept": "162724df-5a66-4ae3-bbf6-5dc6dbba4ebb",
@@ -32,10 +32,15 @@
                             },
                             "type": "obs",
                             "validators": []
-                        },
+                        }
+                    ]
+                },
+                {
+                    "label": "TB prophylaxis adherence",
+                    "questions": [
                         {
                             "type": "obsGroup",
-                            "label": "TB prophylaxis Adherence",
+                            "label": "TB prophylaxis adherence",
                             "questionOptions": {
                                 "concept": "3a69cfcf-f129-4702-a8dd-d061d2a16b9d",
                                 "rendering": "group"
@@ -75,7 +80,7 @@
                                     }
                                 },
                                 {
-                                    "label": "Adherence (TB Prophylaxis) Reasons for Poor/Fair:",
+                                    "label": "Adherence (TB Prophylaxis) reasons for poor/fair:",
                                     "id": "tbProphylaxisAdherence",
                                     "questionOptions": {
                                         "concept": "a89ebbc2-1350-11df-a1f1-0026b9348838",
@@ -159,16 +164,16 @@
                     ]
                 },
                 {
-                    "label": "TB Prophylaxis Plan",
+                    "label": "TB prophylaxis plan",
                     "questions": [
                         {
-                            "label": "TB Prophylaxis Plan:",
+                            "label": "TB Prophylaxis plan:",
                             "questionOptions": {
                                 "concept": "a89c1cfa-1350-11df-a1f1-0026b9348838",
                                 "answers": [
                                     {
                                         "concept": "a899e0ac-1350-11df-a1f1-0026b9348838",
-                                        "label": "NONE"
+                                        "label": "None"
                                     },
                                     {
                                         "concept": "a89b7908-1350-11df-a1f1-0026b9348838",

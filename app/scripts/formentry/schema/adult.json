@@ -4,7 +4,7 @@
     "processor": "EncounterFormProcessor",
     "referencedForms": [
         {
-            "formName": "ampath_poc_triage_encounter_form_v0.01",
+            "formName": "component_vitals",
             "alias": "triage"
         }
     ],
@@ -1724,7 +1724,7 @@
                 {
                     "label": "Vitals",
                     "reference": {
-                        "page": "Page 1",
+                        "page": "Vitals",
                         "section": "Vital Signs:",
                         "form": "triage"
                     }

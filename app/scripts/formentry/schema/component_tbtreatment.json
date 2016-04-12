@@ -1,5 +1,5 @@
 {
-    "name": "component_tb-treatment",
+    "name": "component_tbtreatment",
     "uuid": "xxxx",
     "processor": "EncounterFormProcessor",
     "pages": [
@@ -7,7 +7,7 @@
             "label": "TB Treatment",
             "sections": [
                 {
-                    "label": "Tuberculosis History",
+                    "label": "Tuberculosis history",
                     "questions": [
                         {
                             "id": "onTbTreatment",
@@ -21,7 +21,7 @@
                                     },
                                     {
                                         "concept": "a899b42e-1350-11df-a1f1-0026b9348838",
-                                        "label": "NO"
+                                        "label": "No"
                                     }
                                 ],
                                 "rendering": "select"
@@ -30,14 +30,14 @@
                         },
                         {
                             "type": "obsGroup",
-                            "label": "Start Date of TB treatment",
+                            "label": "Start date of TB treatment",
                             "questionOptions": {
                                 "concept": "a8afdb8c-1350-11df-a1f1-0026b9348838",
                                 "rendering": "group"
                             },
                             "questions": [
                                 {
-                                    "label": "Start Date of TB treatment:",
+                                    "label": "Start date of TB treatment:",
                                     "id": "startDateOfTbTreatment",
                                     "questionOptions": {
                                         "concept": "a899e5f2-1350-11df-a1f1-0026b9348838",
@@ -96,7 +96,7 @@
                                     }
                                 },
                                 {
-                                    "label": "Other Site (Specify)",
+                                    "label": "Other site (Specify)",
                                     "id": "siteOfTbMedsOther",
                                     "questionOptions": {
                                         "concept": "a8a06fc6-1350-11df-a1f1-0026b9348838",
@@ -110,7 +110,7 @@
                             ]
                         },
                         {
-                            "label": "Tuberculosis Treatment Phase",
+                            "label": "Tuberculosis treatment phase",
                             "type": "obs",
                             "id": "tbPhase",
                             "questionOptions": {
@@ -142,14 +142,14 @@
                         },
                         {
                             "type": "obsGroup",
-                            "label": "Current TB Regimen",
+                            "label": "Current TB regimen",
                             "questionOptions": {
                                 "concept": "a8afdb8c-1350-11df-a1f1-0026b9348838",
                                 "rendering": "repeating"
                             },
                             "questions": [
                                 {
-                                    "label": "Current TB Regimen",
+                                    "label": "Current TB regimen",
                                     "type": "obs",
                                     "id": "tb_current",
                                     "questionOptions": {
@@ -283,7 +283,7 @@
                             ]
                         },
                         {
-                            "label": "TB Treatment Completion Date",
+                            "label": "TB treatment completion date",
                             "type": "obs",
                             "id": "tbComplDate",
                             "questionOptions": {
@@ -292,14 +292,19 @@
                             }
                         },
                         {
-                            "label": "TB Treatment Defaulted Date",
+                            "label": "TB treatment defaulted date",
                             "type": "obs",
                             "id": "tbDefaultDate",
                             "questionOptions": {
                                 "concept": "a8a18758-1350-11df-a1f1-0026b9348838",
                                 "rendering": "date"
                             }
-                        },
+                        }
+                    ]
+                },
+                {
+                    "label": "Tuberculosis treatment adherence",
+                    "questions": [
                         {
                             "type": "obsGroup",
                             "label": "Patient adherence to TB medications",
@@ -342,7 +347,7 @@
                                     }
                                 },
                                 {
-                                    "label": "Adherence (TB Treatment) Reasons for Poor/Fair:",
+                                    "label": "Adherence (TB Treatment) reasons for poor/fair:",
                                     "id": "adherenceTbTreatment",
                                     "questionOptions": {
                                         "concept": "a89ebbc2-1350-11df-a1f1-0026b9348838",
@@ -436,7 +441,7 @@
                                 "answers": [
                                     {
                                         "concept": "a899e0ac-1350-11df-a1f1-0026b9348838",
-                                        "label": "NONE"
+                                        "label": "None"
                                     },
                                     {
                                         "concept": "a8ad1276-1350-11df-a1f1-0026b9348838",
@@ -519,10 +524,10 @@
                     ]
                 },
                 {
-                    "label": "TB Treatment plan",
+                    "label": "TB treatment plan",
                     "questions": [
                         {
-                            "label": "TB Treatment plan:",
+                            "label": "TB treatment plan:",
                             "id": "tbTreatmentPlan",
                             "required": "true",
                             "questionOptions": {
@@ -530,7 +535,7 @@
                                 "answers": [
                                     {
                                         "concept": "a899e0ac-1350-11df-a1f1-0026b9348838",
-                                        "label": "NONE"
+                                        "label": "None"
                                     },
                                     {
                                         "concept": "a89b7908-1350-11df-a1f1-0026b9348838",
@@ -564,7 +569,7 @@
                         },
                         {
                             "type": "obsGroup",
-                            "label": "TB Plan Change Reason",
+                            "label": "TB plan change reason",
                             "questionOptions": {
                                 "concept": "a8a078cc-1350-11df-a1f1-0026b9348838",
                                 "rendering": "group"
@@ -822,7 +827,7 @@
                             ]
                         },
                         {
-                            "label": "Current TB Regimen",
+                            "label": "Current TB regimen",
                             "type": "obsGroup",
                             "questionOptions": {
                                 "concept": "a89fe6f0-1350-11df-a1f1-0026b9348838",
@@ -830,7 +835,7 @@
                             },
                             "questions": [
                                 {
-                                    "label": "Current TB Regimen",
+                                    "label": "Current TB regimen",
                                     "questionOptions": {
                                         "concept": "a899e444-1350-11df-a1f1-0026b9348838",
                                         "answers": [
