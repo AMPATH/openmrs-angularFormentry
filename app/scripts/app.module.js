@@ -19,9 +19,12 @@ angular
     'ngTouch',
     'ui.router',
     'ngResource',
+    'openmrs-ngresource.models',
+    'openmrs-ngresource.restServices',
     'openmrs.angularFormentry',
     'ui.ace',
-    'openmrs.RestServices'
+    'openmrs.RestServices',
+    'app.formDesigner'
   ])
   .config(function($stateProvider) {
     $stateProvider
