@@ -566,8 +566,8 @@
                                     "type": "date"
                                 }
                             ],
-                            "disable": {
-                                "disableWhenExpression": "onArt !== 'a899b35c-1350-11df-a1f1-0026b9348838'"
+                            "hide": {
+                                "hideWhenExpression": "onArt !== 'a899b35c-1350-11df-a1f1-0026b9348838'"
                             }
                         },
                         {
@@ -599,8 +599,8 @@
                                     "message": "Patient previously marked as on ART. Please provide the treatment category."
                                 }
                             ],
-                            "disable": {
-                                "disableWhenExpression": "onArt !== 'a899b35c-1350-11df-a1f1-0026b9348838'"
+                            "hide": {
+                                "hideWhenExpression": "onArt !== 'a899b35c-1350-11df-a1f1-0026b9348838'"
                             }
                         },
                         {
@@ -690,8 +690,8 @@
                                     },
                                     "type": "obs",
                                     "validators": [],
-                                    "disable": {
-                                        "disableWhenExpression": "onArt !== 'a899b35c-1350-11df-a1f1-0026b9348838'"
+                                    "hide": {
+                                        "hideWhenExpression": "onArt !== 'a899b35c-1350-11df-a1f1-0026b9348838' && 1===1"
                                     }
                                 }
                             ]
@@ -733,8 +733,8 @@
                                             "message": "Patient on ARVs. Please provide adherence history."
                                         }
                                     ],
-                                    "disable": {
-                                        "disableWhenExpression": "onArt !== 'a899b35c-1350-11df-a1f1-0026b9348838'"
+                                    "hide": {
+                                        "hideWhenExpression": "onArt !== 'a899b35c-1350-11df-a1f1-0026b9348838'"
                                     }
                                 },
                                 {
@@ -800,8 +800,8 @@
                                     },
                                     "type": "obs",
                                     "validators": [],
-                                    "disable": {
-                                        "disableWhenExpression": "onArt !== 'a899b35c-1350-11df-a1f1-0026b9348838' || !arrayContains(['a73d20b3-d721-4763-a362-14a0c41a6b5e','fdaf8b47-ea14-4d28-80fa-e1da58a30e8b'], artAdherence) "
+                                    "hide": {
+                                        "hideWhenExpression": "onArt !== 'a899b35c-1350-11df-a1f1-0026b9348838' || !arrayContains(['a73d20b3-d721-4763-a362-14a0c41a6b5e','fdaf8b47-ea14-4d28-80fa-e1da58a30e8b'], artAdherence) "
                                     }
                                 },
                                 {
@@ -812,8 +812,8 @@
                                         "rendering": "text"
                                     },
                                     "validators": [],
-                                    "disable": {
-                                        "disableWhenExpression": "onArt !== 'a899b35c-1350-11df-a1f1-0026b9348838' || !arrayContains(['a73d20b3-d721-4763-a362-14a0c41a6b5e','fdaf8b47-ea14-4d28-80fa-e1da58a30e8b'], artAdherence)"
+                                    "hide": {
+                                        "hideWhenExpression": "onArt !== 'a899b35c-1350-11df-a1f1-0026b9348838' || !arrayContains(['a73d20b3-d721-4763-a362-14a0c41a6b5e','fdaf8b47-ea14-4d28-80fa-e1da58a30e8b'], artAdherence)"
                                     }
                                 }
                             ]

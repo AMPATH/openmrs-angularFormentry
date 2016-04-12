@@ -4,16 +4,16 @@
 /*
 jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W069, -W026
 */
-(function () {
+(function() {
     'use strict';
 
     angular
         .module('openmrs.angularFormentry')
         .service('FormValidator', FormValidator);
 
-    FormValidator.$inject = ['$filter', 'CurrentLoadedFormService', 'moment'];
+    FormValidator.$inject = ['$filter', 'CurrentLoadedFormService', 'moment', '$timeout'];
 
-    function FormValidator($filter, CurrentLoadedFormService, moment) {
+    function FormValidator($filter, CurrentLoadedFormService, moment, $timeout) {
 
         var service = {
             extractQuestionIds: extractQuestionIds,
@@ -39,7 +39,7 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
         function getFieldValidators(arrayOfValidations) {
             var validator = {};
             var index = 1;
-            _.each(arrayOfValidations, function (validate) {
+            _.each(arrayOfValidations, function(validate) {
                 var validatorKey = validate.type;
 
                 validatorKey = validatorKey + index;
@@ -70,7 +70,7 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
             var validator = new Validator('', undefined);
             if (params.allowFutureDates !== 'true') {
                 //case does not allow future dates
-                validator.expression = function (viewValue, modelValue) {
+                validator.expression = function(viewValue, modelValue) {
                     /*
                     using datejs library
                     */
@@ -93,7 +93,7 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
             }
             else {
                 //case should be a date
-                validator.expression = function (viewValue, modelValue, elementScope) {
+                validator.expression = function(viewValue, modelValue, elementScope) {
                     /*
                     using datejs library
                     */
@@ -120,7 +120,7 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
         function getJsExpressionValidatorObject(schemaValidatorObject) {
 
             var validator = new Validator('"' + schemaValidatorObject.message + '"',
-                function (viewValue, modelValue, elementScope) {
+                function(viewValue, modelValue, elementScope) {
 
                     var val = getFieldValueToValidate(viewValue, modelValue, elementScope);
 
@@ -138,14 +138,14 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
 
                     var keyValue = {};
 
-                    _.each(referencedQuestions, function (qId) {
+                    _.each(referencedQuestions, function(qId) {
                         if (keyValue[qId] === undefined) {
                             var referenceQuestionkey =
                                 CurrentLoadedFormService.getFieldKeyFromGlobalById(qId);
                             var referenceQuestionCurrentValue =
                                 CurrentLoadedFormService.
                                     getAnswerByQuestionKey(CurrentLoadedFormService.formModel,
-                                        referenceQuestionkey);
+                                    referenceQuestionkey);
                             keyValue[qId] = referenceQuestionCurrentValue;
                         }
                     });
@@ -153,10 +153,10 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
                     var expressionToEvaluate =
                         service.
                             replaceQuestionsPlaceholdersWithValue(schemaValidatorObject.failsWhenExpression,
-                                keyValue);
+                            keyValue);
 
                     expressionToEvaluate =
-                    service.replaceMyValuePlaceholdersWithActualValue(expressionToEvaluate, val);
+                        service.replaceMyValuePlaceholdersWithActualValue(expressionToEvaluate, val);
                     console.log('Evaluates val', val);
                     console.log('Evaluates model', elementScope);
                     console.log('expressionToEvaluate', expressionToEvaluate);
@@ -202,7 +202,7 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
 
         function getConditionalAnsweredValidatorObject(schemaValidatorObject) {
             var validator = new Validator('"' + schemaValidatorObject.message + '"',
-                function (viewValue, modelValue, elementScope) {
+                function(viewValue, modelValue, elementScope) {
                     var val = modelValue || viewValue;
 
                     if (elementScope.options && elementScope.options.data
@@ -237,7 +237,7 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
                     var referenceQuestionCurrentValue =
                         CurrentLoadedFormService.
                             getAnswerByQuestionKey(CurrentLoadedFormService.formModel,
-                                referenceQuestionkey);
+                            referenceQuestionkey);
 
 
 
@@ -246,7 +246,7 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
 
                     var isValid = false;
 
-                    _.each(answersThatPermitThisQuestionAnswered, function (answer) {
+                    _.each(answersThatPermitThisQuestionAnswered, function(answer) {
                         if (referenceQuestionCurrentValue === answer) {
                             isValid = true;
                         }
@@ -261,7 +261,7 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
 
         function getConditionalRequiredExpressionFunction(schemaValidatorObject) {
 
-            return function ($viewValue, $modelValue, scope, element) {
+            return function($viewValue, $modelValue, scope, element) {
                 var i = 0;
                 var isRequired;
                 var result;
@@ -275,12 +275,12 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
                     addToListenersMetadata(scope.options.data.id, fields);
                 }
 
-                _.each(schemaValidatorObject.referenceQuestionAnswers, function (val) {
+                _.each(schemaValidatorObject.referenceQuestionAnswers, function(val) {
 
                     var referencedQuestionCurrentAnswer =
                         CurrentLoadedFormService.
                             getAnswerByQuestionKey(CurrentLoadedFormService.formModel,
-                                referenceQuestionkey);
+                            referenceQuestionkey);
                     result = referencedQuestionCurrentAnswer === val;
 
                     if (i === 0) {
@@ -306,7 +306,7 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
 
 
 
-            return (function ($viewValue, $modelValue, scope, element) {
+            return (function($viewValue, $modelValue, scope, element) {
                 //if element is undefined then we are looking for a disable expression
                 //if element is defined then we are looking for a hide expression
 
@@ -324,7 +324,7 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
 
                 fkey = fkey.split('.')[0];
 
-                _.each(params.value, function (val) {
+                _.each(params.value, function(val) {
                     result = scope.model[fkey].value !== val;
                     if (i === 0) results = result;
                     else results = results && result;
@@ -353,16 +353,17 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
             if (schemaValidatorObject.field && schemaValidatorObject.value) {
                 return getHideDisableStructuredFunction(schemaValidatorObject);
             }
-            return function ($viewValue, $modelValue, scope, element) {
-                var val = getFieldValueToValidate($viewValue, $modelValue, scope);
+            return function($viewValue, $modelValue, scope, element) {
+                var val = getFieldValueToValidate($viewValue, $modelValue, scope || element);
 
-                if (scope.options && scope.options.data && scope.options.data.id) {
+                var options = (element ? element.options : undefined) || scope.options;
+                if (options && options.data && options.data.id) {
                     var fields =
                         service.extractQuestionIds(schemaValidatorObject.disableWhenExpression ||
                             schemaValidatorObject.hideWhenExpression,
                             CurrentLoadedFormService.questionMap);
 
-                    addToListenersMetadata(scope.options.data.id, fields);
+                    addToListenersMetadata(options.data.id, fields);
                 }
 
                 var referencedQuestions =
@@ -372,7 +373,7 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
 
                 var keyValue = {};
 
-                _.each(referencedQuestions, function (qId) {
+                _.each(referencedQuestions, function(qId) {
                     if (keyValue[qId] === undefined) {
                         var referenceQuestionkey =
                             CurrentLoadedFormService.getFieldKeyFromGlobalById(qId);
@@ -380,7 +381,7 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
                         var referenceQuestionCurrentValue =
                             CurrentLoadedFormService.
                                 getAnswerByQuestionKey(CurrentLoadedFormService.formModel,
-                                    referenceQuestionkey);
+                                referenceQuestionkey);
 
                         keyValue[qId] = referenceQuestionCurrentValue;
                     }
@@ -389,10 +390,10 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
                 var expressionToEvaluate =
                     service.
                         replaceQuestionsPlaceholdersWithValue(schemaValidatorObject.disableWhenExpression ||
-                            schemaValidatorObject.hideWhenExpression, keyValue);
+                        schemaValidatorObject.hideWhenExpression, keyValue);
 
                 expressionToEvaluate =
-                service.replaceMyValuePlaceholdersWithActualValue(expressionToEvaluate, val);
+                    service.replaceMyValuePlaceholdersWithActualValue(expressionToEvaluate, val);
                 console.log('Evaluates val', val);
                 console.log('Evaluates model', scope);
                 console.log('expressionToEvaluate', expressionToEvaluate);
@@ -404,8 +405,9 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
                 if (isDisabled === true) {
                     if (element) {
                         //case hide
-                        CurrentLoadedFormService.clearQuestionValueByKey(scope.model,
-                            element.options.key.split('.')[0]);
+                        if (element.options)
+                            CurrentLoadedFormService.clearQuestionValueByKey(CurrentLoadedFormService.formModel,
+                                element.options.key.split('.')[0]);
                     }
                     else {
                         //case disable
@@ -413,15 +415,13 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
                             scope.options.key.split('.')[0]);
                     }
                 }
-                // if(scope.to !== undefined){
-                //   scope.to.disabled = isDisabled;
-                // }
+                
                 return isDisabled;
             };
         }
 
         function getCalculateExpressionFunction_JS(schemaValidatorObject) {
-            return function ($viewValue, $modelValue, scope, element) {
+            return function($viewValue, $modelValue, scope, element) {
                 var val = getFieldValueToValidate($viewValue, $modelValue, scope);
 
                 if (scope.options && scope.options.data && scope.options.data.id) {
@@ -440,7 +440,7 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
 
                 var keyValue = {};
 
-                _.each(referencedQuestions, function (qId) {
+                _.each(referencedQuestions, function(qId) {
                     if (keyValue[qId] === undefined) {
                         var referenceQuestionkey =
                             CurrentLoadedFormService.getFieldKeyFromGlobalById(qId);
@@ -448,7 +448,7 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
                         var referenceQuestionCurrentValue =
                             CurrentLoadedFormService.
                                 getAnswerByQuestionKey(CurrentLoadedFormService.formModel,
-                                    referenceQuestionkey);
+                                referenceQuestionkey);
 
                         keyValue[qId] = referenceQuestionCurrentValue;
                     }
@@ -457,10 +457,10 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
                 var expressionToEvaluate =
                     service.
                         replaceQuestionsPlaceholdersWithValue(schemaValidatorObject.calculateExpression ||
-                            schemaValidatorObject.hideWhenExpression, keyValue);
+                        schemaValidatorObject.hideWhenExpression, keyValue);
 
                 expressionToEvaluate =
-                service.replaceMyValuePlaceholdersWithActualValue(expressionToEvaluate, val);
+                    service.replaceMyValuePlaceholdersWithActualValue(expressionToEvaluate, val);
                 console.log('Evaluates val', val);
                 console.log('Evaluates model', scope);
                 console.log('expressionToEvaluate', expressionToEvaluate);
@@ -472,7 +472,7 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
         }
 
         function addToListenersMetadata(listenerId, fieldsIds) {
-            _.each(fieldsIds, function (fieldId) {
+            _.each(fieldsIds, function(fieldId) {
                 if (CurrentLoadedFormService.listenersMetadata[fieldId] === undefined) {
                     console.log('adding listeners entry', fieldId);
                     CurrentLoadedFormService.listenersMetadata[fieldId] = [];
@@ -487,26 +487,38 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
 
         function updateListeners(fieldId) {
             if (CurrentLoadedFormService.listenersMetadata[fieldId] !== undefined) {
-                _.each(CurrentLoadedFormService.listenersMetadata[fieldId], function (listenerId) {
+                _.each(CurrentLoadedFormService.listenersMetadata[fieldId], function(listenerId) {
                     var fields = CurrentLoadedFormService.questionMap[listenerId];
 
                     if (Array.isArray(fields)) {
-                        _.each(fields, function (field) {
+                        _.each(fields, function(field) {
                             if (field.runExpressions) {
                                 field.runExpressions();
+                                if (typeof field.hideExpression === 'function') {
+                                    field.hide = field.hideExpression(field.formControl.$viewValue, field.formControl.$modelValue, field, { options: field });
+                                }
+                            } else if (typeof field.hideExpression === 'function') {
+                                field.hide = field.hideExpression(undefined, undefined, undefined, { options: field });
                             }
                             if (field.formControl) {
                                 field.formControl.$validate();
                             }
+
                         });
                     }
                     else {
                         if (fields.runExpressions) {
                             fields.runExpressions();
+                            if (typeof field.hideExpression === 'function') {
+                                field.hide = field.hideExpression(field.formControl.$viewValue, field.formControl.$modelValue, field, { options: field });
+                            }
+                        } else if (typeof field.hideExpression === 'function') {
+                            field.hide = field.hideExpression(undefined, undefined, undefined, { options: field });
                         }
                         if (fields.formControl) {
                             fields.formControl.$validate();
                         }
+
                     }
 
                 });
@@ -522,7 +534,7 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
         function replaceQuestionsPlaceholdersWithValue(expression, keyValuObject) {
             var fieldIds = Object.keys(keyValuObject);
             var replaced = expression;
-            _.each(fieldIds, function (key) {
+            _.each(fieldIds, function(key) {
                 var toReplace = keyValuObject[key];
                 if (typeof keyValuObject[key] === 'string') {
                     toReplace = '"' + toReplace + '"';
@@ -575,7 +587,7 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
         function extractQuestionIds(expression, questionMap) {
             var fieldIds = Object.keys(questionMap);
             var extracted = [];
-            _.each(fieldIds, function (key) {
+            _.each(fieldIds, function(key) {
                 var findResult = expression.search(key);
                 if (findResult !== -1) {
                     extracted.push(key);
@@ -628,7 +640,7 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
                     return true;
                 }
                 var contains = true;
-                _.each(members, function (val) {
+                _.each(members, function(val) {
                     if (array.indexOf(val) === -1) {
                         contains = false;
                     }
@@ -660,7 +672,7 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
                     return true;
                 }
                 var contains = false;
-                _.each(members, function (val) {
+                _.each(members, function(val) {
                     if (array.indexOf(val) !== -1) {
                         contains = true;
                     }

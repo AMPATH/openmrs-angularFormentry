@@ -144,6 +144,10 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                 var handlerMethod;
                 var modelType = question.type;
 
+                if(question.id === 'current_art_regimen') {
+                    var a = 'me';
+                }
+
                 if (question.type === undefined)
                 {
                   //Apperently during tests there is a function that is being
