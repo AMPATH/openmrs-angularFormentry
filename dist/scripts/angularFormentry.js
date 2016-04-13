@@ -760,7 +760,8 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                         key: 'section_' + sectionId,
                         type: 'section',
                         templateOptions: {
-                            label: section.label
+                            label: section.label,
+                            expanded: section.isExpanded
                         },
                         data: {
                             fields: fields
@@ -841,6 +842,10 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                 var handlerMethod;
                 var modelType = question.type;
 
+                if(question.id === 'current_art_regimen') {
+                    var a = 'me';
+                }
+
                 if (question.type === undefined)
                 {
                   //Apperently during tests there is a function that is being
@@ -859,7 +864,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                             fields.push(f);
                             if (f.templateOptions.historicalExpression) {
                                 fields.push(HistoricalFieldHelperService.
-                                    createHistoricalTextField(f, model, f.key));
+                                    createHistoricalTextField(f, model, f.key, question.historicalPrepopulate));
                             }
                         });
                     } else {
@@ -867,7 +872,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                         fields.push(field);
                         if (field.templateOptions.historicalExpression) {
                             fields.push(HistoricalFieldHelperService.
-                                createHistoricalTextField(field, model, field.key));
+                                createHistoricalTextField(field, model, field.key, question.historicalPrepopulate));
                         }
                     }
 
@@ -951,7 +956,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                         fields.push(obsField);
                         if (obsField.templateOptions.historicalExpression) {
                             fields.push(HistoricalFieldHelperService.
-                                createHistoricalTextField(obsField, model, obsField.key));
+                                createHistoricalTextField(obsField, model, obsField.key, question.historicalPrepopulate));
                         }
 
                     }
@@ -1443,9 +1448,6 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                 templateOptions: {
                     type: 'text',
                     label: _question.label
-                },
-                modelOptions: {
-                    debounce: 1000
                 }
                 // ,
                 // validation: {
@@ -2368,16 +2370,16 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
 /*
 jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W069, -W026
 */
-(function () {
+(function() {
     'use strict';
 
     angular
         .module('openmrs.angularFormentry')
         .service('FormValidator', FormValidator);
 
-    FormValidator.$inject = ['$filter', 'CurrentLoadedFormService', 'moment'];
+    FormValidator.$inject = ['$filter', 'CurrentLoadedFormService', 'moment', '$timeout'];
 
-    function FormValidator($filter, CurrentLoadedFormService, moment) {
+    function FormValidator($filter, CurrentLoadedFormService, moment, $timeout) {
 
         var service = {
             extractQuestionIds: extractQuestionIds,
@@ -2403,7 +2405,7 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
         function getFieldValidators(arrayOfValidations) {
             var validator = {};
             var index = 1;
-            _.each(arrayOfValidations, function (validate) {
+            _.each(arrayOfValidations, function(validate) {
                 var validatorKey = validate.type;
 
                 validatorKey = validatorKey + index;
@@ -2434,7 +2436,7 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
             var validator = new Validator('', undefined);
             if (params.allowFutureDates !== 'true') {
                 //case does not allow future dates
-                validator.expression = function (viewValue, modelValue) {
+                validator.expression = function(viewValue, modelValue) {
                     /*
                     using datejs library
                     */
@@ -2457,7 +2459,7 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
             }
             else {
                 //case should be a date
-                validator.expression = function (viewValue, modelValue, elementScope) {
+                validator.expression = function(viewValue, modelValue, elementScope) {
                     /*
                     using datejs library
                     */
@@ -2484,7 +2486,7 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
         function getJsExpressionValidatorObject(schemaValidatorObject) {
 
             var validator = new Validator('"' + schemaValidatorObject.message + '"',
-                function (viewValue, modelValue, elementScope) {
+                function(viewValue, modelValue, elementScope) {
 
                     var val = getFieldValueToValidate(viewValue, modelValue, elementScope);
 
@@ -2502,14 +2504,14 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
 
                     var keyValue = {};
 
-                    _.each(referencedQuestions, function (qId) {
+                    _.each(referencedQuestions, function(qId) {
                         if (keyValue[qId] === undefined) {
                             var referenceQuestionkey =
                                 CurrentLoadedFormService.getFieldKeyFromGlobalById(qId);
                             var referenceQuestionCurrentValue =
                                 CurrentLoadedFormService.
                                     getAnswerByQuestionKey(CurrentLoadedFormService.formModel,
-                                        referenceQuestionkey);
+                                    referenceQuestionkey);
                             keyValue[qId] = referenceQuestionCurrentValue;
                         }
                     });
@@ -2517,10 +2519,10 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
                     var expressionToEvaluate =
                         service.
                             replaceQuestionsPlaceholdersWithValue(schemaValidatorObject.failsWhenExpression,
-                                keyValue);
+                            keyValue);
 
                     expressionToEvaluate =
-                    service.replaceMyValuePlaceholdersWithActualValue(expressionToEvaluate, val);
+                        service.replaceMyValuePlaceholdersWithActualValue(expressionToEvaluate, val);
                     console.log('Evaluates val', val);
                     console.log('Evaluates model', elementScope);
                     console.log('expressionToEvaluate', expressionToEvaluate);
@@ -2566,7 +2568,7 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
 
         function getConditionalAnsweredValidatorObject(schemaValidatorObject) {
             var validator = new Validator('"' + schemaValidatorObject.message + '"',
-                function (viewValue, modelValue, elementScope) {
+                function(viewValue, modelValue, elementScope) {
                     var val = modelValue || viewValue;
 
                     if (elementScope.options && elementScope.options.data
@@ -2601,7 +2603,7 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
                     var referenceQuestionCurrentValue =
                         CurrentLoadedFormService.
                             getAnswerByQuestionKey(CurrentLoadedFormService.formModel,
-                                referenceQuestionkey);
+                            referenceQuestionkey);
 
 
 
@@ -2610,7 +2612,7 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
 
                     var isValid = false;
 
-                    _.each(answersThatPermitThisQuestionAnswered, function (answer) {
+                    _.each(answersThatPermitThisQuestionAnswered, function(answer) {
                         if (referenceQuestionCurrentValue === answer) {
                             isValid = true;
                         }
@@ -2625,7 +2627,7 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
 
         function getConditionalRequiredExpressionFunction(schemaValidatorObject) {
 
-            return function ($viewValue, $modelValue, scope, element) {
+            return function($viewValue, $modelValue, scope, element) {
                 var i = 0;
                 var isRequired;
                 var result;
@@ -2639,12 +2641,12 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
                     addToListenersMetadata(scope.options.data.id, fields);
                 }
 
-                _.each(schemaValidatorObject.referenceQuestionAnswers, function (val) {
+                _.each(schemaValidatorObject.referenceQuestionAnswers, function(val) {
 
                     var referencedQuestionCurrentAnswer =
                         CurrentLoadedFormService.
                             getAnswerByQuestionKey(CurrentLoadedFormService.formModel,
-                                referenceQuestionkey);
+                            referenceQuestionkey);
                     result = referencedQuestionCurrentAnswer === val;
 
                     if (i === 0) {
@@ -2670,7 +2672,7 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
 
 
 
-            return (function ($viewValue, $modelValue, scope, element) {
+            return (function($viewValue, $modelValue, scope, element) {
                 //if element is undefined then we are looking for a disable expression
                 //if element is defined then we are looking for a hide expression
 
@@ -2688,7 +2690,7 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
 
                 fkey = fkey.split('.')[0];
 
-                _.each(params.value, function (val) {
+                _.each(params.value, function(val) {
                     result = scope.model[fkey].value !== val;
                     if (i === 0) results = result;
                     else results = results && result;
@@ -2717,16 +2719,17 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
             if (schemaValidatorObject.field && schemaValidatorObject.value) {
                 return getHideDisableStructuredFunction(schemaValidatorObject);
             }
-            return function ($viewValue, $modelValue, scope, element) {
-                var val = getFieldValueToValidate($viewValue, $modelValue, scope);
+            return function($viewValue, $modelValue, scope, element) {
+                var val = getFieldValueToValidate($viewValue, $modelValue, scope || element);
 
-                if (scope.options && scope.options.data && scope.options.data.id) {
+                var options = (element ? element.options : undefined) || scope.options;
+                if (options && options.data && options.data.id) {
                     var fields =
                         service.extractQuestionIds(schemaValidatorObject.disableWhenExpression ||
                             schemaValidatorObject.hideWhenExpression,
                             CurrentLoadedFormService.questionMap);
 
-                    addToListenersMetadata(scope.options.data.id, fields);
+                    addToListenersMetadata(options.data.id, fields);
                 }
 
                 var referencedQuestions =
@@ -2736,7 +2739,7 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
 
                 var keyValue = {};
 
-                _.each(referencedQuestions, function (qId) {
+                _.each(referencedQuestions, function(qId) {
                     if (keyValue[qId] === undefined) {
                         var referenceQuestionkey =
                             CurrentLoadedFormService.getFieldKeyFromGlobalById(qId);
@@ -2744,7 +2747,7 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
                         var referenceQuestionCurrentValue =
                             CurrentLoadedFormService.
                                 getAnswerByQuestionKey(CurrentLoadedFormService.formModel,
-                                    referenceQuestionkey);
+                                referenceQuestionkey);
 
                         keyValue[qId] = referenceQuestionCurrentValue;
                     }
@@ -2753,10 +2756,10 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
                 var expressionToEvaluate =
                     service.
                         replaceQuestionsPlaceholdersWithValue(schemaValidatorObject.disableWhenExpression ||
-                            schemaValidatorObject.hideWhenExpression, keyValue);
+                        schemaValidatorObject.hideWhenExpression, keyValue);
 
                 expressionToEvaluate =
-                service.replaceMyValuePlaceholdersWithActualValue(expressionToEvaluate, val);
+                    service.replaceMyValuePlaceholdersWithActualValue(expressionToEvaluate, val);
                 console.log('Evaluates val', val);
                 console.log('Evaluates model', scope);
                 console.log('expressionToEvaluate', expressionToEvaluate);
@@ -2768,8 +2771,9 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
                 if (isDisabled === true) {
                     if (element) {
                         //case hide
-                        CurrentLoadedFormService.clearQuestionValueByKey(scope.model,
-                            element.options.key.split('.')[0]);
+                        if (element.options)
+                            CurrentLoadedFormService.clearQuestionValueByKey(CurrentLoadedFormService.formModel,
+                                element.options.key.split('.')[0]);
                     }
                     else {
                         //case disable
@@ -2777,15 +2781,13 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
                             scope.options.key.split('.')[0]);
                     }
                 }
-                // if(scope.to !== undefined){
-                //   scope.to.disabled = isDisabled;
-                // }
+                
                 return isDisabled;
             };
         }
 
         function getCalculateExpressionFunction_JS(schemaValidatorObject) {
-            return function ($viewValue, $modelValue, scope, element) {
+            return function($viewValue, $modelValue, scope, element) {
                 var val = getFieldValueToValidate($viewValue, $modelValue, scope);
 
                 if (scope.options && scope.options.data && scope.options.data.id) {
@@ -2804,7 +2806,7 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
 
                 var keyValue = {};
 
-                _.each(referencedQuestions, function (qId) {
+                _.each(referencedQuestions, function(qId) {
                     if (keyValue[qId] === undefined) {
                         var referenceQuestionkey =
                             CurrentLoadedFormService.getFieldKeyFromGlobalById(qId);
@@ -2812,7 +2814,7 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
                         var referenceQuestionCurrentValue =
                             CurrentLoadedFormService.
                                 getAnswerByQuestionKey(CurrentLoadedFormService.formModel,
-                                    referenceQuestionkey);
+                                referenceQuestionkey);
 
                         keyValue[qId] = referenceQuestionCurrentValue;
                     }
@@ -2821,10 +2823,10 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
                 var expressionToEvaluate =
                     service.
                         replaceQuestionsPlaceholdersWithValue(schemaValidatorObject.calculateExpression ||
-                            schemaValidatorObject.hideWhenExpression, keyValue);
+                        schemaValidatorObject.hideWhenExpression, keyValue);
 
                 expressionToEvaluate =
-                service.replaceMyValuePlaceholdersWithActualValue(expressionToEvaluate, val);
+                    service.replaceMyValuePlaceholdersWithActualValue(expressionToEvaluate, val);
                 console.log('Evaluates val', val);
                 console.log('Evaluates model', scope);
                 console.log('expressionToEvaluate', expressionToEvaluate);
@@ -2836,7 +2838,7 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
         }
 
         function addToListenersMetadata(listenerId, fieldsIds) {
-            _.each(fieldsIds, function (fieldId) {
+            _.each(fieldsIds, function(fieldId) {
                 if (CurrentLoadedFormService.listenersMetadata[fieldId] === undefined) {
                     console.log('adding listeners entry', fieldId);
                     CurrentLoadedFormService.listenersMetadata[fieldId] = [];
@@ -2851,26 +2853,38 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
 
         function updateListeners(fieldId) {
             if (CurrentLoadedFormService.listenersMetadata[fieldId] !== undefined) {
-                _.each(CurrentLoadedFormService.listenersMetadata[fieldId], function (listenerId) {
+                _.each(CurrentLoadedFormService.listenersMetadata[fieldId], function(listenerId) {
                     var fields = CurrentLoadedFormService.questionMap[listenerId];
 
                     if (Array.isArray(fields)) {
-                        _.each(fields, function (field) {
+                        _.each(fields, function(field) {
                             if (field.runExpressions) {
                                 field.runExpressions();
+                                if (typeof field.hideExpression === 'function') {
+                                    field.hide = field.hideExpression(field.formControl.$viewValue, field.formControl.$modelValue, field, { options: field });
+                                }
+                            } else if (typeof field.hideExpression === 'function') {
+                                field.hide = field.hideExpression(undefined, undefined, undefined, { options: field });
                             }
                             if (field.formControl) {
                                 field.formControl.$validate();
                             }
+
                         });
                     }
                     else {
                         if (fields.runExpressions) {
                             fields.runExpressions();
+                            if (typeof field.hideExpression === 'function') {
+                                field.hide = field.hideExpression(field.formControl.$viewValue, field.formControl.$modelValue, field, { options: field });
+                            }
+                        } else if (typeof field.hideExpression === 'function') {
+                            field.hide = field.hideExpression(undefined, undefined, undefined, { options: field });
                         }
                         if (fields.formControl) {
                             fields.formControl.$validate();
                         }
+
                     }
 
                 });
@@ -2886,7 +2900,7 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
         function replaceQuestionsPlaceholdersWithValue(expression, keyValuObject) {
             var fieldIds = Object.keys(keyValuObject);
             var replaced = expression;
-            _.each(fieldIds, function (key) {
+            _.each(fieldIds, function(key) {
                 var toReplace = keyValuObject[key];
                 if (typeof keyValuObject[key] === 'string') {
                     toReplace = '"' + toReplace + '"';
@@ -2939,7 +2953,7 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
         function extractQuestionIds(expression, questionMap) {
             var fieldIds = Object.keys(questionMap);
             var extracted = [];
-            _.each(fieldIds, function (key) {
+            _.each(fieldIds, function(key) {
                 var findResult = expression.search(key);
                 if (findResult !== -1) {
                     extracted.push(key);
@@ -2992,7 +3006,7 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
                     return true;
                 }
                 var contains = true;
-                _.each(members, function (val) {
+                _.each(members, function(val) {
                     if (array.indexOf(val) === -1) {
                         contains = false;
                     }
@@ -3024,7 +3038,7 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
                     return true;
                 }
                 var contains = false;
-                _.each(members, function (val) {
+                _.each(members, function(val) {
                     if (array.indexOf(val) !== -1) {
                         contains = true;
                     }
@@ -3336,14 +3350,15 @@ jscs:disable requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 
         return service;
 
-        function createHistoricalTextField(parentField, parentFieldModel, parentFieldKey) {
+        function createHistoricalTextField(parentField, parentFieldModel, parentFieldKey, prepopulateValue) {
             return {
                 key: 'historical-text-val',
                 type: 'historical-text',
                 templateOptions: {
                     parentFieldKey: parentFieldKey,
                     parentFieldModel: parentFieldModel,
-                    parentField: parentField
+                    parentField: parentField,
+                    prepopulate: prepopulateValue
                 }
             };
         }
@@ -3518,7 +3533,7 @@ jscs:disable requirePaddingNewLinesBeforeLineComments, requireTrailingComma
         }
 
         function getDisplayText(value, callback, fieldLabel) {
-            callback('"' + value + '"');
+            callback(value);
         }
 
         function getDisplayTextFromOptions(value, options, valueProperty,
@@ -3546,7 +3561,7 @@ jscs:disable requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 
                 });
             }
-            callback('"' + displayText + '"');
+            callback(displayText);
         }
 
         //#endregion
@@ -3789,6 +3804,10 @@ jscs:disable requirePaddingNewLinesBeforeLineComments, requireTrailingComma
         
         this.hasKey = function(name){
             return _.has(store, name)? true: false;
+        };
+        
+        this.removeAllObjects = function() {
+            store = {};
         };
     }
 })();
@@ -5133,13 +5152,17 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       name: 'panel',
       types: ['section'],
       template: '<div class="panel panel-primary"> ' +
-        '<div class="panel-heading px-nested-panel-heading clearfix"> ' +
+        '<div class="panel-heading px-nested-panel-heading clearfix" ng-click="expanded = !expanded; loaded =true;" > ' +
           '<strong class="control-label" ng-if="to.label"> '  +
             '{{to.label}} ' +
             "{{to.required ? '*' : ''}}  "+
-          '</strong> '  +
+          '</strong>'  +
+          '<button type="button" class="btn btn-sm btn-primary pull-right" ng-init="expanded = loaded = (to.expanded || false)" >' +
+          '<span ng-show="!expanded">Show  <span class="caret"></span></span>' +
+          '<span ng-show="expanded">Hide <span class="dropup"><span class="caret"></span></span></span>' +
+          '</button>'+
         '</div> ' +
-        '<div class="panel-body px-nested-panel-body"> ' +
+        '<div class="panel-body px-nested-panel-body" ng-show="expanded" ng-if="loaded || expanded"> ' +
           '<formly-transclude></formly-transclude> ' +
         '</div> ' +
       '</div>'
@@ -5243,7 +5266,7 @@ jshint -W106, -W098, -W109, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
 /*
 jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 */
-(function () {
+(function() {
 
     'use strict';
 
@@ -5251,35 +5274,41 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
         angular
             .module('openmrs.angularFormentry');
 
-    mod.run(function (formlyConfig) {
+    mod.run(function(formlyConfig) {
         // Configure custom types
         formlyConfig.setType({
             name: 'historical-text',
             wrapper: [],
-            template: '<div><div ng-if="historicalValue">' +
-            '{{historicalDisplay}} <button  class="btn btn-default pull-right" ng-click="setValue()">Use Value</button>' +
+            template: '<div style="margin-top:-14px;" ng-if="historicalValue">'+
+            '<div class="panel panel-default container-fluid" ng-if="!to.prepopulate">' +
+            '<div style="padding: 1px;" class="row">'+
+            '<div style="padding-left: 4px; padding-top: 4px;" class="col-xs-9" >' +
+            '<span style="font-wieght:bold;" class="text-warning">Previous Value: </span>'+
+            '<span style="font-weight: bold;" >{{historicalDisplay}}<span/></div>' +
+            '<button type="button" class="btn btn-default btn-small col-xs-3" ng-click="setValue()">Use Value</button>' +
+            '</div>'+
             '</div></div>',
-            link: function (scope, el, attrs, vm) {
+            link: function(scope, el, attrs, vm) {
                 //incase we need link function
             },
 
-            controller: function ($scope, $log, HistoricalDataService) {
+            controller: function($scope, $log, HistoricalDataService) {
                 //functions
                 $scope.setValue = setValue;
                 $scope.getDisplayValue = getDisplayValue;
-                
+
                 //variables 
                 $scope.historicalDisplay = '';
                 $scope.historicalValue = null;
-                
+
                 //bring historical data alias into scope
                 var HD = HistoricalDataService;
-                
+
                 //used in one of the schema historical expressions
                 var sampleRepeatingGroupValue =
                     [{
                         'a8a07a48x1350x11dfxa1f1-0026b9348838': 'reason for hospital',
-                        'made-up-concept-4':[{
+                        'made-up-concept-4': [{
                             'made-up-concept-5': '2016-01-20',
                             'made-up-concept-6': '2016-01-21'
                         }]
@@ -5293,38 +5322,42 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
                         }];
 
                 init();
-                
+
                 function init() {
                     $scope.getDisplayValue();
                 }
-                
+
                 function setValue() {
                     var field = $scope.to.parentField;
                     field.templateOptions.setFieldValue(field, $scope.historicalValue);
                 }
-                
+
                 function getDisplayValue() {
                     var field = $scope.to.parentField;
-                    
+
                     var historicalExpression = field.templateOptions.historicalExpression;
-                     
+
                     //evaluate expression and set historicalValue with the result
-                    if(historicalExpression) {
+                    if (historicalExpression) {
                         try {
                             $scope.historicalValue = eval(historicalExpression);
                         } catch (error) {
-                            $log.debug('Could not evaluate historical expression "'+ historicalExpression + '". Error: ', error);
+                            $log.debug('Could not evaluate historical expression "' + historicalExpression + '". Error: ', error);
                         }
                     }
-                     
+
                     //get display version of the value by calling the getdisplay function
                     //of the field
-                    if (field.templateOptions.getDisplayValue && $scope.historicalValue !== undefined) {
-                        field.templateOptions.getDisplayValue($scope.historicalValue, 
-                        function (displayValue) {
-                            $scope.historicalDisplay = displayValue;
-                        });
-                    }
+                    if ($scope.to.prepopulate !== true)
+                        if (field.templateOptions.getDisplayValue && $scope.historicalValue !== undefined) {
+                            field.templateOptions.getDisplayValue($scope.historicalValue,
+                                function(displayValue) {
+                                    $scope.historicalDisplay = displayValue;
+                                });
+                        }
+
+                    if ($scope.to.prepopulate)
+                        setValue();
 
                 }
             }
@@ -5371,40 +5404,54 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
     .module('openmrs.angularFormentry');
 
   mod.run(function(formlyConfig) {
+      
+        formlyConfig.setType({
+            name: 'kendo-date-picker',
+            // extends:"select",
+            wrapper: ['bootstrapLabel', 'bootstrapHasError', 'validation'],
+            template:
+            '<div style="width: 100%;" class="input-group">' +
+            '<input style="width: 100%;" kendo-date-picker="myPicker" k-options="datePickerConfig" ' +
+            'ng-model="$scope.selectModel" ng-click="open()"/> ' +
+            '<div ng-if="to.weeksList && to.weeksList.length > 0" class="dropup input-group-btn">' +
+            '<button type="button" ng-disabled="to.disabled" class="btn btn-sm btn-default dropdown-toggle" data-toggle="dropdown" >'+
+            '<span class=""> Weeks </span> <span class="caret"></span></button>'+
+            '<ul class="dropdown-menu dropdown-menu-right">' +
+             '<li ng-repeat="week in to.weeksList"><a ng-click="setByWeeks(week)">{{week}} Weeks</a></li>'+
+            '</ul>'+
+            '</div>' +
+            '</div>',
+
+            controller: function($scope, $log, $timeout, moment) {
+                var x = $scope.model[$scope.options.key.split('.')[0]];
+
+                if (!_.isUndefined(x.value)) {
+                    //format the date
+                    x.value = kendo.toString(x.value, "yyyy-MM-dd HH:mm:ss+0300");
+                }
+                $scope.datePickerConfig = {
+                    format: "dd-MM-yyyy",
+                    parseFormats: ["yyyy-MM-ddTHH:mm:ss+0300", "yyyy-MM-dd HH:mm:ss+0300", "yyyy-MM-ddTHH:mm:ss.000Z", "yyyy-MM-ddTHH:mm:ss", "dd-MM-yyyy", "yyyy-MM-dd", "dd/MM/yyyy", "yyyy/MM/dd"],
+                    change: function() {
+                        var datePickerVal = this.value();
+                        x.value = $scope.options.value(kendo.toString(datePickerVal, "yyyy-MM-dd HH:mm:ss+0300"));
+                        console.log('test kendo', datePickerVal)
+                        $scope.$digest();
+                    }
+                };
+
+                $scope.open = function() {
+                    $scope.myPicker.open();
+                };
+                
+                $scope.setByWeeks = function(week) {
+                    var oneMonth = new moment().add(week, 'weeks');
+                     x.value = kendo.toString(oneMonth.toDate(), "yyyy-MM-dd HH:mm:ss+0300");
+                };
+            }
+        });
+         
     // Configure custom types
-    formlyConfig.setType({
-      name: 'kendo-date-picker',
-      // extends:"select",
-      wrapper: ['bootstrapLabel', 'bootstrapHasError', 'validation'],
-      template: '<div> ' +
-        '<input style="width: 100%" kendo-date-picker="myPicker" k-options="datePickerConfig" '+
-        'ng-model="$scope.selectModel" ng-click="open()"/> ' +
-        '</div> ',
-
-      controller: function($scope, $log, $timeout) {
-        var x = $scope.model[$scope.options.key.split('.')[0]];
-        
-        if(!_.isUndefined(x.value)) {
-          //format the date
-          x.value = kendo.toString(x.value, "yyyy-MM-dd HH:mm:ss+0300");
-        }
-        $scope.datePickerConfig = {
-          format : "dd-MM-yyyy",
-          parseFormats: ["yyyy-MM-ddTHH:mm:ss+0300", "yyyy-MM-dd HH:mm:ss+0300", "yyyy-MM-ddTHH:mm:ss.000Z", "yyyy-MM-ddTHH:mm:ss", "dd-MM-yyyy", "yyyy-MM-dd", "dd/MM/yyyy", "yyyy/MM/dd"],
-          change : function() {
-            var datePickerVal = this.value();
-            x.value = $scope.options.value(kendo.toString(datePickerVal, "yyyy-MM-dd HH:mm:ss+0300"));
-            console.log('test kendo', datePickerVal)
-            $scope.$digest();
-          }
-        };
-
-        $scope.open = function() {
-            $scope.myPicker.open();
-        };
-      }
-    });
-
     formlyConfig.setType({
       name: 'kendo-select-multiple',
       // extends:"select",
@@ -5461,7 +5508,9 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
         $scope.clearValue = function() {
           x.value = null;
         };
-        $scope.to.options.unshift({name:'',value:''});
+        if( $scope.to.options[0].name != '')
+            $scope.to.options.unshift({name:'',value:''});
+            
         $scope.selectOptions = {
           dataTextField: 'name',
           dataValueField: 'value',
@@ -5472,8 +5521,6 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
     });
 
   })
-
-
 
 })();
 
