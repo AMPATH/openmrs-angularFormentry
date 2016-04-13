@@ -29,5 +29,9 @@
         this.hasKey = function(name){
             return _.has(store, name)? true: false;
         };
+        
+        this.removeAllObjects = function() {
+            store = {};
+        };
     }
 })();

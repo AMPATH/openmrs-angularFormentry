@@ -17,8 +17,14 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
         formlyConfig.setType({
             name: 'historical-text',
             wrapper: [],
-            template: '<div ng-if="historicalValue"><div ng-if="!to.prepopulate">' +
-            '{{historicalDisplay}} <button  class="btn btn-default pull-right" ng-click="setValue()">Use Value</button>' +
+            template: '<div style="margin-top:-14px;" ng-if="historicalValue">'+
+            '<div class="panel panel-default container-fluid" ng-if="!to.prepopulate">' +
+            '<div style="padding: 1px;" class="row">'+
+            '<div style="padding-left: 4px; padding-top: 4px;" class="col-xs-9" >' +
+            '<span style="font-wieght:bold;" class="text-warning">Previous Value: </span>'+
+            '<span style="font-weight: bold;" >{{historicalDisplay}}<span/></div>' +
+            '<button type="button" class="btn btn-default btn-small col-xs-3" ng-click="setValue()">Use Value</button>' +
+            '</div>'+
             '</div></div>',
             link: function(scope, el, attrs, vm) {
                 //incase we need link function

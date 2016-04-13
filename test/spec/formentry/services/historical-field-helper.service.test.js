@@ -200,7 +200,7 @@
         ' when getDisplayText is invoked', function () {
              var fieldLabel = 'testLabel';
              var value = 'myValue';
-             var expectedDisplayText = '"myValue"';
+             var expectedDisplayText = 'myValue';
              
              historicalHelperService.getDisplayText(value, function(display){
                 expect(expectedDisplayText).to.equal(display); 
@@ -226,8 +226,8 @@
                      label: 'five thousand'
                  }
              ];
-             var expectedDisplayText = '"concept two"';
-             var expectedDisplayText2 = '"concept two, five thousand"';
+             var expectedDisplayText = 'concept two';
+             var expectedDisplayText2 = 'concept two, five thousand';
              
              historicalHelperService.getDisplayTextFromOptions(value, options, 'concept', 
              'label', function(display){
