@@ -160,7 +160,7 @@
             } else if (obs.groupMembers) {
                 var group = {};
                 _.each(obs.groupMembers, function (member) {
-                    _.extend(group, __transformObs(member));
+                    ___augumentObs(group, __transformObs(member));
                 });
                 
                 //Handle already existing data
