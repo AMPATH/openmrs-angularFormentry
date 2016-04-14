@@ -2782,6 +2782,10 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
                     }
                 }
                 
+                if(element && element.options && element.options.data && element.options.data.historicalField) {
+                     element.options.data.historicalField.hide = isDisabled;
+                }
+                
                 return isDisabled;
             };
         }
@@ -3351,7 +3355,8 @@ jscs:disable requirePaddingNewLinesBeforeLineComments, requireTrailingComma
         return service;
 
         function createHistoricalTextField(parentField, parentFieldModel, parentFieldKey, prepopulateValue) {
-            return {
+            
+            var field =  {
                 key: 'historical-text-val',
                 type: 'historical-text',
                 templateOptions: {
@@ -3361,6 +3366,9 @@ jscs:disable requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                     prepopulate: prepopulateValue
                 }
             };
+            
+            parentField.data['historicalField'] = field;
+            return field;
         }
 
         function handleHistoricalExpressionProperty(field, schemaQuestion) {
@@ -3730,7 +3738,7 @@ jscs:disable requirePaddingNewLinesBeforeLineComments, requireTrailingComma
             } else if (obs.groupMembers) {
                 var group = {};
                 _.each(obs.groupMembers, function (member) {
-                    _.extend(group, __transformObs(member));
+                    ___augumentObs(group, __transformObs(member));
                 });
                 
                 //Handle already existing data
