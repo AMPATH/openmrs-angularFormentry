@@ -36,7 +36,8 @@
         return service;
 
         function createHistoricalTextField(parentField, parentFieldModel, parentFieldKey, prepopulateValue) {
-            return {
+            
+            var field =  {
                 key: 'historical-text-val',
                 type: 'historical-text',
                 templateOptions: {
@@ -46,6 +47,9 @@
                     prepopulate: prepopulateValue
                 }
             };
+            
+            parentField.data['historicalField'] = field;
+            return field;
         }
 
         function handleHistoricalExpressionProperty(field, schemaQuestion) {
