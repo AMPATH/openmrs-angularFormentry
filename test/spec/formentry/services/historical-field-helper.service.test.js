@@ -39,6 +39,7 @@
                     rendering: 'text',
                     concept: '123266'
                 },
+                data: {},
                 validators: [
                     {
                         type: 'conditionalAnswered',
@@ -354,6 +355,8 @@
                     prepopulate: undefined
                 }
              };
+             
+             regularSchemaQuestion.data.historicalField = expectedHistoricalFieldObject;
              
              var output = historicalHelperService.
                 createHistoricalTextField(regularSchemaQuestion ,{}, 'somekey');

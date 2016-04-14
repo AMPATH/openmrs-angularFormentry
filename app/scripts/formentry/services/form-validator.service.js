@@ -416,6 +416,10 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
                     }
                 }
                 
+                if(element && element.options && element.options.data && element.options.data.historicalField) {
+                     element.options.data.historicalField.hide = isDisabled;
+                }
+                
                 return isDisabled;
             };
         }
