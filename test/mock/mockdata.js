@@ -873,6 +873,50 @@ function getMockRestPersonAttributes() {
                         "display": "YES"
                     },
                     "groupMembers": null
+                },
+                {
+                    "uuid": "fdb32127-6c64-4bde-b97b-13fb7c8accb8",
+                    "obsDatetime": "2016-04-14T09:12:43.000+0300",
+                    "concept": {
+                        "uuid": "a8a08344-1350-11df-a1f1-0026b9348838"
+                    },
+                    "value": null,
+                    "groupMembers": [
+                        {
+                            "uuid": "bdc5beb4-25bd-4b6c-ba60-cbffd4249750",
+                            "display": "CURRENT ANTIRETROVIRAL DRUGS USED FOR TREATMENT: LAMIVUDINE AND STAVUDINE",
+                            "concept": {
+                                "uuid": "a899cf5e-1350-11df-a1f1-0026b9348838",
+                                "display": "CURRENT ANTIRETROVIRAL DRUGS USED FOR TREATMENT"
+                            },
+                            "obsDatetime": "2016-04-14T09:12:43.000+0300",
+                            "obsGroup": {
+                                "uuid": "fdb32127-6c64-4bde-b97b-13fb7c8accb8",
+                                "display": "CURRENT ANTIRETROVIRAL DRUGS USED FOR TREATMENT, DETAILED: LAMIVUDINE AND STAVUDINE, NEVIRAPINE, EFAVIRENZ, ATAZANAVIR AND RITONAVIR, ZIDOVUDINE"
+                            },
+                             "value": {
+                                "uuid": "3d587177-984e-4eeb-93f2-3223b6c1dd7c",
+                                "display": "LAMIVUDINE AND STAVUDINE",
+                             }
+                        },
+                        {
+                            "uuid": "2343c2c1-46bc-438a-b831-76d6eabbacc6",
+                            "display": "CURRENT ANTIRETROVIRAL DRUGS USED FOR TREATMENT: NEVIRAPINE",
+                            "concept": {
+                                "uuid": "a899cf5e-1350-11df-a1f1-0026b9348838",
+                                "display": "CURRENT ANTIRETROVIRAL DRUGS USED FOR TREATMENT"
+                            },
+                            "obsDatetime": "2016-04-14T09:12:43.000+0300",
+                            "obsGroup": {
+                                "uuid": "fdb32127-6c64-4bde-b97b-13fb7c8accb8",
+                                "display": "CURRENT ANTIRETROVIRAL DRUGS USED FOR TREATMENT, DETAILED: LAMIVUDINE AND STAVUDINE, NEVIRAPINE, EFAVIRENZ, ATAZANAVIR AND RITONAVIR, ZIDOVUDINE"
+                            },
+                             "value": {
+                                "uuid": "a8967656-1350-11df-a1f1-0026b9348838",
+                                "display": "NEVIRAPINE",
+                             }
+                        }
+                    ]
                 }
             ]
         };
@@ -888,6 +932,12 @@ function getMockRestPersonAttributes() {
           'a8afcafc-1350-11df-a1f1-0026b9348838': [
               'a8ad1276-1350-11df-a1f1-0026b9348838',
               'a8afc8b8-1350-11df-a1f1-0026b9348838'
+          ],
+          'a8a08344-1350-11df-a1f1-0026b9348838':
+          [
+            {
+                'a899cf5e-1350-11df-a1f1-0026b9348838': ['3d587177-984e-4eeb-93f2-3223b6c1dd7c','a8967656-1350-11df-a1f1-0026b9348838']
+            }
           ],
           'a8afdb8c-1350-11df-a1f1-0026b9348838': [
             {
