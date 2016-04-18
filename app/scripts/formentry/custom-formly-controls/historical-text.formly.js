@@ -4,7 +4,7 @@ jshint -W106, -W098, -W109, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
 /*
 jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 */
-(function() {
+(function () {
 
     'use strict';
 
@@ -12,25 +12,27 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
         angular
             .module('openmrs.angularFormentry');
 
-    mod.run(function(formlyConfig) {
+    mod.run(function (formlyConfig) {
         // Configure custom types
         formlyConfig.setType({
             name: 'historical-text',
             wrapper: [],
-            template: '<div style="margin-top:-14px;" ng-if="historicalValue">'+
-            '<div class="panel panel-default container-fluid" ng-if="!to.prepopulate">' +
-            '<div style="padding: 1px;" class="row">'+
+            template: '<div style="margin-top:-14px;" ng-if="historicalValue">' +
+            '<div class="panel panel-default" ng-if="!to.prepopulate">' +
+            '<div class="container-fluid">' +
+            '<div style="padding: 1px;" class="row">' +
             '<div style="padding-left: 4px; padding-top: 4px;" class="col-xs-9" >' +
-            '<span style="font-wieght:bold;" class="text-warning">Previous Value: </span>'+
+            '<span style="font-wieght:bold;" class="text-warning">Previous Value: </span>' +
             '<span style="font-weight: bold;" >{{historicalDisplay}}<span/></div>' +
             '<button type="button" class="btn btn-default btn-small col-xs-3" ng-click="setValue()">Use Value</button>' +
-            '</div>'+
+            '</div>' +
+            '</div>' + 
             '</div></div>',
-            link: function(scope, el, attrs, vm) {
+            link: function (scope, el, attrs, vm) {
                 //incase we need link function
             },
 
-            controller: function($scope, $log, HistoricalDataService) {
+            controller: function ($scope, $log, HistoricalDataService) {
                 //functions
                 $scope.setValue = setValue;
                 $scope.getDisplayValue = getDisplayValue;
@@ -89,7 +91,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
                     if ($scope.to.prepopulate !== true)
                         if (field.templateOptions.getDisplayValue && $scope.historicalValue !== undefined) {
                             field.templateOptions.getDisplayValue($scope.historicalValue,
-                                function(displayValue) {
+                                function (displayValue) {
                                     $scope.historicalDisplay = displayValue;
                                 });
                         }
@@ -97,6 +99,42 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
                     if ($scope.to.prepopulate)
                         setValue();
 
+                }
+
+                function arrayContains(array, members) {
+                    if (Array.isArray(members)) {
+                        if (members.length === 0) {
+                            return true;
+                        }
+                        var contains = true;
+                        _.each(members, function (val) {
+                            if (array.indexOf(val) === -1) {
+                                contains = false;
+                            }
+                        });
+                        return contains;
+                    }
+                    else {
+                        return array.indexOf(members) !== -1;
+                    }
+                }
+
+                function arrayContainsAny(array, members) {
+                    if (Array.isArray(members)) {
+                        if (members.length === 0) {
+                            return true;
+                        }
+                        var contains = false;
+                        _.each(members, function (val) {
+                            if (array.indexOf(val) !== -1) {
+                                contains = true;
+                            }
+                        });
+                        return contains;
+                    }
+                    else {
+                        return array.indexOf(members) !== -1;
+                    }
                 }
             }
 

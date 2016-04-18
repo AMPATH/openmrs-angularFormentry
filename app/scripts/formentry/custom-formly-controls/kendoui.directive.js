@@ -24,7 +24,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             'ng-model="$scope.selectModel" ng-click="open()"/> ' +
             '<div ng-if="to.weeksList && to.weeksList.length > 0" class="dropup input-group-btn">' +
             '<button type="button" ng-disabled="to.disabled" class="btn btn-sm btn-default dropdown-toggle" data-toggle="dropdown" >'+
-            '<span class=""> Weeks </span> <span class="caret"></span></button>'+
+            '<span class="weeks-control"> Weeks </span> <span class="caret"></span></button>'+
             '<ul class="dropdown-menu dropdown-menu-right">' +
              '<li ng-repeat="week in to.weeksList"><a ng-click="setByWeeks(week)">{{week}} Weeks</a></li>'+
             '</ul>'+

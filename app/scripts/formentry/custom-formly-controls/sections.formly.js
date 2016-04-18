@@ -33,8 +33,8 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             "{{to.required ? '*' : ''}}  "+
           '</strong>'  +
           '<button type="button" class="btn btn-sm btn-primary pull-right" ng-init="expanded = loaded = (to.expanded || false)" >' +
-          '<span ng-show="!expanded">Show  <span class="caret"></span></span>' +
-          '<span ng-show="expanded">Hide <span class="dropup"><span class="caret"></span></span></span>' +
+          '<span ng-show="!expanded">Show  <span class="glyphicon glyphicon-menu-down"></span></span>' +
+          '<span ng-show="expanded">Hide <span class="glyphicon glyphicon-menu-up"></span></span>' +
           '</button>'+
         '</div> ' +
         '<div class="panel-body px-nested-panel-body" ng-show="expanded" ng-if="loaded || expanded"> ' +
