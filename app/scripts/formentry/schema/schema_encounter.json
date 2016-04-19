@@ -408,7 +408,8 @@
                     "reference": {
                         "page": "Page 1",
                         "section": "PWPs",
-                        "form": "triage"
+                        "form": "triage",
+                        "excludeQuestions": ["toExclude"]
                     }
                 }
             ]
@@ -417,7 +418,8 @@
             "label": "Referenced Page",
             "reference": {
                 "page": "Page 1",
-                "form": "triage"
+                "form": "triage",
+                "excludeQuestions": ["q7b", "toExclude"]
             }
         },
         {
