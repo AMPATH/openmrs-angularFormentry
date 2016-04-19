@@ -382,7 +382,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
               }
             });
           }
-          $log.debug('Repeating fieldsxxx', sectionFields);
+          // $log.debug('Repeating fieldsxxx', sectionFields);
           _.each(sectionFields, function(_sectionFields) {
             var fieldKeys = Object.keys(_sectionFields);
             var sectionObs = [];
@@ -393,6 +393,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
               groupMembers: sectionObs
             };
             _generateSectionPayLoad(_sectionFields, sectionObs);
+            // console.log('Repeating obs b4 updating payload', obs);
             if (sectionObs.length > 0) {
               if (!_.isUndefined(obs.concept)) {
                 obsRestPayload.push(obs);
@@ -428,21 +429,21 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       }
 
       if (_.isUndefined(initialValue) && (!_.isNull(value) &&
-          value !== '' && !_.isUndefined(value))) {
+          value !== '' && !_.isUndefined(value) && !_.isObject(value))) {
         obs = {
           concept: field.concept,
           value: value
         };
 
       } else if (initialValue !== value && (!_.isNull(value) &&
-          value !== '' && !_.isUndefined(value))) {
+          value !== '' && !_.isUndefined(value) && !_.isObject(value))) {
         obs = {
           uuid: field.initialUuid,
           concept: field.concept,
           value: value
         };
       } else if (initialValue !== value && (!_.isNull(value) &&
-          value === '' && !_.isUndefined(value) && !_.isUndefined(initialValue))) {
+          value === '' && !_.isUndefined(value) && !_.isUndefined(initialValue) && !_.isObject(value))) {
         obs = {
           uuid: field.initialUuid,
           concept: field.concept,
