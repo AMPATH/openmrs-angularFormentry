@@ -88,6 +88,9 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
           valuePrimitive: true,
           dataSource: $scope.to.options
         };
+      },
+      link: function(scope, el, attrs) {
+        $('.k-input').attr('readonly', "readonly")
       }
     });
 
