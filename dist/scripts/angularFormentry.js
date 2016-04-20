@@ -3957,6 +3957,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
          * Return a formatted date.
          */
         function formatDate(date, format, timezone) {
+            //console.log('date to be converted ', date);
             if (typeof date === 'string') {
                 //Try to parse
                 date = new Date(date);
@@ -3970,13 +3971,16 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
                 throw new ReferenceError('Invalid type passed as date!');
             }
 
-            var format = format || 'yyyy-MM-dd HH:mm:ss';
+            var format = format || 'YYYY-MM-DD HH:mm:ss';
             var timezone = timezone || getLocalTimezone();
 
             console.log('timezone', timezone);
             console.log('date', date);
-
-            return $filter('date')(date, format, timezone);
+            //console.log('utc date', moment(date).utc());
+            var momented = moment(date).utcOffset(timezone);
+            console.log('converted', momented);
+            console.log('converted formatted', momented.format(format));
+            return momented.format(format);
         }
     }
 })();
@@ -5525,6 +5529,9 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
           valuePrimitive: true,
           dataSource: $scope.to.options
         };
+      },
+      link: function(scope, el, attrs) {
+        $('.k-input').attr('readonly', "readonly")
       }
     });
 
