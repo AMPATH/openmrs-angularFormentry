@@ -26,7 +26,7 @@
     "moment": "~2.10.6",
     "angular-moment": "~0.10.3",
     "kendo-ui": "kendo-ui-core#~2016.1.226",
-    "openmrs-ngresource": "https://github.com/AMPATH/openmrs-ngresource.git#0.0.7"
+    "openmrs-ngresource": "https://github.com/AMPATH/openmrs-ngresource.git#0.0.8"
   },
   "resolutions": {
     "angular": "1.4.7"
