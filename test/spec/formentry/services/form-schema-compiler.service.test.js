@@ -6,10 +6,10 @@
 /*jshint -W026, -W030, -W106 */
 /*jscs:disable disallowMixedSpacesAndTabs, requireDotNotation
 /*jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma*/
-(function() {
+(function () {
     'use strict';
-    describe('Form Schema Compiler Service Unit Tests', function() {
-        beforeEach(function() {
+    describe('Form Schema Compiler Service Unit Tests', function () {
+        beforeEach(function () {
             module('mock.formSchemas');
             module('openmrs.angularFormentry');
         });
@@ -21,7 +21,7 @@
         var triageFormWithReferences
         var schemaArray;
 
-        beforeEach(inject(function($injector) {
+        beforeEach(inject(function ($injector) {
             formSchemasService = $injector.get('TestFormSchemasService');
             formCompilerService = $injector.get('FormSchemaCompilerService');
 
@@ -35,19 +35,19 @@
         }));
 
         it('Should load form schema compiler service',
-            function() {
+            function () {
                 expect(formCompilerService).to.exist;
                 expect(formCompilerService.findSchemaByName).to.be.defined;
             });
 
         it('Should load test form schemas service',
-            function() {
+            function () {
                 expect(formSchemasService).to.exist;
                 expect(formSchemasService.getAdultReturnSchema).to.be.defined;
             });
 
         it('Should load all form schemas required for testing',
-            function() {
+            function () {
                 expect(adultReturnForm).to.exist;
                 expect(adultReturnForm.name).to.equal('AMPATH Adult Return Encounter Form 6.09');
 
@@ -59,7 +59,7 @@
             });
 
         it('Should return the correct schema when findSchemaByName is invoked',
-            function() {
+            function () {
                 var returnedSchema;
                 var expectedSchema = adultReturnForm;
                 returnedSchema = formCompilerService.findSchemaByName(schemaArray,
@@ -70,7 +70,7 @@
             });
 
         it('Should return the correct page when getPageInSchemaByLabel is invoked',
-            function() {
+            function () {
                 var returnedPage;
                 returnedPage = formCompilerService.getPageInSchemaByLabel(adultReturnForm,
                     'Medical History');
@@ -81,7 +81,7 @@
             });
 
         it('Should return the correct section when getSectionInSchemaByPageLabelBySectionLabel is invoked',
-            function() {
+            function () {
                 var returnedSection;
                 returnedSection = formCompilerService.
                     getSectionInSchemaByPageLabelBySectionLabel(adultReturnForm,
@@ -93,7 +93,7 @@
             });
 
         it('Should return the correct question when getQuestionByIdInSchema is invoked',
-            function() {
+            function () {
                 var returnedQuestion;
                 returnedQuestion = formCompilerService.
                     getQuestionByIdInSchema(adultReturnForm, 'scheduledVisit');
@@ -111,8 +111,29 @@
 
             });
 
+        it('Should return the correct questions array when getQuestionsArrayByQuestionIdInSchema is invoked',
+            function () {
+                var returnedQuestionArray;
+                returnedQuestionArray = formCompilerService.
+                    getQuestionsArrayByQuestionIdInSchema(adultReturnForm, 'scheduledVisit');
+                console.error('returned array', returnedQuestionArray);
+                expect(Array.isArray(returnedQuestionArray)).to.equal(true);
+                expect(returnedQuestionArray[0].id).to.equal('encDate');
+                expect(returnedQuestionArray[0].label).to.equal('Visit Date');
+
+                //deeper question
+                returnedQuestionArray = undefined;
+                returnedQuestionArray = formCompilerService.getQuestionsArrayByQuestionIdInSchema(adultReturnForm,
+                    'pcpProphylaxisAdherence');
+
+                expect(Array.isArray(returnedQuestionArray)).to.equal(true);
+                expect(returnedQuestionArray[0].id).to.equal('pcpProphylaxisAdherence');
+                expect(returnedQuestionArray[0].label).to.equal("Patient's adherence on PCP Prophylaxis:");
+
+            });
+
         it('Should fill in missing object members when fillPlaceholderObject is invoked',
-            function() {
+            function () {
 
                 //case filling empty objects
                 var placeHolderObject = {};
@@ -148,7 +169,7 @@
             });
 
         it('Should clear reference member from placeHolder object when deleteReferenceMember is invoked',
-            function() {
+            function () {
                 var placeHolderObject = {
                     memberA: 'string 2',
                     reference: {
@@ -164,8 +185,57 @@
                 expect(placeHolderObject.reference).to.be.undefined;
             });
 
+        it('Should remove object from an array when removeObjectFromArray is invoked',
+            function () {
+                var myObject = {
+                    a: 'b'
+                };
+
+                var myArray = [{
+                    b: 'c'
+                },
+                    myObject,
+                    {
+                        e: 'f'
+                    }];
+
+                formCompilerService.
+                    removeObjectFromArray(myArray, myObject);
+                console.log('array after removing element', myArray, 'object', myObject);
+                expect(myArray.length).to.equal(2);
+                expect(myArray.indexOf(myObject)).to.equal(-1);
+            });
+
+        it('Should remove excluded questions from placeholder when removeObjectFromArray is invoked',
+            function () {
+                var placeHolderObject = {
+                    memberA: 'string 2',
+                    reference: {
+                        page: '1',
+                        section: '2',
+                        excludeQuestions: ['3']
+                    },
+                    questions: [
+                        {
+                            id: '2'
+                        },
+                        {
+                            id:'1'                            
+                        },
+                        {
+                            id: '3'
+                        }]
+                };
+
+                formCompilerService.
+                    removeExcludedQuestionsFromPlaceholder(placeHolderObject);
+                console.log('array after removing element', placeHolderObject.questions);
+                expect(placeHolderObject.questions.length).to.equal(2);
+                expect(placeHolderObject.questions.indexOf({id: '3'})).to.equal(-1);
+            });
+
         it('Should return an array of all reference types when getAllPlaceholderObjects is invoked',
-            function() {
+            function () {
                 var referencedSections = formCompilerService.
                     getAllPlaceholderObjects(triageFormWithReferences);
 
@@ -173,7 +243,7 @@
             });
 
         it('Should return an object key value of formAlias-formSchema when getReferencedForms is invoked',
-            function() {
+            function () {
                 var referencedForms = formCompilerService.
                     getReferencedForms(triageFormWithReferences, schemaArray);
 
@@ -182,7 +252,7 @@
             });
 
         it('Should replace all place holder objects with actual objects in a form when fillAllPlaceholderObjectsInForm is invoked ',
-            function() {
+            function () {
                 formCompilerService.
                     fillAllPlaceholderObjectsInForm(triageFormWithReferences, schemaArray);
 
@@ -190,7 +260,7 @@
                 var placeHolders = formCompilerService.
                     getAllPlaceholderObjects(triageFormWithReferences);
 
-                 expect(placeHolders.length).to.equal(0);
+                expect(placeHolders.length).to.equal(0);
             });
 
     });

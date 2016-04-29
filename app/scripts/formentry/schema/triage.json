@@ -228,6 +228,7 @@
             },
             {
               "label": "Is this patient a member of any of the following high risk populations?",
+              "id": "toExclude",
               "questionOptions":{
                 "rendering":"select",
                 "concept": "93aa3f1d-1c39-4196-b5e6-8adc916cd5d6",
