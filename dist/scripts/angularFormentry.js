@@ -1582,6 +1582,13 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                 obsField['templateOptions']['rows'] = _question.questionOptions.rows || 15;
                 obsField['templateOptions']['columns'] = _question.questionOptions.columns;
                 obsField['templateOptions']['placeholder'] = _question.questionOptions.placeholder;
+                
+                if(!obsField['modelOptions']) {
+                    obsField['modelOptions'] = {};
+                }
+                obsField['modelOptions']['debounce'] = {
+                    default: 3000
+                };
             }
 
             obsField['templateOptions']['createModelBluePrint'] = function(parentModel, value) {
@@ -4352,7 +4359,7 @@ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106, -W026
 /*
 jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 */
-(function() {
+(function () {
     'use strict';
 
     angular
@@ -4369,10 +4376,13 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             getPageInSchemaByLabel: getPageInSchemaByLabel,
             getSectionInSchemaByPageLabelBySectionLabel: getSectionInSchemaByPageLabelBySectionLabel,
             getQuestionByIdInSchema: getQuestionByIdInSchema,
+            getQuestionsArrayByQuestionIdInSchema: getQuestionsArrayByQuestionIdInSchema,
             getAllPlaceholderObjects: getAllPlaceholderObjects,
             fillPlaceholderObject: fillPlaceholderObject,
             deleteReferenceMember: deleteReferenceMember,
-            fillAllPlaceholderObjectsInForm: fillAllPlaceholderObjectsInForm
+            fillAllPlaceholderObjectsInForm: fillAllPlaceholderObjectsInForm,
+            removeObjectFromArray: removeObjectFromArray,
+            removeExcludedQuestionsFromPlaceholder: removeExcludedQuestionsFromPlaceholder
         };
 
         return service;
@@ -4383,7 +4393,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             }
 
             var foundSchema;
-            _.each(schemaArray, function(schema) {
+            _.each(schemaArray, function (schema) {
                 if (schema.name === nameOfSchema) {
                     foundSchema = schema;
                 }
@@ -4397,7 +4407,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             }
 
             var foundPage;
-            _.each(schema.pages, function(page) {
+            _.each(schema.pages, function (page) {
                 if (page.label === pageLabel) {
                     foundPage = page;
                 }
@@ -4417,7 +4427,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
             var foundSection;
 
-            _.each(foundPage.sections, function(section) {
+            _.each(foundPage.sections, function (section) {
                 if (section.label === sectionLabel) {
                     foundSection = section;
                 }
@@ -4430,6 +4440,13 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
                 return;
             }
             return _getQuestionByIdInSchema(schema, questionId);
+        }
+
+        function getQuestionsArrayByQuestionIdInSchema(schema, questionId) {
+            if (_.isEmpty(schema) || _.isEmpty(questionId)) {
+                return;
+            }
+            return _getQuestionsArrayByQuestionIdInSchema(schema, schema, questionId);
         }
 
         function _getQuestionByIdInSchema(object, questionId) {
@@ -4453,6 +4470,36 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
                     var toExpand = (object.pages || object.sections || object.questions);
                     //console.log('toExpand', toExpand);
                     return _getQuestionByIdInSchema(toExpand, questionId);
+                } else {
+                    return;
+                }
+            } else {
+                return;
+            }
+        }
+
+        function _getQuestionsArrayByQuestionIdInSchema(parent, object, questionId) {
+            if (Array.isArray(object)) {
+                //console.debug('is array', object);
+                var returnedValue;
+                for (var i = 0; i < object.length; i++) {
+                    if (!_.isEmpty(object[i])) {
+                        returnedValue = _getQuestionsArrayByQuestionIdInSchema(object, object[i], questionId);
+                    }
+                    if (!_.isEmpty(returnedValue)) {
+                        break;
+                    }
+                }
+
+                return returnedValue;
+            } else if (typeof object === 'object') {
+                //console.debug('is object', object);
+                if (_isQuestionObjectWithId(object, questionId)) {
+                    return parent;
+                } else if (_isSchemaSubObjectExpandable(object)) {
+                    var toExpand = (object.pages || object.sections || object.questions);
+                    //console.log('toExpand', toExpand);
+                    return _getQuestionsArrayByQuestionIdInSchema(toExpand, toExpand, questionId);
                 } else {
                     return;
                 }
@@ -4540,11 +4587,11 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
             //replace all placeHolders
             _replaceAllPlaceholdersWithActualObjects(formSchema, referencedForms, placeHolders);
-            
+
         }
 
         function _replaceAllPlaceholdersWithActualObjects(formSchema, keyValReferencedForms, placeHoldersArray) {
-            _.each(placeHoldersArray, function(placeHolder) {
+            _.each(placeHoldersArray, function (placeHolder) {
                 var referencedObject = _getReferencedObject(formSchema, placeHolder.reference, keyValReferencedForms);
 
                 if (_.isEmpty(referencedObject)) {
@@ -4553,17 +4600,39 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
                     //console.log('Form compile: filling placeholder object', placeHolder);
                     //console.log('Form compile: filling placeholder object with', referencedObject);
                     fillPlaceholderObject(placeHolder, referencedObject);
+                    removeExcludedQuestionsFromPlaceholder(placeHolder);
                     deleteReferenceMember(placeHolder);
                 }
             });
         }
 
+        function removeObjectFromArray(array, object) {
+            var indexOfObject = array.indexOf(object);
+            if (indexOfObject === -1) return;
+
+            array.splice(indexOfObject, 1);
+        }
+
+        function removeExcludedQuestionsFromPlaceholder(placeHolder) {
+            if (angular.isArray(placeHolder.reference.excludeQuestions)) {
+                _.each(placeHolder.reference.excludeQuestions, function (excludedQuestionId) {
+                    var questionsArray = getQuestionsArrayByQuestionIdInSchema(
+                        placeHolder, excludedQuestionId);
+
+                    if (!angular.isArray(questionsArray)) return;
+                    var question = getQuestionByIdInSchema(questionsArray, excludedQuestionId);
+
+                    removeObjectFromArray(questionsArray, question);
+                });
+            }
+        }
+
         function _getReferencedObject(formSchema, referenceData, keyValReferencedForms) {
-            if(_.isEmpty(referenceData.form)) {
+            if (_.isEmpty(referenceData.form)) {
                 console.error('Form compile: reference missing form attribute', referenceData);
                 return;
             }
-            if(_.isEmpty(keyValReferencedForms[referenceData.form])) {
+            if (_.isEmpty(keyValReferencedForms[referenceData.form])) {
                 console.error('Form compile: referenced form alias not found', referenceData);
                 return;
             }
@@ -4578,7 +4647,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
                     referenceData.section
                 );
             }
-            if(!_.isEmpty(referenceData.page)) {
+            if (!_.isEmpty(referenceData.page)) {
                 return getPageInSchemaByLabel(
                     keyValReferencedForms[referenceData.form],
                     referenceData.page
@@ -4596,7 +4665,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
             var keyValReferencedForms = {};
 
-            _.each(referencedForms, function(reference) {
+            _.each(referencedForms, function (reference) {
                 var referencedFormSchema =
                     findSchemaByName(formSchemasLookupArray, reference.formName);
                 keyValReferencedForms[reference.alias] = referencedFormSchema;
