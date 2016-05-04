@@ -496,6 +496,13 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                 obsField['templateOptions']['rows'] = _question.questionOptions.rows || 15;
                 obsField['templateOptions']['columns'] = _question.questionOptions.columns;
                 obsField['templateOptions']['placeholder'] = _question.questionOptions.placeholder;
+                
+                if(!obsField['modelOptions']) {
+                    obsField['modelOptions'] = {};
+                }
+                obsField['modelOptions']['debounce'] = {
+                    default: 3000
+                };
             }
 
             obsField['templateOptions']['createModelBluePrint'] = function(parentModel, value) {
