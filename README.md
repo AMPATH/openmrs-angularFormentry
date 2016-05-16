@@ -12,6 +12,11 @@ Run `grunt` for building and `grunt serve` for preview.
 
 Running `grunt test` will run the unit tests with karma.
 
+## Installing
+
+To install via bower
+bower install https://github.com/AMPATH/openmrs-angularFormentry.git
+
 ## Introduction
 
 Angular OpenMRS formentry is a module that aims at using angular framework to create a standalone module that can be used by the community and angular AMRS project to create forms.
