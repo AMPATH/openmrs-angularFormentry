@@ -25,6 +25,17 @@ This module has the following key components:
 - Form/field Validators
 - Payload generators
 
+## Consuming the module
+This module does the following
+- Converts a form schema into Formly Schema/one that the form can consume.
+- Creates a model for you given an empty model
+- Populates the model with existing data when viewing/editting data
+- Generates a payload that you can submit to openmrs rest endpoints to save/update/delete data
+
+For code snippets on how you can consume the module, see the GIST:
+https://gist.github.com/nkimaina/9bb43eade884f40d43c8cd5dd6342d3c
+ 
+
 ## FORM SCHEMA FORMAT
 
 
