@@ -4,7 +4,7 @@
 (function () {
     'use strict';
 
-    describe.only('Order Processor Unit Tests', function () {
+    describe('Order Processor Unit Tests', function () {
         beforeEach(function () {
             module('angularFormentry');
             module('openmrs.angularFormentry');
@@ -47,6 +47,43 @@
                 },
                 {
                     uuid: 'deleteduuid',
+                    concept: 'concept4',
+                    type: 'testorder',
+                    orderer: 'f9badd80-ab76-11e2-9e96-0800200c9a66',
+                    careSetting: 'c365e560-c3ec-11e3-9c1a-0800200c9a66'
+                }
+            ]
+        };
+
+        var modifiedStateOfVirtualGroupOrderModelSample2 = {
+            orderType: 'testorder',
+            orderConcepts: ['5092AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+                '5085AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA', 'concept3'],
+            orderSetting: 'orderSetting',
+            orders: [
+                {
+                    concept: '5092AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+                    type: 'testorder',
+                    orderer: 'f9badd80-ab76-11e2-9e96-0800200c9a66',
+                    careSetting: 'c365e560-c3ec-11e3-9c1a-0800200c9a66'
+                },
+                {
+                    uuid: 'anotherValue',
+                    concept: '5092AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+                    type: 'testorder',
+                    orderer: 'f9badd80-ab76-11e2-9e96-0800200c9a66',
+                    careSetting: 'c365e560-c3ec-11e3-9c1a-0800200c9a66'
+                }
+            ],
+            deletedOrders: [
+                {
+                    concept: 'concept3',
+                    type: 'testorder',
+                    orderer: 'f9badd80-ab76-11e2-9e96-0800200c9a66',
+                    careSetting: 'c365e560-c3ec-11e3-9c1a-0800200c9a66'
+                },
+                {
+                    uuid: 'deleteduuid2',
                     concept: 'concept4',
                     type: 'testorder',
                     orderer: 'f9badd80-ab76-11e2-9e96-0800200c9a66',
@@ -449,6 +486,175 @@
 
                 orderProcessorService.populateModel(modelWithVirtualGroups, orderPayloadArraySample);
                 expect(modelWithVirtualGroups).to.deep.equal(filledModel);
+            });
+
+        it('should create the right single order payload when getOrderPayload is called',
+            function () {
+                //case new order
+                var newOrderModel = newOrderModelSample;
+                var expectedPayloadObject = {
+                    concept: '5085AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+                    type: 'testorder',
+                    orderer: 'f9badd80-ab76-11e2-9e96-0800200c9a66',
+                    careSetting: 'c365e560-c3ec-11e3-9c1a-0800200c9a66'
+                };
+
+                var actualPayloadObject = orderProcessorService.getOrderPayload(newOrderModel);
+
+                expect(expectedPayloadObject).to.deep.equal(actualPayloadObject);
+
+                //case existing order
+                var existingOrderModel = existingOrderModelSample;
+
+                expectedPayloadObject = {
+                    uuid: 'bbd17798-27da-4d71-aeef-7f624e135a09'
+                    //concept: '5092AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA', Not Editable
+                    //type: 'testorder', Not Editable
+                    //orderer: 'f9badd80-ab76-11e2-9e96-0800200c9a66', Not Editable
+                    //careSetting: 'c365e560-c3ec-11e3-9c1a-0800200c9a66', Not Editable
+                    //orderNumber: 'ORD-2', Not Editable
+                };
+
+                actualPayloadObject = orderProcessorService.getOrderPayload(existingOrderModel);
+                expect(expectedPayloadObject).to.deep.equal(actualPayloadObject);
+            });
+
+        it('should create the right virtual group order payload when getVirtualGroupOrderPayload is called',
+            function () {
+                var groupOrder = modifiedStateOfVirtualGroupOrderModelSample;
+
+                var expectedPayloadObject = {
+                    encounterAppendableOrderPayload: [
+                        {
+                            concept: '5085AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+                            type: 'testorder',
+                            orderer: 'f9badd80-ab76-11e2-9e96-0800200c9a66',
+                            careSetting: 'c365e560-c3ec-11e3-9c1a-0800200c9a66'
+                        },
+                        {
+                            uuid: 'bbd17798-27da-4d71-aeef-7f624e135a09'
+                        }
+                    ],
+                    deletedOrdersUuid: ['deleteduuid']
+                };
+
+                var actualPayloadObject = orderProcessorService.getVirtualGroupOrderPayload(groupOrder);
+                expect(expectedPayloadObject).to.deep.equal(actualPayloadObject);
+
+            });
+
+        it('should merge virtual group order payloads when mergeVirtualGroupOrderPayLoads is called',
+            function () {
+
+                var payloadObject1 = {
+                    encounterAppendableOrderPayload: [
+                        {
+                            concept: '5085AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+                            type: 'testorder',
+                            orderer: 'f9badd80-ab76-11e2-9e96-0800200c9a66',
+                            careSetting: 'c365e560-c3ec-11e3-9c1a-0800200c9a66'
+                        },
+                        {
+                            uuid: 'bbd17798-27da-4d71-aeef-7f624e135a09'
+                        }
+                    ],
+                    deletedOrdersUuid: ['deleteduuid']
+                };
+
+                var payloadObject2 = {
+                    encounterAppendableOrderPayload: [
+                        {
+                            concept: '5092AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+                            type: 'testorder',
+                            orderer: 'f9badd80-ab76-11e2-9e96-0800200c9a66',
+                            careSetting: 'c365e560-c3ec-11e3-9c1a-0800200c9a66'
+                        },
+                        {
+                            uuid: 'anotherValue'
+                        }
+                    ],
+                    deletedOrdersUuid: ['deleteduuid2']
+                };
+
+                var expectededFinalPayloadObject = {
+                    encounterAppendableOrderPayload: [
+                        {
+                            concept: '5085AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+                            type: 'testorder',
+                            orderer: 'f9badd80-ab76-11e2-9e96-0800200c9a66',
+                            careSetting: 'c365e560-c3ec-11e3-9c1a-0800200c9a66'
+                        },
+                        {
+                            uuid: 'bbd17798-27da-4d71-aeef-7f624e135a09'
+                        },
+                        {
+                            concept: '5092AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+                            type: 'testorder',
+                            orderer: 'f9badd80-ab76-11e2-9e96-0800200c9a66',
+                            careSetting: 'c365e560-c3ec-11e3-9c1a-0800200c9a66'
+                        },
+                        {
+                            uuid: 'anotherValue'
+                        }
+                    ],
+                    deletedOrdersUuid: ['deleteduuid', 'deleteduuid2']
+                };
+
+                var actualFinalPayloadObject = orderProcessorService.
+                    mergeVirtualGroupOrderPayLoads([payloadObject1, payloadObject2]);
+                expect(expectededFinalPayloadObject).to.deep.equal(actualFinalPayloadObject);
+
+            });
+
+        it('should generate order payload when generateOrderPayload is called',
+            function () {
+
+                var sampleModel = {
+                    someProperty: 'property',
+                    someObject: {
+                        someArray: [
+                            {
+                                someproperty: 'someprop',
+                                someOrder: modifiedStateOfVirtualGroupOrderModelSample
+                            }
+                        ]
+                    },
+                    someOject2: {
+                        someProperty: {
+                            someOrder: modifiedStateOfVirtualGroupOrderModelSample2
+                        }
+                    }
+                };
+
+                var expectededFinalPayloadObject = {
+                    encounterAppendableOrderPayload: [
+                        {
+                            concept: '5085AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+                            type: 'testorder',
+                            orderer: 'f9badd80-ab76-11e2-9e96-0800200c9a66',
+                            careSetting: 'c365e560-c3ec-11e3-9c1a-0800200c9a66'
+                        },
+                        {
+                            uuid: 'bbd17798-27da-4d71-aeef-7f624e135a09'
+                        },
+                        {
+                            concept: '5092AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+                            type: 'testorder',
+                            orderer: 'f9badd80-ab76-11e2-9e96-0800200c9a66',
+                            careSetting: 'c365e560-c3ec-11e3-9c1a-0800200c9a66'
+                        },
+                        {
+                            uuid: 'anotherValue'
+                        }
+                    ],
+                    deletedOrdersUuid: ['deleteduuid', 'deleteduuid2']
+                };
+
+                var actualFinalPayloadObject = orderProcessorService.
+                    generateOrderPayload(sampleModel);
+                    
+                expect(expectededFinalPayloadObject).to.deep.equal(actualFinalPayloadObject);
+
             });
 
     });
