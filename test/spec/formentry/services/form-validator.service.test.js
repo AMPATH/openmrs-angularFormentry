@@ -443,7 +443,7 @@
 			expect(isValid).to.equal(true);
 
 			//case future
-			value = new Date('2016-05-05');
+			value = new Date('2116-05-05');
 			isValid = validator.expression(value, undefined);
 
 			expect(isValid).to.equal(false);
