@@ -3,7 +3,7 @@ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106, -W026
 jscs:disable disallowMixedSpacesAndTabs, requireDotNotation
 jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 */
-(function() {
+(function () {
     'use strict';
 
     angular
@@ -15,13 +15,14 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
         'SearchDataService',
         'FormValidator',
         'FormentryConfig',
-        'HistoricalFieldHelperService'
+        'HistoricalFieldHelperService',
+        'OrdersFieldHandler'
     ];
 
     var obsId = 0;
 
     function OpenmrsFieldHandler($log, SearchDataService, FormValidator,
-        FormentryConfig, HistoricalFieldHelperService) {
+        FormentryConfig, HistoricalFieldHelperService, OrdersFieldHandler) {
         var currentQuestionMap = {};
 
         // Register Openmrs specific handlers
@@ -41,6 +42,8 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
             conceptSearchFieldHandler);
         FormentryConfig.registerFieldHandler('locationAttributeFieldHandler',
             locationAttributeFieldHandler);
+        FormentryConfig.registerFieldHandler('orderFieldHandler',
+            OrdersFieldHandler.createOrderField);
         FormentryConfig.registerFieldHandler('defaultFieldHandler',
             defaultFieldHandler);
 
@@ -201,7 +204,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
             var field = _field || {};
             //set the validator to default validator
             var defaultValidator = {
-                expression: function(viewValue, modelValue, scope) {
+                expression: function (viewValue, modelValue, scope) {
                     return true;
                 },
                 message: ''
@@ -222,7 +225,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 
         function _handleFieldModelBlueprintCreators(field, question) {
             //handle external model blue print creators
-            field['templateOptions']['createModelBluePrint'] = function(parentModel) {
+            field['templateOptions']['createModelBluePrint'] = function (parentModel) {
                 return HistoricalFieldHelperService.
                     createModelForRegularField(parentModel, field.key,
                     question, question.questionOptions.concept, 20);
@@ -243,7 +246,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
             // answerList.push({name:'unselect', value:undefined});
             // get the anserq options for radio/select options/multicheckbox
             if (angular.isArray(_answers)) {
-                _.each(_answers, function(answer) {
+                _.each(_answers, function (answer) {
                     var item = {
                         name: answer.label,
                         value: answer.concept
@@ -296,16 +299,16 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 
             _handleValidators(field,
                 question.questionOptions.shownDateOptions ?
-                question.questionOptions.shownDateOptions.validators : [],
+                    question.questionOptions.shownDateOptions.validators : [],
                 questionMap);
 
-           _handleExpressionProperties(field,
-           question.questionOptions.shownDateOptions ?
-                question.questionOptions.shownDateOptions.required : undefined,
-                 question.questionOptions.shownDateOptions ?
-                question.questionOptions.shownDateOptions.disable: undefined,
-           undefined, question.questionOptions.shownDateOptions ?
-                question.questionOptions.shownDateOptions.calculate: undefined);
+            _handleExpressionProperties(field,
+                question.questionOptions.shownDateOptions ?
+                    question.questionOptions.shownDateOptions.required : undefined,
+                question.questionOptions.shownDateOptions ?
+                    question.questionOptions.shownDateOptions.disable : undefined,
+                undefined, question.questionOptions.shownDateOptions ?
+                    question.questionOptions.shownDateOptions.calculate : undefined);
 
             if (question.questionOptions.shownDateOptions) {
                 _addToQuestionMap(question.questionOptions.shownDateOptions, field, questionMap);
@@ -414,7 +417,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 
                 if (typeof obsField['templateOptions']['getDisplayValue'] !== 'function') {
                     obsField['templateOptions']['getDisplayValue'] =
-                        function(value, callback) {
+                        function (value, callback) {
                             HistoricalFieldHelperService.
                                 getDisplayText(value, callback, _question.label);
                         };
@@ -432,7 +435,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 
                 if (typeof obsField['templateOptions']['getDisplayValue'] !== 'function') {
                     obsField['templateOptions']['getDisplayValue'] =
-                        function(value, callback) {
+                        function (value, callback) {
                             HistoricalFieldHelperService.getDisplayText(value, callback, _question.label);
                         };
                 }
@@ -478,7 +481,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                 }
 
                 obsField['templateOptions']['getDisplayValue'] =
-                    function(value, callback) {
+                    function (value, callback) {
                         HistoricalFieldHelperService.
                             getDisplayTextFromOptions(value, _question.questionOptions.answers,
                             'concept', 'label', callback, _question.label);
@@ -496,8 +499,8 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                 obsField['templateOptions']['rows'] = _question.questionOptions.rows || 15;
                 obsField['templateOptions']['columns'] = _question.questionOptions.columns;
                 obsField['templateOptions']['placeholder'] = _question.questionOptions.placeholder;
-                
-                if(!obsField['modelOptions']) {
+
+                if (!obsField['modelOptions']) {
                     obsField['modelOptions'] = {};
                 }
                 obsField['modelOptions']['debounce'] = {
@@ -505,7 +508,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                 };
             }
 
-            obsField['templateOptions']['createModelBluePrint'] = function(parentModel, value) {
+            obsField['templateOptions']['createModelBluePrint'] = function (parentModel, value) {
                 return HistoricalFieldHelperService.
                     createModelForRegularField(parentModel, obsField.key,
                     _question, _question.questionOptions.concept, value);
@@ -514,7 +517,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
             //finally, ensure all fields have getDisplayValue
             if (typeof obsField['templateOptions']['getDisplayValue'] !== 'function') {
                 obsField['templateOptions']['getDisplayValue'] =
-                    function(value, callback) {
+                    function (value, callback) {
                         HistoricalFieldHelperService.getDisplayText(value, callback, _question.label);
                     };
             }

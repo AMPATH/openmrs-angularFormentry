@@ -53,8 +53,62 @@
                 },
                 {
                     "label": "Section Name",
-                    "isExpanded" : true,
+                    "isExpanded": true,
                     "questions": [
+                        {
+                            "label": "Tests Ordered",
+                            "id": "order1",
+                            "type": "testOrder",
+                            "questionOptions": {
+                                "rendering": "repeating",
+                                "selectableOrders": [
+                                    {
+                                        "concept": "a898f50c-1350-11df-a1f1-0026b9348838",
+                                        "label": "CBC"
+                                    },
+                                    {
+                                        "concept": "a896cce6-1350-11df-a1f1-0026b9348838",
+                                        "label": "CD4"
+                                    },
+                                    {
+                                        "concept": "a8908192-1350-11df-a1f1-0026b9348838",
+                                        "label": "CXR"
+                                    },
+                                    {
+                                        "concept": "a8999fb6-1350-11df-a1f1-0026b9348838",
+                                        "label": "Elisa"
+                                    },
+                                    {
+                                        "concept": "741517cf-8bac-4755-b289-8dd2a2df7962",
+                                        "label": "Gene Xpert"
+                                    },
+                                    {
+                                        "concept": "a8908a16-1350-11df-a1f1-0026b9348838",
+                                        "label": "Hgb"
+                                    },
+                                    {
+                                        "concept": "a896ca48-1350-11df-a1f1-0026b9348838",
+                                        "label": "SGPT"
+                                    },
+                                    {
+                                        "concept": "a8945d4e-1350-11df-a1f1-0026b9348838",
+                                        "label": "Sputum AFB"
+                                    },
+                                    {
+                                        "concept": "a8a462a2-1350-11df-a1f1-0026b9348838",
+                                        "label": "TB Culture"
+                                    },
+                                    {
+                                        "concept": "a8982474-1350-11df-a1f1-0026b9348838",
+                                        "label": "Viral Load"
+                                    },
+                                    {
+                                        "concept": "a8945678-1350-11df-a1f1-0026b9348838",
+                                        "label": "VDRL"
+                                    }
+                                ]
+                            }
+                        },
                         {
                             "type": "personAttribute",
                             "label": "Person Attribute Health center",
@@ -78,7 +132,7 @@
                                 "rendering": "textarea",
                                 "concept": "1232",
                                 "rows": 15,
-                                "placeholder" : "Enter the question 1"
+                                "placeholder": "Enter the question 1"
                             }
                         },
                         {
@@ -160,7 +214,11 @@
                             "questionOptions": {
                                 "rendering": "date",
                                 "concept": "1234",
-                                "weeksList" :[4,8,12]
+                                "weeksList": [
+                                    4,
+                                    8,
+                                    12
+                                ]
                             },
                             "validators": []
                         },
@@ -409,7 +467,9 @@
                         "page": "Page 1",
                         "section": "PWPs",
                         "form": "triage",
-                        "excludeQuestions": ["toExclude"]
+                        "excludeQuestions": [
+                            "toExclude"
+                        ]
                     }
                 }
             ]
@@ -419,7 +479,10 @@
             "reference": {
                 "page": "Page 1",
                 "form": "triage",
-                "excludeQuestions": ["q7b", "toExclude"]
+                "excludeQuestions": [
+                    "q7b",
+                    "toExclude"
+                ]
             }
         },
         {

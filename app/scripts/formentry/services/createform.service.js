@@ -16,6 +16,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
     function CreateFormService($log, OpenmrsFieldHandler,
       HistoricalFieldHelperService, schemaValidatorService) {
         var gId = 0;
+        var orderCounter = 0;
         var service = {
             createForm: createForm
         };
@@ -274,6 +275,17 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                     var field = handlerMethod(question, model, questionMap);
                     fields.push(OpenmrsFieldHandler.createAnchorField(field.key));
                     fields.push(field);
+
+                } else if (question.type === 'testOrder') {
+                    orderCounter = orderCounter + 1;
+                    var repeatingId = 'testorder' + orderCounter;
+                    model[repeatingId] = {};
+
+                    handlerMethod = OpenmrsFieldHandler.getFieldHandler('orderFieldHandler');
+                    var orderField = handlerMethod(question, model[repeatingId], questionMap, repeatingId);
+
+                    fields.push(OpenmrsFieldHandler.createAnchorField(orderField.key));
+                    fields.push(orderField);
 
                 } else {
                     handlerMethod = OpenmrsFieldHandler.getFieldHandler('defaultFieldHandler');
