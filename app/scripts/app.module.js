@@ -24,7 +24,8 @@ angular
     'openmrs.angularFormentry',
     'ui.ace',
     'openmrs.RestServices',
-    'app.formDesigner'
+    'app.formDesigner',
+    'app.developerDemo'
   ])
   .config(function($stateProvider) {
     $stateProvider

@@ -1,0 +1,118 @@
+{
+  "name": "triage",
+  "uuid": "xxxx",
+  "processor": "EncounterFormProcessor",
+  "pages": [
+    {
+      "label": "Page 1",
+      "sections": [
+        {
+          "label": "Encounter Details",
+          "isExpanded": true,
+          "questions": [
+            {
+              "label": "Visit Date",
+              "type": "encounterDatetime",
+              "required": "true",
+              "default": "",
+              "id":"encDate",
+              "questionOptions":{
+                "rendering":"date"
+              },
+              "validators": [
+                {
+                  "type": "date"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "label": "Vital Signs",
+          "isExpanded": true,
+          "questions": [
+            {
+              "label": "BP:Systolic:",
+              "questionOptions":{
+                "rendering":"number",
+                "concept": "5085AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+                "max": "250",
+                "min": "0"
+              },
+              "type": "obs",
+              "validators": []
+            },
+            {
+              "label": "BP:Diastolic:",
+              "questionOptions":{
+                "rendering":"number",
+                "concept": "5086AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+                "max": "150",
+                "min": "0"
+              },
+              "type": "obs",
+              "validators": []
+            },
+            {
+              "label": "Pulse(Rate/Min):",
+              "questionOptions":{
+                "rendering":"number",
+                "concept": "5087AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+                "max": "230",
+                "min": "0"
+              },
+              "type": "obs",
+              "validators": []
+            },
+            {
+              "label": "Temp(C):",
+              "questionOptions":{
+                "rendering":"number",
+                "concept": "5088AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+                "max": "43",
+                "min": "25"
+              },
+              "type": "obs",
+              "validators": []
+            },
+            {
+              "label": "Weight(Kg):",
+              "id":"weight",
+              "questionOptions":{
+                "rendering":"number",
+                "concept": "5089AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+                "max": "150",
+                "min": "0"
+              },
+              "type": "obs",
+              "validators": []
+            },
+            {
+              "label": "Height(CM):",
+              "id":"height",
+              "questionOptions":{
+                "rendering":"number",
+                "concept": "5090AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+                "max": "350",
+                "min": "0"
+              },
+              "type": "obs",
+              "validators": []
+            },
+            {
+              "label": "Sp02:",
+              "questionOptions":{
+                "rendering":"number",
+                "concept": "5092AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+                "max": "100",
+                "min": "0"
+              },
+              "type": "obs",
+              "validators": []
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
