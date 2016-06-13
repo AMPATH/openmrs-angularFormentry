@@ -714,6 +714,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
     function CreateFormService($log, OpenmrsFieldHandler,
       HistoricalFieldHelperService, schemaValidatorService) {
         var gId = 0;
+        var orderCounter = 0;
         var service = {
             createForm: createForm
         };
@@ -973,6 +974,17 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                     fields.push(OpenmrsFieldHandler.createAnchorField(field.key));
                     fields.push(field);
 
+                } else if (question.type === 'testOrder') {
+                    orderCounter = orderCounter + 1;
+                    var repeatingId = 'testorder' + orderCounter;
+                    model[repeatingId] = {};
+
+                    handlerMethod = OpenmrsFieldHandler.getFieldHandler('orderFieldHandler');
+                    var orderField = handlerMethod(question, model[repeatingId], questionMap, repeatingId);
+
+                    fields.push(OpenmrsFieldHandler.createAnchorField(orderField.key));
+                    fields.push(orderField);
+
                 } else {
                     handlerMethod = OpenmrsFieldHandler.getFieldHandler('defaultFieldHandler');
                     var field = handlerMethod(question, model, questionMap);
@@ -1089,7 +1101,7 @@ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106, -W026
 jscs:disable disallowMixedSpacesAndTabs, requireDotNotation
 jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 */
-(function() {
+(function () {
     'use strict';
 
     angular
@@ -1101,13 +1113,14 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
         'SearchDataService',
         'FormValidator',
         'FormentryConfig',
-        'HistoricalFieldHelperService'
+        'HistoricalFieldHelperService',
+        'OrdersFieldHandler'
     ];
 
     var obsId = 0;
 
     function OpenmrsFieldHandler($log, SearchDataService, FormValidator,
-        FormentryConfig, HistoricalFieldHelperService) {
+        FormentryConfig, HistoricalFieldHelperService, OrdersFieldHandler) {
         var currentQuestionMap = {};
 
         // Register Openmrs specific handlers
@@ -1127,6 +1140,8 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
             conceptSearchFieldHandler);
         FormentryConfig.registerFieldHandler('locationAttributeFieldHandler',
             locationAttributeFieldHandler);
+        FormentryConfig.registerFieldHandler('orderFieldHandler',
+            OrdersFieldHandler.createOrderField);
         FormentryConfig.registerFieldHandler('defaultFieldHandler',
             defaultFieldHandler);
 
@@ -1287,7 +1302,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
             var field = _field || {};
             //set the validator to default validator
             var defaultValidator = {
-                expression: function(viewValue, modelValue, scope) {
+                expression: function (viewValue, modelValue, scope) {
                     return true;
                 },
                 message: ''
@@ -1308,7 +1323,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 
         function _handleFieldModelBlueprintCreators(field, question) {
             //handle external model blue print creators
-            field['templateOptions']['createModelBluePrint'] = function(parentModel) {
+            field['templateOptions']['createModelBluePrint'] = function (parentModel) {
                 return HistoricalFieldHelperService.
                     createModelForRegularField(parentModel, field.key,
                     question, question.questionOptions.concept, 20);
@@ -1329,7 +1344,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
             // answerList.push({name:'unselect', value:undefined});
             // get the anserq options for radio/select options/multicheckbox
             if (angular.isArray(_answers)) {
-                _.each(_answers, function(answer) {
+                _.each(_answers, function (answer) {
                     var item = {
                         name: answer.label,
                         value: answer.concept
@@ -1382,16 +1397,16 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 
             _handleValidators(field,
                 question.questionOptions.shownDateOptions ?
-                question.questionOptions.shownDateOptions.validators : [],
+                    question.questionOptions.shownDateOptions.validators : [],
                 questionMap);
 
-           _handleExpressionProperties(field,
-           question.questionOptions.shownDateOptions ?
-                question.questionOptions.shownDateOptions.required : undefined,
-                 question.questionOptions.shownDateOptions ?
-                question.questionOptions.shownDateOptions.disable: undefined,
-           undefined, question.questionOptions.shownDateOptions ?
-                question.questionOptions.shownDateOptions.calculate: undefined);
+            _handleExpressionProperties(field,
+                question.questionOptions.shownDateOptions ?
+                    question.questionOptions.shownDateOptions.required : undefined,
+                question.questionOptions.shownDateOptions ?
+                    question.questionOptions.shownDateOptions.disable : undefined,
+                undefined, question.questionOptions.shownDateOptions ?
+                    question.questionOptions.shownDateOptions.calculate : undefined);
 
             if (question.questionOptions.shownDateOptions) {
                 _addToQuestionMap(question.questionOptions.shownDateOptions, field, questionMap);
@@ -1500,7 +1515,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 
                 if (typeof obsField['templateOptions']['getDisplayValue'] !== 'function') {
                     obsField['templateOptions']['getDisplayValue'] =
-                        function(value, callback) {
+                        function (value, callback) {
                             HistoricalFieldHelperService.
                                 getDisplayText(value, callback, _question.label);
                         };
@@ -1518,7 +1533,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 
                 if (typeof obsField['templateOptions']['getDisplayValue'] !== 'function') {
                     obsField['templateOptions']['getDisplayValue'] =
-                        function(value, callback) {
+                        function (value, callback) {
                             HistoricalFieldHelperService.getDisplayText(value, callback, _question.label);
                         };
                 }
@@ -1564,7 +1579,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                 }
 
                 obsField['templateOptions']['getDisplayValue'] =
-                    function(value, callback) {
+                    function (value, callback) {
                         HistoricalFieldHelperService.
                             getDisplayTextFromOptions(value, _question.questionOptions.answers,
                             'concept', 'label', callback, _question.label);
@@ -1582,8 +1597,8 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                 obsField['templateOptions']['rows'] = _question.questionOptions.rows || 15;
                 obsField['templateOptions']['columns'] = _question.questionOptions.columns;
                 obsField['templateOptions']['placeholder'] = _question.questionOptions.placeholder;
-                
-                if(!obsField['modelOptions']) {
+
+                if (!obsField['modelOptions']) {
                     obsField['modelOptions'] = {};
                 }
                 obsField['modelOptions']['debounce'] = {
@@ -1591,7 +1606,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                 };
             }
 
-            obsField['templateOptions']['createModelBluePrint'] = function(parentModel, value) {
+            obsField['templateOptions']['createModelBluePrint'] = function (parentModel, value) {
                 return HistoricalFieldHelperService.
                     createModelForRegularField(parentModel, obsField.key,
                     _question, _question.questionOptions.concept, value);
@@ -1600,7 +1615,7 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
             //finally, ensure all fields have getDisplayValue
             if (typeof obsField['templateOptions']['getDisplayValue'] !== 'function') {
                 obsField['templateOptions']['getDisplayValue'] =
-                    function(value, callback) {
+                    function (value, callback) {
                         HistoricalFieldHelperService.getDisplayText(value, callback, _question.label);
                     };
             }
@@ -1634,6 +1649,81 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
     }
 })();
 
+/*
+jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106, -W026
+jscs:disable disallowMixedSpacesAndTabs, requireDotNotation
+jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
+*/
+(function () {
+    'use strict';
+
+    angular
+        .module('openmrs.angularFormentry')
+        .factory('OrdersFieldHandler', OrdersFieldHandler);
+
+    OrdersFieldHandler.$inject = [
+        '$log'
+    ];
+
+    function OrdersFieldHandler($log) {
+
+        var service = {
+            createOrderField: createOrderField
+        };
+
+        return service;
+
+        function createOrderField(question, orderModel, questionMap, repeatingId) {
+            initializeOrderGroupModel(orderModel, question);
+            var orderField = {
+                type: 'orderSection',
+                key: repeatingId,
+                data: {
+                    selectableOrders: question.questionOptions.selectableOrders
+                },
+                templateOptions: {
+                    label: question.label,
+                    fields: [{
+                        className: 'row',
+                        fieldGroup: [] //TODO: Has values if 
+                    }],
+                    createChildFieldModel: function(concept) {
+                        return createChildFieldModel(concept, orderModel);
+                    }
+                }
+            };
+
+            return orderField;
+        }
+
+        function initializeOrderGroupModel(orderModel, question) {
+            orderModel.orderType = 'testorder';
+            orderModel.orderConcepts = extractConcepts(question);
+            orderModel.orderSetting = 'orderSetting';
+            orderModel.orders = [];
+            orderModel.deletedOrders = [];
+        }
+        
+        function extractConcepts(question){
+            var concepts = [];
+            _.each(question.questionOptions.selectableOrders,
+            function(choice){
+               concepts.push(choice.concept); 
+            });
+            
+            return concepts;
+        }
+
+        function createChildFieldModel(concept, virtualOrdersGroupModel) {
+            var orderModel ={};
+            orderModel.concept = concept;
+            orderModel.type = virtualOrdersGroupModel.orderType;
+            orderModel.orderer = undefined;
+            orderModel.careSetting = virtualOrdersGroupModel.orderSetting;
+            return orderModel;
+        }
+    }
+})();
 /*
 jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106, -W026
 */
@@ -1698,7 +1788,7 @@ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106, -W026
 /*
 jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 */
-(function() {
+(function () {
   'use strict';
 
   angular
@@ -1725,13 +1815,13 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       updatedModel = angular.copy(model);
     }
 
-    function _getRepeatingFieldsModel () {
+    function _getRepeatingFieldsModel() {
       var repeatingFieldsModel = {};
       for (var i in updatedModel) {
         var sectionModel = updatedModel[i];
         for (var p in sectionModel) {
           var f = sectionModel[p];
-          if(p.startsWith('obsRepeating')) {
+          if (p.startsWith('obsRepeating')) {
             repeatingFieldsModel[p] = f;
           }
         }
@@ -1759,7 +1849,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       // $log.debug('Model', model);
       var sectionKeys = Object.keys(model);
       // $log.debug('Section Keys', sectionKeys);
-      _.each(sectionKeys, function(section) {
+      _.each(sectionKeys, function (section) {
         var sectionModel = model[section];
         // $log.debug('Section Models', sectionModel);
         _addObsToSection(sectionModel, openmrsRestObj);
@@ -1767,7 +1857,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
     }
 
     function _addObsToField(field, obs) {
-      var val = _.filter(obs, function(o) {
+      var val = _.filter(obs, function (o) {
         if (o.concept.uuid === field.concept) {
           return o;
         }
@@ -1775,7 +1865,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
       var opts = [];
       var optsUuid = [];
-      _.each(val, function(o) {
+      _.each(val, function (o) {
         if (field.obsDatetime) {
           //special case for fields having showDate property
           field.initialValue = new Date(o.obsDatetime);
@@ -1815,7 +1905,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       var results = {
         obs: []
       };
-      var val = _.filter(obs, function(o) {
+      var val = _.filter(obs, function (o) {
         if (o.concept.uuid === concept) {
           return o;
         }
@@ -1823,7 +1913,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
       if (!_.isUndefined(val)) {
         results.repeatObs = val;
-        _.each(val, function(o) {
+        _.each(val, function (o) {
           if (!_.isNull(o.groupMembers)) {
             results.obs = _.union(results.obs, o.groupMembers);
           } else {
@@ -1836,22 +1926,22 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
     }
 
     function _addObsToSection(sectionModel, openmrsRestObj) {
-      var fieldKeys =typeof sectionModel === 'object'? Object.keys(sectionModel):'';
+      var fieldKeys = typeof sectionModel === 'object' ? Object.keys(sectionModel) : '';
       //geting obs data without obs groups
-      var obsData = _.filter(openmrsRestObj.obs, function(obs) {
+      var obsData = _.filter(openmrsRestObj.obs, function (obs) {
         if (_.isNull(obs.groupMembers)) {
           return obs;
         }
       });
 
       //geting obs data with obs groups
-      var obsGroupData = _.filter(openmrsRestObj.obs, function(obs) {
+      var obsGroupData = _.filter(openmrsRestObj.obs, function (obs) {
         if (obs.groupMembers !== null) {
           return obs;
         }
       });
 
-      _.each(fieldKeys, function(fieldKey) {
+      _.each(fieldKeys, function (fieldKey) {
         if (fieldKey.startsWith('obsGroup')) {
           var sectionFields = sectionModel[fieldKey];
           var sectionKeys = Object.keys(sectionFields);
@@ -1890,7 +1980,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
               var f = sectionFields[0][sectionKeys[i]];
               var c = f.concept;
               sectionObs = getGroupSectionObs(obsData, c);
-              _.each(sectionObs.obs, function(o, k) {
+              _.each(sectionObs.obs, function (o, k) {
                 var obj = {
                   groupMembers: []
                 };
@@ -1918,15 +2008,15 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
                 var thisCol = colDetails[x];
                 var thisColConcept = thisCol.concept;
                 var n = 0; // no of repeats for the current field
-                for (var r = 0; r<sectionObs.repeatObs.length; r++) {
+                for (var r = 0; r < sectionObs.repeatObs.length; r++) {
                   var thisObs = sectionObs.repeatObs[r];
                   //get if concept is available in the group members
-                  for(var gm=0; gm<thisObs.groupMembers.length; gm++){
-                    if(thisObs.groupMembers[gm].concept.uuid === thisColConcept) {
+                  for (var gm = 0; gm < thisObs.groupMembers.length; gm++) {
+                    if (thisObs.groupMembers[gm].concept.uuid === thisColConcept) {
                       n++;
                     }
                   }
-                  if (n>nRows) nRows = n;
+                  if (n > nRows) nRows = n;
                 }
               }
             }
@@ -1942,9 +2032,9 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             obs: []
           };
           var repeatObs = sectionObs.repeatObs;
-          _.each(sectionFields, function(_sectionFields, k) {
+          _.each(sectionFields, function (_sectionFields, k) {
             var concepLists = [];
-            for(var vx in _sectionFields) {
+            for (var vx in _sectionFields) {
               if (vx !== 'groupConcept') {
                 var thisCol = _sectionFields[vx];
                 concepLists.push(thisCol.concept);
@@ -1952,15 +2042,15 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             }
             var fieldRestObs = [];
             // $log.error('Repeating Concept Lists ++  ', concepLists);
-            for (var r = 0; r<repeatObs.length; r++) {
+            for (var r = 0; r < repeatObs.length; r++) {
               var thisObs = repeatObs[r];
               // $log.error('Repeating Lists ++  ', thisObs);
               //get if concept is available in the group members
-              for(var gm=0; gm<thisObs.groupMembers.length; gm++){
-                if(_.contains(concepLists,thisObs.groupMembers[gm].concept.uuid)) {
+              for (var gm = 0; gm < thisObs.groupMembers.length; gm++) {
+                if (_.contains(concepLists, thisObs.groupMembers[gm].concept.uuid)) {
                   // $log.error('Repeating Values ++  ', thisObs.groupMembers);
-                  if(!_.contains(fieldRestObs, thisObs)) {
-                    fieldRestObs.push(thisObs) ;
+                  if (!_.contains(fieldRestObs, thisObs)) {
+                    fieldRestObs.push(thisObs);
                   }
                 }
               }
@@ -1968,7 +2058,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             // sectionObs = results;
             // $log.error('Repeating Values ++3  ', fieldRestObs);
             if (fieldRestObs[k]) {
-              results.obs=fieldRestObs[k].groupMembers;
+              results.obs = fieldRestObs[k].groupMembers;
               sectionObs = results;
             }
             // $log.error('Repeating Field obs ', sectionObs);
@@ -1987,7 +2077,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       // $log.debug('Model', model);
       var sectionKeys = Object.keys(model);
       // $log.debug('Section Keys', sectionKeys);
-      _.each(sectionKeys, function(section) {
+      _.each(sectionKeys, function (section) {
         var sectionModel = model[section];
         // $log.debug('Section Models', sectionModel);
         _generateSectionPayLoad(sectionModel, obsRestPayload);
@@ -1998,9 +2088,9 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
     function _generateSectionPayLoad(sectionModel, obsRestPayload) {
       var repeatingFieldsModel = _getRepeatingFieldsModel();
-      var fieldKeys = typeof sectionModel === 'object'? Object.keys(sectionModel):[];
+      var fieldKeys = typeof sectionModel === 'object' ? Object.keys(sectionModel) : [];
       // $log.debug('fieldKeys', fieldKeys);
-      _.each(fieldKeys, function(fieldKey) {
+      _.each(fieldKeys, function (fieldKey) {
         if (fieldKey.startsWith('obsGroup')) {
           var sectionFields = sectionModel[fieldKey];
           var sectionKeys = Object.keys(sectionFields);
@@ -2034,10 +2124,10 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             // $log.debug('Repeating fields', sectionFields);
             //if the current model has no values
             //take the original model but set the value property to null
-            _.each(originalModel, function(_sectionFields) {
+            _.each(originalModel, function (_sectionFields) {
               for (var i in _sectionFields) {
                 var f = _sectionFields[i];
-                if(_.has(f, 'value')) {
+                if (_.has(f, 'value')) {
                   f.value = "";
                 }
               }
@@ -2050,18 +2140,18 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             // to determine the variances before rebuilding the model that
             // will finally be used for generating the payload
             originalModel = repeatingFieldsModel[fieldKey];
-            _.each(originalModel, function(_sectionFields) {
+            _.each(originalModel, function (_sectionFields) {
               var found = false;
               var f;
               var fm;
               for (var i in _sectionFields) {
                 f = _sectionFields[i];
-                if(_.has(f, 'initialValue')) {
+                if (_.has(f, 'initialValue')) {
                   f.value = "";
-                  _.each(sectionFields, function(_sf) {
-                    for(var j in _sf) {
+                  _.each(sectionFields, function (_sf) {
+                    for (var j in _sf) {
                       fm = _sf[j];
-                      if(_.has(fm, 'initialValue')) {
+                      if (_.has(fm, 'initialValue')) {
                         if (f.initialValue === fm.initialValue) {
                           found = true;
                         }
@@ -2077,7 +2167,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             });
           }
           // $log.debug('Repeating fieldsxxx', sectionFields);
-          _.each(sectionFields, function(_sectionFields) {
+          _.each(sectionFields, function (_sectionFields) {
             var fieldKeys = Object.keys(_sectionFields);
             var sectionObs = [];
             var concept = sectionFields[0][sectionKeys[0]];
@@ -2092,7 +2182,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
               if (!_.isUndefined(obs.concept)) {
                 obsRestPayload.push(obs);
               } else {
-                _.each(sectionObs, function(o) {
+                _.each(sectionObs, function (o) {
                   obsRestPayload.push(o);
                 });
               }
@@ -2123,21 +2213,21 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       }
 
       if (_.isUndefined(initialValue) && (!_.isNull(value) &&
-          value !== '' && !_.isUndefined(value) && !_.isObject(value))) {
+        value !== '' && !_.isUndefined(value) && !_.isObject(value))) {
         obs = {
           concept: field.concept,
           value: value
         };
 
       } else if (initialValue !== value && (!_.isNull(value) &&
-          value !== '' && !_.isUndefined(value) && !_.isObject(value))) {
+        value !== '' && !_.isUndefined(value) && !_.isObject(value))) {
         obs = {
           uuid: field.initialUuid,
           concept: field.concept,
           value: value
         };
       } else if (initialValue !== value && (!_.isNull(value) &&
-          value === '' && !_.isUndefined(value) && !_.isUndefined(initialValue) && !_.isObject(value))) {
+        value === '' && !_.isUndefined(value) && !_.isUndefined(initialValue) && !_.isObject(value))) {
         obs = {
           uuid: field.initialUuid,
           concept: field.concept,
@@ -2156,10 +2246,13 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
         field.obsDatetime) {
         //This shld be an obs date for the previous field
         var lastFieldPayload;
-        if (obsRestPayload.length>0) {
+        if (obsRestPayload.length > 0) {
           lastFieldPayload = obsRestPayload[obsRestPayload.length - 1];
           $log.debug('last obs payload', lastFieldPayload);
-          lastFieldPayload.obsDatetime = _parseDate(field.value);
+
+          if (!_.isEmpty(field.value) && _.isEmpty(lastFieldPayload.obsDatetime)) {
+            lastFieldPayload.obsDatetime = _parseDate(field.value);
+          }
         }
 
       } else if (_.isString(field.value) || _.isNumber(field.value)) {
@@ -2172,8 +2265,8 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
         var initialUuid = field.initialUuid;
         var value = field.value;
         if (initialValue === undefined && (!_.isNull(value) &&
-            value !== '' && !_.isUndefined(value))) {
-          _.each(value, function(val) {
+          value !== '' && !_.isUndefined(value))) {
+          _.each(value, function (val) {
             obs = {
               concept: field.concept,
               value: val
@@ -2187,19 +2280,19 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
           });
 
         } else if (initialValue !== value && (!_.isNull(value) &&
-            value !== '' && !_.isUndefined(value))) {
+          value !== '' && !_.isUndefined(value))) {
           var existingObs = _.intersection(initialValue, value);
           var newObs = [];
           var obsToFilter = [];
           var obsToVoid = [];
           var i = 0;
-          _.each(initialValue, function(val) {
+          _.each(initialValue, function (val) {
             if (!(_.contains(value, val))) {
               obs = {
                 concept: field.concept,
                 value: val,
                 uuid: initialUuid[i],
-                voided:true
+                voided: true
               };
               obsToVoid.push(val);
               obsRestPayload.push(obs);
@@ -2209,7 +2302,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
           obsToFilter = _.union(obsToVoid, existingObs);
           newObs = _.difference(value, obsToFilter);
-          _.each(newObs, function(val) {
+          _.each(newObs, function (val) {
             obs = {
               concept: field.concept,
               value: val
@@ -5645,6 +5738,121 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
   })
 
+})();
+
+/*
+jshint -W106, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W069, -W026
+*/
+/*
+jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLinesBeforeLineComments, requireTrailingComma
+*/
+(function() {
+    'use strict';
+
+    var mod =
+        angular
+            .module('openmrs.angularFormentry');
+
+    mod.run(function config(formlyConfig) {
+        formlyConfig.setType({
+            name: 'orderSection',
+            template: '<div class="panel panel-default"> ' +
+            '<div class="panel-heading"> ' +
+            '{{to.label}}' +
+            '</div> ' +
+            '<div class="panel-body"> ' +
+            // <!--loop through each element in model array-->
+            '<div class="{{hideRepeat}}"> ' +
+            '<div class="repeatsection" ng-repeat="element in model[options.key].orders" ' +
+            'ng-init="fields = copyFields(to.fields)"> ' +
+            '<span>{{$parent.getDisplayValue(element.concept)}}<span>' +
+            // '<formly-form fields="fields" ' +
+            // 'model="element" bind-name="\'formly_ng_repeat\' + index + $parent.$index"> ' +
+            // '</formly-form> ' +
+            '<p > ' +
+            '<button type="button" class="btn btn-sm btn-danger" ng-click="deleteField($index)"> ' +
+            'Delete' +
+            '</button> ' +
+            '</p> ' +
+            '<hr> ' +
+            '</div> ' +
+            '<p class="AddNewButton" ng-hide="addingNew"> ' +
+            '<button type="button" class="btn btn-primary" ng-click="addingNew = true" >+ Order Test</button> ' +
+            '</p> ' +
+            '<div ng-show="addingNew">' +
+            '<select kendo-drop-down-list k-options="selectOptions"' +
+            'ng-model="$scope.selectedOrder" style="width: 100%;"></select>' +
+            '<button style="margin-top:4px;" type="button" class="btn btn-success" ng-click="addNew($scope.selectedOrder)" >Ok</button> ' +
+            '<button style="margin-top:4px;" type="button" class="btn btn-default" ng-click="addingNew = false" >Cancel</button> ' + 
+            '</div>' +
+            '</div> ' +
+            '</div>',
+            controller: function($scope, $log, CurrentLoadedFormService) {
+                //$scope.formOptions = { formState: $scope.formState };
+                
+                $scope.addingNew = false;
+                
+                $scope.addNew = addNew;
+                $scope.deleteField = deleteField;
+                
+                $scope.selectedOrder = undefined;
+                
+                $scope.selectOptions = {
+                    dataTextField: 'label',
+                    dataValueField: 'concept',
+                    valuePrimitive: true,
+                    dataSource: $scope.options.data.selectableOrders
+                };
+        
+                $scope.copyFields = copyFields;
+                $scope.getDisplayValue = getDisplayValue;
+                
+                function getDisplayValue(orderConcept) {
+                    var orders = $scope.options.data.selectableOrders;
+                    for(var i=0; i < orders.length; i++) {
+                        if(orders[i].concept === orderConcept)
+                            return orders[i].label;
+                    }
+                }
+
+                function copyFields(fields) {
+                    var copy = angular.copy(fields);
+                    addFieldsToQuestionMap(copy);
+                    return copy;
+                }
+
+                function addFieldsToQuestionMap(groups) {
+                    
+                    _.each(groups, function(group) {
+                        _.each(group.fieldGroup, function(field) {
+                            var id = field.data.id;
+                            if (!_.isEmpty(id)) {
+                                if (id in CurrentLoadedFormService.questionMap) {
+                                    CurrentLoadedFormService.questionMap[id].push(field);
+                                } else {
+                                    CurrentLoadedFormService.questionMap[id] = [field];
+                                }
+                            }
+                        });
+                    });
+                }
+
+                function addNew(orderConcept) {
+                    //$scope.model[$scope.options.key] = $scope.model[$scope.options.key] || [];
+                    $log.log('order section');
+                    var orderSectionModel = $scope.model[$scope.options.key].orders;
+                    orderSectionModel.push($scope.to.createChildFieldModel(orderConcept));
+                    $scope.addingNew = false;
+                }
+                
+                function deleteField($index) {
+                    var deletedOrder =  $scope.model[$scope.options.key].orders[$index];
+                    $scope.model[$scope.options.key].orders.deletedOrders.push(deletedOrder);
+                    $scope.model[$scope.options.key].orders.splice($index, 1);
+                }
+            }
+        });
+    });
 })();
 
 /*

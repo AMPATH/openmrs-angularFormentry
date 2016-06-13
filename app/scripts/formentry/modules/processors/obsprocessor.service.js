@@ -4,7 +4,7 @@ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106, -W026
 /*
 jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 */
-(function() {
+(function () {
   'use strict';
 
   angular
@@ -31,13 +31,13 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       updatedModel = angular.copy(model);
     }
 
-    function _getRepeatingFieldsModel () {
+    function _getRepeatingFieldsModel() {
       var repeatingFieldsModel = {};
       for (var i in updatedModel) {
         var sectionModel = updatedModel[i];
         for (var p in sectionModel) {
           var f = sectionModel[p];
-          if(p.startsWith('obsRepeating')) {
+          if (p.startsWith('obsRepeating')) {
             repeatingFieldsModel[p] = f;
           }
         }
@@ -65,7 +65,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       // $log.debug('Model', model);
       var sectionKeys = Object.keys(model);
       // $log.debug('Section Keys', sectionKeys);
-      _.each(sectionKeys, function(section) {
+      _.each(sectionKeys, function (section) {
         var sectionModel = model[section];
         // $log.debug('Section Models', sectionModel);
         _addObsToSection(sectionModel, openmrsRestObj);
@@ -73,7 +73,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
     }
 
     function _addObsToField(field, obs) {
-      var val = _.filter(obs, function(o) {
+      var val = _.filter(obs, function (o) {
         if (o.concept.uuid === field.concept) {
           return o;
         }
@@ -81,7 +81,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
       var opts = [];
       var optsUuid = [];
-      _.each(val, function(o) {
+      _.each(val, function (o) {
         if (field.obsDatetime) {
           //special case for fields having showDate property
           field.initialValue = new Date(o.obsDatetime);
@@ -121,7 +121,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       var results = {
         obs: []
       };
-      var val = _.filter(obs, function(o) {
+      var val = _.filter(obs, function (o) {
         if (o.concept.uuid === concept) {
           return o;
         }
@@ -129,7 +129,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
       if (!_.isUndefined(val)) {
         results.repeatObs = val;
-        _.each(val, function(o) {
+        _.each(val, function (o) {
           if (!_.isNull(o.groupMembers)) {
             results.obs = _.union(results.obs, o.groupMembers);
           } else {
@@ -142,22 +142,22 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
     }
 
     function _addObsToSection(sectionModel, openmrsRestObj) {
-      var fieldKeys =typeof sectionModel === 'object'? Object.keys(sectionModel):'';
+      var fieldKeys = typeof sectionModel === 'object' ? Object.keys(sectionModel) : '';
       //geting obs data without obs groups
-      var obsData = _.filter(openmrsRestObj.obs, function(obs) {
+      var obsData = _.filter(openmrsRestObj.obs, function (obs) {
         if (_.isNull(obs.groupMembers)) {
           return obs;
         }
       });
 
       //geting obs data with obs groups
-      var obsGroupData = _.filter(openmrsRestObj.obs, function(obs) {
+      var obsGroupData = _.filter(openmrsRestObj.obs, function (obs) {
         if (obs.groupMembers !== null) {
           return obs;
         }
       });
 
-      _.each(fieldKeys, function(fieldKey) {
+      _.each(fieldKeys, function (fieldKey) {
         if (fieldKey.startsWith('obsGroup')) {
           var sectionFields = sectionModel[fieldKey];
           var sectionKeys = Object.keys(sectionFields);
@@ -196,7 +196,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
               var f = sectionFields[0][sectionKeys[i]];
               var c = f.concept;
               sectionObs = getGroupSectionObs(obsData, c);
-              _.each(sectionObs.obs, function(o, k) {
+              _.each(sectionObs.obs, function (o, k) {
                 var obj = {
                   groupMembers: []
                 };
@@ -224,15 +224,15 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
                 var thisCol = colDetails[x];
                 var thisColConcept = thisCol.concept;
                 var n = 0; // no of repeats for the current field
-                for (var r = 0; r<sectionObs.repeatObs.length; r++) {
+                for (var r = 0; r < sectionObs.repeatObs.length; r++) {
                   var thisObs = sectionObs.repeatObs[r];
                   //get if concept is available in the group members
-                  for(var gm=0; gm<thisObs.groupMembers.length; gm++){
-                    if(thisObs.groupMembers[gm].concept.uuid === thisColConcept) {
+                  for (var gm = 0; gm < thisObs.groupMembers.length; gm++) {
+                    if (thisObs.groupMembers[gm].concept.uuid === thisColConcept) {
                       n++;
                     }
                   }
-                  if (n>nRows) nRows = n;
+                  if (n > nRows) nRows = n;
                 }
               }
             }
@@ -248,9 +248,9 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             obs: []
           };
           var repeatObs = sectionObs.repeatObs;
-          _.each(sectionFields, function(_sectionFields, k) {
+          _.each(sectionFields, function (_sectionFields, k) {
             var concepLists = [];
-            for(var vx in _sectionFields) {
+            for (var vx in _sectionFields) {
               if (vx !== 'groupConcept') {
                 var thisCol = _sectionFields[vx];
                 concepLists.push(thisCol.concept);
@@ -258,15 +258,15 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             }
             var fieldRestObs = [];
             // $log.error('Repeating Concept Lists ++  ', concepLists);
-            for (var r = 0; r<repeatObs.length; r++) {
+            for (var r = 0; r < repeatObs.length; r++) {
               var thisObs = repeatObs[r];
               // $log.error('Repeating Lists ++  ', thisObs);
               //get if concept is available in the group members
-              for(var gm=0; gm<thisObs.groupMembers.length; gm++){
-                if(_.contains(concepLists,thisObs.groupMembers[gm].concept.uuid)) {
+              for (var gm = 0; gm < thisObs.groupMembers.length; gm++) {
+                if (_.contains(concepLists, thisObs.groupMembers[gm].concept.uuid)) {
                   // $log.error('Repeating Values ++  ', thisObs.groupMembers);
-                  if(!_.contains(fieldRestObs, thisObs)) {
-                    fieldRestObs.push(thisObs) ;
+                  if (!_.contains(fieldRestObs, thisObs)) {
+                    fieldRestObs.push(thisObs);
                   }
                 }
               }
@@ -274,7 +274,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             // sectionObs = results;
             // $log.error('Repeating Values ++3  ', fieldRestObs);
             if (fieldRestObs[k]) {
-              results.obs=fieldRestObs[k].groupMembers;
+              results.obs = fieldRestObs[k].groupMembers;
               sectionObs = results;
             }
             // $log.error('Repeating Field obs ', sectionObs);
@@ -293,7 +293,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       // $log.debug('Model', model);
       var sectionKeys = Object.keys(model);
       // $log.debug('Section Keys', sectionKeys);
-      _.each(sectionKeys, function(section) {
+      _.each(sectionKeys, function (section) {
         var sectionModel = model[section];
         // $log.debug('Section Models', sectionModel);
         _generateSectionPayLoad(sectionModel, obsRestPayload);
@@ -304,9 +304,9 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
     function _generateSectionPayLoad(sectionModel, obsRestPayload) {
       var repeatingFieldsModel = _getRepeatingFieldsModel();
-      var fieldKeys = typeof sectionModel === 'object'? Object.keys(sectionModel):[];
+      var fieldKeys = typeof sectionModel === 'object' ? Object.keys(sectionModel) : [];
       // $log.debug('fieldKeys', fieldKeys);
-      _.each(fieldKeys, function(fieldKey) {
+      _.each(fieldKeys, function (fieldKey) {
         if (fieldKey.startsWith('obsGroup')) {
           var sectionFields = sectionModel[fieldKey];
           var sectionKeys = Object.keys(sectionFields);
@@ -340,10 +340,10 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             // $log.debug('Repeating fields', sectionFields);
             //if the current model has no values
             //take the original model but set the value property to null
-            _.each(originalModel, function(_sectionFields) {
+            _.each(originalModel, function (_sectionFields) {
               for (var i in _sectionFields) {
                 var f = _sectionFields[i];
-                if(_.has(f, 'value')) {
+                if (_.has(f, 'value')) {
                   f.value = "";
                 }
               }
@@ -356,18 +356,18 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             // to determine the variances before rebuilding the model that
             // will finally be used for generating the payload
             originalModel = repeatingFieldsModel[fieldKey];
-            _.each(originalModel, function(_sectionFields) {
+            _.each(originalModel, function (_sectionFields) {
               var found = false;
               var f;
               var fm;
               for (var i in _sectionFields) {
                 f = _sectionFields[i];
-                if(_.has(f, 'initialValue')) {
+                if (_.has(f, 'initialValue')) {
                   f.value = "";
-                  _.each(sectionFields, function(_sf) {
-                    for(var j in _sf) {
+                  _.each(sectionFields, function (_sf) {
+                    for (var j in _sf) {
                       fm = _sf[j];
-                      if(_.has(fm, 'initialValue')) {
+                      if (_.has(fm, 'initialValue')) {
                         if (f.initialValue === fm.initialValue) {
                           found = true;
                         }
@@ -383,7 +383,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             });
           }
           // $log.debug('Repeating fieldsxxx', sectionFields);
-          _.each(sectionFields, function(_sectionFields) {
+          _.each(sectionFields, function (_sectionFields) {
             var fieldKeys = Object.keys(_sectionFields);
             var sectionObs = [];
             var concept = sectionFields[0][sectionKeys[0]];
@@ -398,7 +398,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
               if (!_.isUndefined(obs.concept)) {
                 obsRestPayload.push(obs);
               } else {
-                _.each(sectionObs, function(o) {
+                _.each(sectionObs, function (o) {
                   obsRestPayload.push(o);
                 });
               }
@@ -429,21 +429,21 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       }
 
       if (_.isUndefined(initialValue) && (!_.isNull(value) &&
-          value !== '' && !_.isUndefined(value) && !_.isObject(value))) {
+        value !== '' && !_.isUndefined(value) && !_.isObject(value))) {
         obs = {
           concept: field.concept,
           value: value
         };
 
       } else if (initialValue !== value && (!_.isNull(value) &&
-          value !== '' && !_.isUndefined(value) && !_.isObject(value))) {
+        value !== '' && !_.isUndefined(value) && !_.isObject(value))) {
         obs = {
           uuid: field.initialUuid,
           concept: field.concept,
           value: value
         };
       } else if (initialValue !== value && (!_.isNull(value) &&
-          value === '' && !_.isUndefined(value) && !_.isUndefined(initialValue) && !_.isObject(value))) {
+        value === '' && !_.isUndefined(value) && !_.isUndefined(initialValue) && !_.isObject(value))) {
         obs = {
           uuid: field.initialUuid,
           concept: field.concept,
@@ -462,10 +462,13 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
         field.obsDatetime) {
         //This shld be an obs date for the previous field
         var lastFieldPayload;
-        if (obsRestPayload.length>0) {
+        if (obsRestPayload.length > 0) {
           lastFieldPayload = obsRestPayload[obsRestPayload.length - 1];
           $log.debug('last obs payload', lastFieldPayload);
-          lastFieldPayload.obsDatetime = _parseDate(field.value);
+
+          if (!_.isEmpty(field.value) && _.isEmpty(lastFieldPayload.obsDatetime)) {
+            lastFieldPayload.obsDatetime = _parseDate(field.value);
+          }
         }
 
       } else if (_.isString(field.value) || _.isNumber(field.value)) {
@@ -478,8 +481,8 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
         var initialUuid = field.initialUuid;
         var value = field.value;
         if (initialValue === undefined && (!_.isNull(value) &&
-            value !== '' && !_.isUndefined(value))) {
-          _.each(value, function(val) {
+          value !== '' && !_.isUndefined(value))) {
+          _.each(value, function (val) {
             obs = {
               concept: field.concept,
               value: val
@@ -493,19 +496,19 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
           });
 
         } else if (initialValue !== value && (!_.isNull(value) &&
-            value !== '' && !_.isUndefined(value))) {
+          value !== '' && !_.isUndefined(value))) {
           var existingObs = _.intersection(initialValue, value);
           var newObs = [];
           var obsToFilter = [];
           var obsToVoid = [];
           var i = 0;
-          _.each(initialValue, function(val) {
+          _.each(initialValue, function (val) {
             if (!(_.contains(value, val))) {
               obs = {
                 concept: field.concept,
                 value: val,
                 uuid: initialUuid[i],
-                voided:true
+                voided: true
               };
               obsToVoid.push(val);
               obsRestPayload.push(obs);
@@ -515,7 +518,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
           obsToFilter = _.union(obsToVoid, existingObs);
           newObs = _.difference(value, obsToFilter);
-          _.each(newObs, function(val) {
+          _.each(newObs, function (val) {
             obs = {
               concept: field.concept,
               value: val
