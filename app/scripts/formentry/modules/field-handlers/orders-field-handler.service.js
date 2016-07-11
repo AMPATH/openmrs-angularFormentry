@@ -46,9 +46,9 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
         }
 
         function initializeOrderGroupModel(orderModel, question) {
-            orderModel.orderType = 'testorder';
+            orderModel.orderType = question.questionOptions.orderType;//'testorder';
             orderModel.orderConcepts = extractConcepts(question);
-            orderModel.orderSetting = 'orderSetting';
+            orderModel.orderSetting = question.questionOptions.orderSettingUuid;
             orderModel.orders = [];
             orderModel.deletedOrders = [];
         }

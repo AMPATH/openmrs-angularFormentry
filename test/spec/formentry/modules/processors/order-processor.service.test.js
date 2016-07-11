@@ -652,8 +652,69 @@
 
                 var actualFinalPayloadObject = orderProcessorService.
                     generateOrderPayload(sampleModel);
-                    
+
                 expect(expectededFinalPayloadObject).to.deep.equal(actualFinalPayloadObject);
+
+            });
+
+        it('should populate orderer when populatePayloadProvider is called',
+            function () {
+                var providerUuid = 'provider-uuid';
+
+                //case single order payload
+                var sampleSinglePayload = {
+                    concept: 'concept',
+                    type: 'type',
+                    orderer: undefined,
+                    careSetting: 'care-setting'
+                };
+
+                var expected = {
+                    concept: 'concept',
+                    type: 'type',
+                    orderer: 'provider-uuid',
+                    careSetting: 'care-setting'
+                };
+
+                orderProcessorService.populatePayloadProvider(sampleSinglePayload, providerUuid);
+
+                expect(sampleSinglePayload).to.deep.equal(expected);
+
+
+                //case array of orders
+                var sampleArray = [
+                    {
+                        concept: 'concept',
+                        type: 'type',
+                        orderer: undefined,
+                        careSetting: 'care-setting'
+                    },
+                    {
+                        concept: 'concept 2',
+                        type: 'type',
+                        orderer: undefined,
+                        careSetting: 'care-setting'
+                    }
+                ];
+
+                var expectedArray = [
+                    {
+                        concept: 'concept',
+                        type: 'type',
+                        orderer: 'provider-uuid',
+                        careSetting: 'care-setting'
+                    },
+                    {
+                        concept: 'concept 2',
+                        type: 'type',
+                        orderer: 'provider-uuid',
+                        careSetting: 'care-setting'
+                    }
+                ];
+
+                orderProcessorService.populatePayloadProvider(sampleArray, providerUuid);
+
+                expect(JSON.stringify(sampleArray)).to.equal(JSON.stringify(expectedArray));
 
             });
 

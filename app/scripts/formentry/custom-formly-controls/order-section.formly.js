@@ -4,7 +4,7 @@ jshint -W106, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W069, -W0
 /*
 jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 */
-(function() {
+(function () {
     'use strict';
 
     var mod =
@@ -23,13 +23,14 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             '<div class="{{hideRepeat}}"> ' +
             '<div class="repeatsection" ng-repeat="element in model[options.key].orders" ' +
             'ng-init="fields = copyFields(to.fields)"> ' +
-            '<span>{{$parent.getDisplayValue(element.concept)}}<span>' +
+            '<span>{{$parent.getDisplayValue(element.concept)}}<span></br>' +
+            '<span ng-if="element.orderNumber" class="text-success">{{"#: " + element.orderNumber}}<span>' +
             // '<formly-form fields="fields" ' +
             // 'model="element" bind-name="\'formly_ng_repeat\' + index + $parent.$index"> ' +
             // '</formly-form> ' +
             '<p > ' +
             '<button type="button" class="btn btn-sm btn-danger" ng-click="deleteField($index)"> ' +
-            'Delete' +
+            'Remove' +
             '</button> ' +
             '</p> ' +
             '<hr> ' +
@@ -41,34 +42,34 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             '<select kendo-drop-down-list k-options="selectOptions"' +
             'ng-model="$scope.selectedOrder" style="width: 100%;"></select>' +
             '<button style="margin-top:4px;" type="button" class="btn btn-success" ng-click="addNew($scope.selectedOrder)" >Ok</button> ' +
-            '<button style="margin-top:4px;" type="button" class="btn btn-default" ng-click="addingNew = false" >Cancel</button> ' + 
+            '<button style="margin-top:4px;" type="button" class="btn btn-default" ng-click="addingNew = false" >Cancel</button> ' +
             '</div>' +
             '</div> ' +
             '</div>',
-            controller: function($scope, $log, CurrentLoadedFormService) {
+            controller: function ($scope, $log, CurrentLoadedFormService) {
                 //$scope.formOptions = { formState: $scope.formState };
-                
+
                 $scope.addingNew = false;
-                
+
                 $scope.addNew = addNew;
                 $scope.deleteField = deleteField;
-                
+
                 $scope.selectedOrder = undefined;
-                
+
                 $scope.selectOptions = {
                     dataTextField: 'label',
                     dataValueField: 'concept',
                     valuePrimitive: true,
                     dataSource: $scope.options.data.selectableOrders
                 };
-        
+
                 $scope.copyFields = copyFields;
                 $scope.getDisplayValue = getDisplayValue;
-                
+
                 function getDisplayValue(orderConcept) {
                     var orders = $scope.options.data.selectableOrders;
-                    for(var i=0; i < orders.length; i++) {
-                        if(orders[i].concept === orderConcept)
+                    for (var i = 0; i < orders.length; i++) {
+                        if (orders[i].concept === orderConcept)
                             return orders[i].label;
                     }
                 }
@@ -80,9 +81,9 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
                 }
 
                 function addFieldsToQuestionMap(groups) {
-                    
-                    _.each(groups, function(group) {
-                        _.each(group.fieldGroup, function(field) {
+
+                    _.each(groups, function (group) {
+                        _.each(group.fieldGroup, function (field) {
                             var id = field.data.id;
                             if (!_.isEmpty(id)) {
                                 if (id in CurrentLoadedFormService.questionMap) {
@@ -102,9 +103,11 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
                     orderSectionModel.push($scope.to.createChildFieldModel(orderConcept));
                     $scope.addingNew = false;
                 }
-                
+
                 function deleteField($index) {
-                    var deletedOrder =  $scope.model[$scope.options.key].orders[$index];
+                    var deletedOrder = $scope.model[$scope.options.key].orders[$index];
+                    if (!$scope.model[$scope.options.key].orders.deletedOrders)
+                        $scope.model[$scope.options.key].orders.deletedOrders = [];
                     $scope.model[$scope.options.key].orders.deletedOrders.push(deletedOrder);
                     $scope.model[$scope.options.key].orders.splice($index, 1);
                 }

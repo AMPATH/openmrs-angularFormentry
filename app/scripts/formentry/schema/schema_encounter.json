@@ -61,6 +61,8 @@
                             "type": "testOrder",
                             "questionOptions": {
                                 "rendering": "repeating",
+                                "orderSettingUuid": "uuuid-uuid-uuid-uuid",
+                                "orderType": "testorder",
                                 "selectableOrders": [
                                     {
                                         "concept": "a898f50c-1350-11df-a1f1-0026b9348838",

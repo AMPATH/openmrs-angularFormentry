@@ -13,11 +13,12 @@ jscs:disable requirePaddingNewLinesBeforeLineComments, requireTrailingComma
     EncounterProcessor.$inject = [
         'FormentryUtilService',
         'ObsProcessorService',
+        'OrderProcessorService',
         '$log'
     ];
 
     var UNKNOWN_ROLE_UUID = 'a0b03050-c99b-11e0-9572-0800200c9a66';
-    function EncounterProcessor(utils, obsProcessor, $log) {
+    function EncounterProcessor(utils, obsProcessor, orderProcessor, $log) {
         var service = {
             generateEncounterPayload: generateEncounterPayload,
             populateModel: populateModel
@@ -36,15 +37,17 @@ jscs:disable requirePaddingNewLinesBeforeLineComments, requireTrailingComma
             } else {
                 if (encDetails.encDatetime !== null) {
                     payload.encounterDatetime =
-                    utils.formatDate(encDetails.encDatetime.value, null, '+0300');
+                        utils.formatDate(encDetails.encDatetime.value, null, '+0300');
                 }
                 if (encDetails.encLocation !== null) {
                     payload.location = encDetails.encLocation.value;
                 }
 
                 // Create encounterProviders (Assume one for now)
+                var providerObject;
                 if (encDetails.encProvider !== null) {
                     payload.provider = encDetails.encProvider.value;
+                    providerObject = encDetails.encProvider.valueObject;
                 }
 
                 if (model.form_info) {
@@ -62,7 +65,20 @@ jscs:disable requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                     payload.obs = obsPayload;
                 }
 
+                //orderProcessor
+                var ordersPayload = orderProcessor.generateOrderPayload(model);
+
+                if (ordersPayload !== null && !_.isEmpty(ordersPayload) && ordersPayload.encounterAppendableOrderPayload.length > 0) {
+                    payload.orders = ordersPayload.encounterAppendableOrderPayload;
+
+                    _.each(payload.orders, function (order) {
+                        if (order.orderer === undefined || order.orderer === null && !order.uuid) {
+                            orderProcessor.populatePayloadProvider(order, providerObject.uuId());
+                        }
+                    });
+                }
                 //Call the call back if provided
+                console.log('payload ;;;', payload);
                 return payload;
             }
         }
@@ -89,6 +105,9 @@ jscs:disable requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 
             // Populate obs if any
             obsProcessor.addExistingObsSetToForm(model, openmrsRestObj);
+
+            // populate orders if any
+            orderProcessor.populateModel(model, openmrsRestObj);
         }
 
         function _findEncounterDetailsInModel(model) {
@@ -103,7 +122,7 @@ jscs:disable requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                 if (_.has(model[section], 'encounterDate') ||
                     _.has(model[section], 'encounterDatetime')) {
                     details.encDatetime = model[section].encounterDatetime
-                    || model[section].encounterDate;
+                        || model[section].encounterDate;
                 }
                 if (_.has(model[section], 'encounterLocation')) {
                     details.encLocation = model[section].encounterLocation;

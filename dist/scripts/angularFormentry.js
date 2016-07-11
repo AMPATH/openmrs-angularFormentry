@@ -1697,9 +1697,9 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
         }
 
         function initializeOrderGroupModel(orderModel, question) {
-            orderModel.orderType = 'testorder';
+            orderModel.orderType = question.questionOptions.orderType;//'testorder';
             orderModel.orderConcepts = extractConcepts(question);
-            orderModel.orderSetting = 'orderSetting';
+            orderModel.orderSetting = question.questionOptions.orderSettingUuid;
             orderModel.orders = [];
             orderModel.deletedOrders = [];
         }
@@ -2325,6 +2325,207 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
   }
 })();
 
+/*
+jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106, -W026
+jscs:disable disallowMixedSpacesAndTabs, requireDotNotation
+jscs:disable requirePaddingNewLinesBeforeLineComments, requireTrailingComma
+*/
+(function () {
+    'use strict';
+
+    angular
+        .module('openmrs.angularFormentry')
+        .factory('OrderProcessorService', OrderProcessorService);
+
+    OrderProcessorService.$inject = [
+        'FormentryUtilService',
+        '$log'
+    ];
+
+    function OrderProcessorService(utils, $log) {
+        var service = {
+            //main functions
+            generateOrderPayload: generateOrderPayload,
+            populateModel: populateModel,
+            populatePayloadProvider: populatePayloadProvider,
+
+            //internal functions exposed for testing
+            createOrderModel: createOrderModel,
+            findVirtualGroupModelByConcept: findVirtualGroupModelByConcept,
+            fillVirtualGroupsModelWithPayload: fillVirtualGroupsModelWithPayload,
+            extractVirtualOrderGroupsFromModel: extractVirtualOrderGroupsFromModel,
+
+            getOrderPayload: getOrderPayload,
+            getVirtualGroupOrderPayload: getVirtualGroupOrderPayload,
+            mergeVirtualGroupOrderPayLoads: mergeVirtualGroupOrderPayLoads
+        };
+
+        return service;
+
+        function generateOrderPayload(model) {
+            var orderGroups = extractVirtualOrderGroupsFromModel(model);
+            var arrayOfOrderGroupPayload = [];
+
+            _.each(orderGroups, function (orderGroup) {
+                arrayOfOrderGroupPayload.push(getVirtualGroupOrderPayload(orderGroup));
+            });
+
+            if (arrayOfOrderGroupPayload.length != 0) {
+                return mergeVirtualGroupOrderPayLoads(arrayOfOrderGroupPayload);
+            }
+        }
+
+        function populateModel(model, payload) {
+            var orderPayload = payload;
+            if (!angular.isArray(payload)) {
+                orderPayload = payload.orders;
+            }
+            var virtualGroups = extractVirtualOrderGroupsFromModel(model);
+
+            fillVirtualGroupsModelWithPayload(orderPayload, virtualGroups);
+        }
+
+        function createOrderModel(orderPayload) {
+            return {
+                uuid: orderPayload.uuid,
+                concept: orderPayload.concept.uuid,
+                type: orderPayload.type,
+                orderer: orderPayload.orderer.uuid,
+                careSetting: orderPayload.careSetting.uuid,
+                orderNumber: orderPayload.orderNumber
+            };
+        }
+
+        function findVirtualGroupModelByConcept(concept, virtualGroupsArray) {
+            for (var i = 0; i < virtualGroupsArray.length; i++) {
+                if (virtualGroupsArray[i].orderConcepts.indexOf(concept) > -1) {
+                    return virtualGroupsArray[i];
+                }
+            }
+        }
+
+        function fillVirtualGroupsModelWithPayload(orderPayloadArray, virtualGroupsArray) {
+            _.each(orderPayloadArray, function (orderPayload) {
+                var group =
+                    findVirtualGroupModelByConcept(orderPayload.concept.uuid, virtualGroupsArray);
+
+                var orderModel = createOrderModel(orderPayload);
+                if (!angular.isArray(group.orders)) {
+                    group.orders = [];
+                }
+
+                group.orders.push(orderModel);
+            });
+        }
+
+        function extractVirtualOrderGroupsFromModel(model) {
+            var arrayOfVirtualGroups = [];
+            _fillArrayWithVirtualGroupsRecursively(arrayOfVirtualGroups, model);
+            return arrayOfVirtualGroups;
+
+        }
+
+        function _fillArrayWithVirtualGroupsRecursively(array, subModel) {
+            if (_.isEmpty(subModel)) {
+                return;
+            }
+
+            if (angular.isArray(subModel)) {
+                _.each(subModel, function (obj) {
+                    _fillArrayWithVirtualGroupsRecursively(array, obj);
+                });
+                return;
+            }
+
+            if (angular.isArray(subModel.orderConcepts)) {
+                array.push(subModel);
+                return;
+            }
+
+            if (typeof subModel === 'object')
+                _.each(Object.keys(subModel), function (key) {
+                    if (angular.isArray(subModel[key]) || typeof subModel[key] === 'object') {
+                        _fillArrayWithVirtualGroupsRecursively(array, subModel[key]);
+                    }
+                });
+        }
+
+        function getOrderPayload(orderModel) {
+            if (orderModel) {
+                if (orderModel.uuid) {
+                    //case existing order
+                    return {
+                        uuid: orderModel.uuid
+                    };
+                } else {
+                    //case new order
+                    return {
+                        concept: orderModel.concept,
+                        type: orderModel.type,
+                        orderer: orderModel.orderer,
+                        careSetting: orderModel.careSetting
+                    };
+                }
+            }
+        }
+
+        function getVirtualGroupOrderPayload(groupOrderModel) {
+            var payloadObject = {
+                encounterAppendableOrderPayload: [],
+                deletedOrdersUuid: []
+            };
+
+            _.each(groupOrderModel.orders, function (order) {
+                payloadObject.encounterAppendableOrderPayload.push(getOrderPayload(order));
+            });
+
+            _.each(groupOrderModel.deletedOrders, function (order) {
+                if (order.uuid) {
+                    payloadObject.deletedOrdersUuid.push(order.uuid);
+                }
+            });
+            return payloadObject;
+        }
+
+        function mergeVirtualGroupOrderPayLoads(arrayOfVirtualGroupOrderPayload) {
+            var finalPayloadObject = {
+                encounterAppendableOrderPayload: [],
+                deletedOrdersUuid: []
+            };
+
+            _.each(arrayOfVirtualGroupOrderPayload, function (payload) {
+                finalPayloadObject.encounterAppendableOrderPayload =
+                    finalPayloadObject.encounterAppendableOrderPayload.
+                        concat(payload.encounterAppendableOrderPayload);
+
+                finalPayloadObject.deletedOrdersUuid =
+                    finalPayloadObject.deletedOrdersUuid.
+                        concat(payload.deletedOrdersUuid);
+            });
+
+            return finalPayloadObject;
+        }
+
+        function populatePayloadProvider(order, providerUuid) {
+            if (angular.isArray(order)) {
+                _.each(order, function (singleOrder) {
+                    if (typeof singleOrder === 'object') {
+                        singleOrder.orderer = providerUuid;
+                    }
+                });
+                return;
+            }
+            
+            if (typeof order === 'object') {
+                order.orderer = providerUuid;
+                return;
+            }
+
+            
+        }
+
+    }
+})();
 /*
 jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W069, -W026
 */
@@ -3310,11 +3511,12 @@ jscs:disable requirePaddingNewLinesBeforeLineComments, requireTrailingComma
     EncounterProcessor.$inject = [
         'FormentryUtilService',
         'ObsProcessorService',
+        'OrderProcessorService',
         '$log'
     ];
 
     var UNKNOWN_ROLE_UUID = 'a0b03050-c99b-11e0-9572-0800200c9a66';
-    function EncounterProcessor(utils, obsProcessor, $log) {
+    function EncounterProcessor(utils, obsProcessor, orderProcessor, $log) {
         var service = {
             generateEncounterPayload: generateEncounterPayload,
             populateModel: populateModel
@@ -3333,15 +3535,17 @@ jscs:disable requirePaddingNewLinesBeforeLineComments, requireTrailingComma
             } else {
                 if (encDetails.encDatetime !== null) {
                     payload.encounterDatetime =
-                    utils.formatDate(encDetails.encDatetime.value, null, '+0300');
+                        utils.formatDate(encDetails.encDatetime.value, null, '+0300');
                 }
                 if (encDetails.encLocation !== null) {
                     payload.location = encDetails.encLocation.value;
                 }
 
                 // Create encounterProviders (Assume one for now)
+                var providerObject;
                 if (encDetails.encProvider !== null) {
                     payload.provider = encDetails.encProvider.value;
+                    providerObject = encDetails.encProvider.valueObject;
                 }
 
                 if (model.form_info) {
@@ -3359,7 +3563,20 @@ jscs:disable requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                     payload.obs = obsPayload;
                 }
 
+                //orderProcessor
+                var ordersPayload = orderProcessor.generateOrderPayload(model);
+
+                if (ordersPayload !== null && !_.isEmpty(ordersPayload) && ordersPayload.encounterAppendableOrderPayload.length > 0) {
+                    payload.orders = ordersPayload.encounterAppendableOrderPayload;
+
+                    _.each(payload.orders, function (order) {
+                        if (order.orderer === undefined || order.orderer === null && !order.uuid) {
+                            orderProcessor.populatePayloadProvider(order, providerObject.uuId());
+                        }
+                    });
+                }
                 //Call the call back if provided
+                console.log('payload ;;;', payload);
                 return payload;
             }
         }
@@ -3386,6 +3603,9 @@ jscs:disable requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 
             // Populate obs if any
             obsProcessor.addExistingObsSetToForm(model, openmrsRestObj);
+
+            // populate orders if any
+            orderProcessor.populateModel(model, openmrsRestObj);
         }
 
         function _findEncounterDetailsInModel(model) {
@@ -3400,7 +3620,7 @@ jscs:disable requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                 if (_.has(model[section], 'encounterDate') ||
                     _.has(model[section], 'encounterDatetime')) {
                     details.encDatetime = model[section].encounterDatetime
-                    || model[section].encounterDate;
+                        || model[section].encounterDate;
                 }
                 if (_.has(model[section], 'encounterLocation')) {
                     details.encLocation = model[section].encounterLocation;
@@ -5010,7 +5230,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             'ng-required="{{to.required}}" ng-disabled="{{to.disabled}}" ' +
             'reset-search-input="false"> ' +
             '<ui-select-match placeholder="{{to.placeholder}}"> ' +
-            '{{evaluateFunction($select.selected[to.labelProp || \'name\'])}} ' +
+            '{{evaluateFunction($select.selected[to.labelProp || \'name\'])}}{{setSelectedObject($select.selected)}}' +
             '</ui-select-match> ' +
             '<ui-select-choices refresh="refreshItemSource($select.search)" ' +
             'group-by="to.groupBy" refresh-delay="1000"' +
@@ -5030,11 +5250,10 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
                 var vm = this;
                 $scope.to.required = $scope.options.expressionProperties['templateOptions.required'];
                 $scope.to.disabled = $scope.options.expressionProperties['templateOptions.disabled'];
-                ;
-
                 $scope.itemSource = [];
                 $scope.refreshItemSource = refreshItemSource;
                 $scope.evaluateFunction = evaluateFunction;
+                $scope.setSelectedObject = setSelectedObject;
                 vm.getSelectedObject = getSelectedObject;
 
                 $scope.$watch(function (scope) {
@@ -5045,6 +5264,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
                         if ($scope.itemSource !== undefined && $scope.itemSource.length === 0) {
                             getSelectedObject();
                         }
+
                     });
 
                 activate();
@@ -5086,7 +5306,13 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
                     }
                 }
 
+                function setSelectedObject(selectedObject) {
+                    console.log('setting selected object', selectedObject);
+                    $scope.model[getKey($scope.options.key)].valueObject = selectedObject;
+                }
+
                 function evaluateFunction(obj) {
+                    //console.log('$select.selected', obj);
                     if (obj && (typeof obj) === 'function') {
                         return obj();
                     }
@@ -5746,7 +5972,7 @@ jshint -W106, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W069, -W0
 /*
 jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 */
-(function() {
+(function () {
     'use strict';
 
     var mod =
@@ -5765,13 +5991,14 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             '<div class="{{hideRepeat}}"> ' +
             '<div class="repeatsection" ng-repeat="element in model[options.key].orders" ' +
             'ng-init="fields = copyFields(to.fields)"> ' +
-            '<span>{{$parent.getDisplayValue(element.concept)}}<span>' +
+            '<span>{{$parent.getDisplayValue(element.concept)}}<span></br>' +
+            '<span ng-if="element.orderNumber" class="text-success">{{"#: " + element.orderNumber}}<span>' +
             // '<formly-form fields="fields" ' +
             // 'model="element" bind-name="\'formly_ng_repeat\' + index + $parent.$index"> ' +
             // '</formly-form> ' +
             '<p > ' +
-            '<button type="button" class="btn btn-sm btn-danger" ng-click="deleteField($index)"> ' +
-            'Delete' +
+            '<button ng-hide="element.orderNumber" type="button" class="btn btn-sm btn-danger" ng-click="deleteField($index)"> ' +
+            'Remove' +
             '</button> ' +
             '</p> ' +
             '<hr> ' +
@@ -5783,34 +6010,34 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             '<select kendo-drop-down-list k-options="selectOptions"' +
             'ng-model="$scope.selectedOrder" style="width: 100%;"></select>' +
             '<button style="margin-top:4px;" type="button" class="btn btn-success" ng-click="addNew($scope.selectedOrder)" >Ok</button> ' +
-            '<button style="margin-top:4px;" type="button" class="btn btn-default" ng-click="addingNew = false" >Cancel</button> ' + 
+            '<button style="margin-top:4px;" type="button" class="btn btn-default" ng-click="addingNew = false" >Cancel</button> ' +
             '</div>' +
             '</div> ' +
             '</div>',
-            controller: function($scope, $log, CurrentLoadedFormService) {
+            controller: function ($scope, $log, CurrentLoadedFormService) {
                 //$scope.formOptions = { formState: $scope.formState };
-                
+
                 $scope.addingNew = false;
-                
+
                 $scope.addNew = addNew;
                 $scope.deleteField = deleteField;
-                
+
                 $scope.selectedOrder = undefined;
-                
+
                 $scope.selectOptions = {
                     dataTextField: 'label',
                     dataValueField: 'concept',
                     valuePrimitive: true,
                     dataSource: $scope.options.data.selectableOrders
                 };
-        
+
                 $scope.copyFields = copyFields;
                 $scope.getDisplayValue = getDisplayValue;
-                
+
                 function getDisplayValue(orderConcept) {
                     var orders = $scope.options.data.selectableOrders;
-                    for(var i=0; i < orders.length; i++) {
-                        if(orders[i].concept === orderConcept)
+                    for (var i = 0; i < orders.length; i++) {
+                        if (orders[i].concept === orderConcept)
                             return orders[i].label;
                     }
                 }
@@ -5822,9 +6049,9 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
                 }
 
                 function addFieldsToQuestionMap(groups) {
-                    
-                    _.each(groups, function(group) {
-                        _.each(group.fieldGroup, function(field) {
+
+                    _.each(groups, function (group) {
+                        _.each(group.fieldGroup, function (field) {
                             var id = field.data.id;
                             if (!_.isEmpty(id)) {
                                 if (id in CurrentLoadedFormService.questionMap) {
@@ -5844,9 +6071,11 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
                     orderSectionModel.push($scope.to.createChildFieldModel(orderConcept));
                     $scope.addingNew = false;
                 }
-                
+
                 function deleteField($index) {
-                    var deletedOrder =  $scope.model[$scope.options.key].orders[$index];
+                    var deletedOrder = $scope.model[$scope.options.key].orders[$index];
+                    if (!$scope.model[$scope.options.key].orders.deletedOrders)
+                        $scope.model[$scope.options.key].orders.deletedOrders = [];
                     $scope.model[$scope.options.key].orders.deletedOrders.push(deletedOrder);
                     $scope.model[$scope.options.key].orders.splice($index, 1);
                 }

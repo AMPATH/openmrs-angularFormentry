@@ -21,7 +21,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             'ng-required="{{to.required}}" ng-disabled="{{to.disabled}}" ' +
             'reset-search-input="false"> ' +
             '<ui-select-match placeholder="{{to.placeholder}}"> ' +
-            '{{evaluateFunction($select.selected[to.labelProp || \'name\'])}} ' +
+            '{{evaluateFunction($select.selected[to.labelProp || \'name\'])}}{{setSelectedObject($select.selected)}}' +
             '</ui-select-match> ' +
             '<ui-select-choices refresh="refreshItemSource($select.search)" ' +
             'group-by="to.groupBy" refresh-delay="1000"' +
@@ -41,11 +41,10 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
                 var vm = this;
                 $scope.to.required = $scope.options.expressionProperties['templateOptions.required'];
                 $scope.to.disabled = $scope.options.expressionProperties['templateOptions.disabled'];
-                ;
-
                 $scope.itemSource = [];
                 $scope.refreshItemSource = refreshItemSource;
                 $scope.evaluateFunction = evaluateFunction;
+                $scope.setSelectedObject = setSelectedObject;
                 vm.getSelectedObject = getSelectedObject;
 
                 $scope.$watch(function (scope) {
@@ -56,6 +55,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
                         if ($scope.itemSource !== undefined && $scope.itemSource.length === 0) {
                             getSelectedObject();
                         }
+
                     });
 
                 activate();
@@ -97,7 +97,13 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
                     }
                 }
 
+                function setSelectedObject(selectedObject) {
+                    console.log('setting selected object', selectedObject);
+                    $scope.model[getKey($scope.options.key)].valueObject = selectedObject;
+                }
+
                 function evaluateFunction(obj) {
+                    //console.log('$select.selected', obj);
                     if (obj && (typeof obj) === 'function') {
                         return obj();
                     }
