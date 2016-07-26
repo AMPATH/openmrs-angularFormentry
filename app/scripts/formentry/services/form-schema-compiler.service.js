@@ -301,7 +301,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             console.error('Form compile: Unsupported reference type', referenceData.reference);
         }
 
-        function getReferencedForms(formSchema, formSchemasLookupArray) {
+        function getReferencedForms(formSchema, formSchemaLookup) {
             var referencedForms = formSchema.referencedForms;
 
             if (_.isEmpty(referencedForms)) {
@@ -309,18 +309,23 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             }
 
             var keyValReferencedForms = {};
-
-            _.each(referencedForms, function (reference) {
-                var referencedFormSchema =
-                    findSchemaByName(formSchemasLookupArray, reference.formName);
-                keyValReferencedForms[reference.alias] = referencedFormSchema;
-            });
+            if(Array.isArray(formSchemaLookup)) {
+              _.each(referencedForms, function (reference) {
+                  var referencedFormSchema =
+                      findSchemaByName(formSchemaLookup, reference.formName);
+                  keyValReferencedForms[reference.alias] = referencedFormSchema;
+              });
+            } else {
+              // Assume it is a key value pair of uuid:schema //i.e this is from
+              // openmrs backend
+              _.each(referencedForms, function (reference) {
+                keyValReferencedForms[reference.alias] = 
+                                        formSchemaLookup[reference.ref.uuid];
+              })
+            }
 
             return keyValReferencedForms;
         }
-
-
-
 
     }
 })();
