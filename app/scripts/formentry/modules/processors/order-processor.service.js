@@ -20,6 +20,7 @@ jscs:disable requirePaddingNewLinesBeforeLineComments, requireTrailingComma
             //main functions
             generateOrderPayload: generateOrderPayload,
             populateModel: populateModel,
+            populatePayloadProvider: populatePayloadProvider,
 
             //internal functions exposed for testing
             createOrderModel: createOrderModel,
@@ -37,12 +38,12 @@ jscs:disable requirePaddingNewLinesBeforeLineComments, requireTrailingComma
         function generateOrderPayload(model) {
             var orderGroups = extractVirtualOrderGroupsFromModel(model);
             var arrayOfOrderGroupPayload = [];
-            
-            _.each(orderGroups, function(orderGroup){
+
+            _.each(orderGroups, function (orderGroup) {
                 arrayOfOrderGroupPayload.push(getVirtualGroupOrderPayload(orderGroup));
             });
-            
-            if(arrayOfOrderGroupPayload.length != 0){
+
+            if (arrayOfOrderGroupPayload.length != 0) {
                 return mergeVirtualGroupOrderPayLoads(arrayOfOrderGroupPayload);
             }
         }
@@ -114,11 +115,12 @@ jscs:disable requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                 return;
             }
 
-            _.each(Object.keys(subModel), function (key) {
-                if (angular.isArray(subModel[key]) || typeof subModel[key] === 'object') {
-                    _fillArrayWithVirtualGroupsRecursively(array, subModel[key]);
-                }
-            });
+            if (typeof subModel === 'object')
+                _.each(Object.keys(subModel), function (key) {
+                    if (angular.isArray(subModel[key]) || typeof subModel[key] === 'object') {
+                        _fillArrayWithVirtualGroupsRecursively(array, subModel[key]);
+                    }
+                });
         }
 
         function getOrderPayload(orderModel) {
@@ -157,25 +159,43 @@ jscs:disable requirePaddingNewLinesBeforeLineComments, requireTrailingComma
             });
             return payloadObject;
         }
-        
+
         function mergeVirtualGroupOrderPayLoads(arrayOfVirtualGroupOrderPayload) {
             var finalPayloadObject = {
                 encounterAppendableOrderPayload: [],
                 deletedOrdersUuid: []
             };
-            
-             _.each(arrayOfVirtualGroupOrderPayload, function (payload) {
-                 finalPayloadObject.encounterAppendableOrderPayload =
-                 finalPayloadObject.encounterAppendableOrderPayload.
-                 concat(payload.encounterAppendableOrderPayload);
-                 
-                 finalPayloadObject.deletedOrdersUuid =
-                 finalPayloadObject.deletedOrdersUuid.
-                 concat(payload.deletedOrdersUuid);
+
+            _.each(arrayOfVirtualGroupOrderPayload, function (payload) {
+                finalPayloadObject.encounterAppendableOrderPayload =
+                    finalPayloadObject.encounterAppendableOrderPayload.
+                        concat(payload.encounterAppendableOrderPayload);
+
+                finalPayloadObject.deletedOrdersUuid =
+                    finalPayloadObject.deletedOrdersUuid.
+                        concat(payload.deletedOrdersUuid);
             });
-            
+
             return finalPayloadObject;
         }
-        
+
+        function populatePayloadProvider(order, providerUuid) {
+            if (angular.isArray(order)) {
+                _.each(order, function (singleOrder) {
+                    if (typeof singleOrder === 'object') {
+                        singleOrder.orderer = providerUuid;
+                    }
+                });
+                return;
+            }
+            
+            if (typeof order === 'object') {
+                order.orderer = providerUuid;
+                return;
+            }
+
+            
+        }
+
     }
 })();
