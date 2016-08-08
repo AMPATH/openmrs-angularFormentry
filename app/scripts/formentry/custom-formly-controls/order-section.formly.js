@@ -23,13 +23,13 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             '<div class="{{hideRepeat}}"> ' +
             '<div class="repeatsection" ng-repeat="element in model[options.key].orders" ' +
             'ng-init="fields = copyFields(to.fields)"> ' +
-            '<span>{{$parent.getDisplayValue(element.concept)}}<span></br>' +
-            '<span ng-if="element.orderNumber" class="text-success">{{"#: " + element.orderNumber}}<span>' +
+            '<span>{{$parent.getDisplayValue(element.concept)}}</span></br>' +
+            '<span ng-if="element.orderNumber" class="text-success">{{"#: " + element.orderNumber}}</span>' +
             // '<formly-form fields="fields" ' +
             // 'model="element" bind-name="\'formly_ng_repeat\' + index + $parent.$index"> ' +
             // '</formly-form> ' +
-            '<p > ' +
-            '<button type="button" class="btn btn-sm btn-danger" ng-click="deleteField($index)"> ' +
+            '<p ng-hide="element.orderNumber"> ' +
+            '<button type="button" class="btn btn-sm btn-danger" ng-hide="element.orderNumber" ng-click="deleteField($index)"> ' +
             'Remove' +
             '</button> ' +
             '</p> ' +
