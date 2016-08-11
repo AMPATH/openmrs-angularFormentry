@@ -9,10 +9,18 @@
     <!-- Place favicon.ico and apple-touch-icon.png in the root directory -->
     <!-- build:css(.) styles/vendor.css -->
     <!-- bower:css -->
-    <link rel="stylesheet" href="bower_components/bootstrap/dist/css/bootstrap.css" />
     <link rel="stylesheet" href="bower_components/angular-ui-select/dist/select.css" />
+    <link rel="stylesheet" href="bower_components/angular-dialog-service/dist/dialogs.css" />
+    <link rel="stylesheet" href="bower_components/datatables.net-bs/css/dataTables.bootstrap.css" />
     <!-- endbower -->
     <!-- endbuild -->
+    
+    <!-- bower components not conforming to standards -->
+    <!-- build:css(.) styles/nonbowervendor.css -->
+    <link rel="stylesheet" href="bower_components/bootstrap/dist/css/bootstrap.css">
+    <link rel="stylesheet" href="bower_components/angular-bootstrap/ui-bootstrap-csp.css">
+    <!-- endbuild -->
+    
     <!-- build:css(.tmp) styles/main.css -->
     <link rel="stylesheet" href="styles/main.css">
     <link rel="stylesheet" href="bower_components/kendo-ui/styles/kendo.common.min.css" />
@@ -39,13 +47,13 @@
                         <span class="icon-bar"></span>
                     </button>
 
-                    <a class="navbar-brand" href="#/">angularFormentry</a>
+                    <a class="navbar-brand" href="#/">Angular Form Entry Module</a>
                 </div>
 
                 <div class="collapse navbar-collapse" id="js-navbar-collapse">
 
                     <ul class="nav navbar-nav">
-                        <li class="active"><a href="#/">Home</a></li>
+                        <li ui-sref-active="active"><a ng-href="#/form/manage">Form Manager</a></li>
                         <li><a ng-href="#/about">Sample Form</a></li>
                         <li><a ng-href="#/form-designer">Form Editor</a></li>
                         <li><a ng-href="#/developer-demo">Simple Demo</a></li>
@@ -56,7 +64,7 @@
         </div>
     </div>
 
-    <div class="container">
+    <div class="container-fluid">
         <div ui-view=""></div>
     </div>
 
@@ -106,37 +114,31 @@
     <script src="bower_components/underscore/underscore.js"></script>
     <script src="bower_components/underscore.string/dist/underscore.string.js"></script>
     <script src="bower_components/openmrs-ngresource/dist/scripts/openmrsNgresource.js"></script>
+    <script src="bower_components/angular-translate/angular-translate.js"></script>
+    <script src="bower_components/angular-dialog-service/dist/dialogs.js"></script>
+    <script src="bower_components/angular-dialog-service/dist/dialogs-default-translations.js"></script>
+    <script src="bower_components/datatables.net/js/jquery.dataTables.js"></script>
+    <script src="bower_components/datatables.net-bs/js/dataTables.bootstrap.js"></script>
     <!-- endbower -->
     <!-- endbuild -->
-
+    
+    <!-- Bower components not conforming to bower standards -->
+    <!-- build:js(.) scripts/nonbowervendor.js -->
     <script type="text/javascript" src="bower_components/ace-builds/src-min-noconflict/ace.js"></script>
-
     <script type="text/javascript" src="bower_components/ace-builds/src-min-noconflict/ace.js"></script>
+    <!-- endbuild -->
 
-
-    <script src="scripts/app.module.js"></script>
-    <script src="scripts/form-designer/form-designer.module.js"></script>
-
-    <script src="scripts/controllers/main.js"></script>
-    <script src="scripts/controllers/about.js"></script>
-    <script src="scripts/controllers/editorController.js"></script>
-    <script src="scripts/formentry/modules/rest-services/authentication.service.js"></script>
-    <script src="scripts/developer-demo/simple-developer-demo.module.js"></script>
     <!-- Modules -->
-
-
-    <!-- form-designer -->
-    <script src="scripts/form-designer/form-designer.controller.js"></script>
-    <script src="scripts/form-designer/form-designer.service.js"></script>
-
-    <!-- developer-demo -->
-    <script src="scripts/developer-demo/simple-developer-demo.controller.js"></script>
-
-
     <!-- Formentry Module files -->
     <!-- build:js({.tmp,app}) scripts/angularFormentry.js -->
-    <script src="scripts/formentry/formentry.module.js"></script>
+    <script src="scripts/developer-demo/simple-developer-demo.module.js"></script>
+    <script src="scripts/string-utils.js"></script>
     <script src="scripts/formentry/modules/rest-services/rest-services.module.js"></script>
+    <script src="scripts/form-designer/form-designer.module.js"></script>
+    <script src="scripts/formentry/formentry.module.js"></script>
+    <script src="scripts/openmrs-form-manager/openmrs-form-manager.module.js"></script>
+    <script src="scripts/app.module.js"></script>
+
     <!-- services -->
     <script src="scripts/formentry/services/formentry.testservice.js"></script>
     <script src="scripts/formentry/services/formentry.service.js"></script>
@@ -159,6 +161,9 @@
     <script src="scripts/formentry/services/schemaValidator.service.js"></script>
     <script src="scripts/services/config.service.js"></script>
     <script src="scripts/formentry/services/form-schema-compiler.service.js"></script>
+    <script src="scripts/services/auth.service.js"></script>
+    <script src="scripts/services/cache.service.js"></script>
+    <script src="scripts/openmrs-form-manager/form-manager-util.service.js"></script>
 
     <!-- Formly Custom Controls-->
     <script src="scripts/formentry/custom-formly-controls/datepicker.formly.js"></script>
@@ -174,6 +179,20 @@
     <script src="scripts/formentry/custom-formly-controls/order-section.formly.js"></script>
     <!--Directives-->
     <script src="scripts/formentry/directives/formly-error-summary.directive.js"></script>
+    
+    <script src="scripts/controllers/main.js"></script>
+    <script src="scripts/controllers/about.js"></script>
+    <script src="scripts/controllers/editorController.js"></script>
+    <script src="scripts/developer-demo/simple-developer-demo.controller.js"></script>
+    <!-- form-designer -->
+    <script src="scripts/form-designer/form-designer.controller.js"></script>
+    <script src="scripts/form-designer/form-designer.service.js"></script>
+    
+    <!-- openmrs form manager -->
+    <script src="scripts/openmrs-form-manager/openmrs-form-manager.controller.js"></script>
+    <script src="scripts/openmrs-form-manager/create-form.controller.js"></script>
+    <script src="scripts/openmrs-form-manager/view-edit-form.controller.js"></script>
+    <script src="scripts/openmrs-form-manager/openmrs-server-config.directive.js"></script>
     <!-- endbuild -->
 
 </body>

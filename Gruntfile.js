@@ -66,7 +66,7 @@ module.exports = function (grunt) {
                     livereload: '<%= connect.options.livereload %>'
                 },
                 files: [
-                    '<%= yeoman.app %>/{,*/}*.html',
+                    '<%= yeoman.app %>/{,*/}*.htm{l,}',
                     '.tmp/styles/{,*/}*.css',
                     '<%= yeoman.app %>/images/{,*/}*.{png,jpg,jpeg,gif,webp,svg}'
                 ]
@@ -237,7 +237,7 @@ module.exports = function (grunt) {
         },
         // Performs rewrites based on filerev and the useminPrepare configuration
         usemin: {
-            html: ['<%= yeoman.dist %>/{,*/}*.html'],
+            html: ['<%= yeoman.dist %>/{,*/}*.htm{l,}'],
             css: ['<%= yeoman.dist %>/styles/{,*/}*.css'],
             js: ['<%= yeoman.dist %>/scripts/{,*/}*.js'],
             options: {
@@ -283,7 +283,7 @@ module.exports = function (grunt) {
                 files: [{
                         expand: true,
                         cwd: '<%= yeoman.dist %>',
-                        src: ['*.html'],
+                        src: ['*.htm{l,}'],
                         dest: '<%= yeoman.dist %>'
                     }]
             }
@@ -296,7 +296,7 @@ module.exports = function (grunt) {
                     usemin: 'scripts/angular-formentry.js'
                 },
                 cwd: '<%= yeoman.app %>',
-                src: 'views/{,*/}*.html',
+                src: 'views/{,*/}*.htm{l,}',
                 dest: '.tmp/templateCache.js'
             }
         },
@@ -315,7 +315,7 @@ module.exports = function (grunt) {
         // Replace Google CDN references
         cdnify: {
             dist: {
-                html: ['<%= yeoman.dist %>/*.html']
+                html: ['<%= yeoman.dist %>/*.htm{l,}']
             }
         },
         // Copies remaining files to places other tasks can use
@@ -329,8 +329,9 @@ module.exports = function (grunt) {
                         src: [
                             '*.{ico,png,txt}',
                             '.htaccess',
-                            '*.html',
-                            'images/{,*/}*.{webp}',
+                            '*.htm{l,}',
+                            'views/{,*/}*.htm{l,}',
+                            'images/{,*/}*.{webp,gif,png}',
                             'styles/fonts/{,*/}*.*'
                         ]
                     }, {

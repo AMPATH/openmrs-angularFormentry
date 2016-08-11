@@ -1,0 +1,89 @@
+<div class="breadcrumb">
+  <h3>OpenMRS Form Manamegement Tool</h3>
+  <p>Lets you do all cool stuff, but you will need access to openmrs backend.
+  If you just want to play with forms, go to Form Editor</p>
+</div>
+<div class="panel-group" id="accordion">
+  <div class="panel panel-default">
+      <div class="panel-heading" data-toggle="collapse" data-parent="#accordion" href="#collapseOne">
+          <h4 class="panel-title">
+              OpenMRS Server Configurations
+          </h4>
+      </div>
+      <div id="collapseOne" class="panel-collapse collapse in">
+          <div class="panel-body">
+              <server-url-config></server-url-config>
+          </div>
+      </div>
+  </div>
+</div>   
+ 
+<div class="panel panel-info" style="padding:4px;" data-ng-if="!vm.errorFetchingForms && !vm.busy && vm.authenticated">
+  <div class="panel panel-danger" data-ng-show="vm.errors.length>0">
+    <div><h3 style="margin-left:4px; margin-top: 0px" class="text-danger">LIST OF FIELDS WITH ERRORS</h3></div>
+    <div style="margin-left:4px; margin-top: 0px" data-ng-repeat="e in vm.errors" data-ng-show="vm.errors.length>0">
+      <span class="text-primary"><i class="glyphicon glyphicon-zoom-in"></i> {{e.id}} </span>
+      <br/>
+        <span >
+          {{e.error}}
+        </span>
+    </div>
+  </div>
+  
+  <div class="table-responsive">
+  <input ng-model="vm.query" id="search" class="form-control" placeholder="Filter"/>
+  <table id="form-table" class="table table-bordered table-striped">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Version</th>
+        <th>Published</th>
+        <th>Schema Action</th>
+        <th>View</th>
+        <th>Edit</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr data-ng-repeat="form in vm.existingForms | filter:vm.query" data-ng-click="setSelected(form);">
+        <td>
+          {{form.name}}
+        </td>
+        <td>{{form.version}}</td>
+        <td>
+          <span class="label label-{{form.publishedCssClass}}">{{form.publishedText}}</span>
+        </td>
+        <td>
+          <p ng-show="form.published">None (Published)</p>
+          <input ng-show="!form.published" type="file" file-model="form.schema"/>
+          <button class="btn btn-default" ng-disable="form.schema == null" 
+          ng-show="!form.published && !form.hasSchema" ng-click="uploadSchema(form);">
+          Upload
+          </button>
+          <button class="btn btn-warning" ng-disable="form.schema == null" 
+          ng-show="!form.published && form.hasSchema" ng-click="updateSchema(form);">
+          Update
+          </button>
+          <img ng-show="form.busy && !form.published" src="images/ajax-loader.gif"/>
+        </td>
+        <td>
+          <button class="btn btn-primary" ng-click="viewForm(form);">View</button>
+        </td>
+        <td>
+          <button class="btn btn-warning" ng-click="editForm(form);">Edit</button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<div ng-show="vm.authenticated">
+  <button class="btn btn-default" ng-click="createForm();">Create Form/Component</button>
+</div>
+<script>
+ $(document).ready(function() {
+   $('#form-table').DataTable({
+     "searching": false,
+   });
+ })
+</script>
