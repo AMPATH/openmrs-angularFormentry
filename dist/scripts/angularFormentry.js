@@ -1,3 +1,61 @@
+(function() {
+  'use strict';
+
+  angular
+    .module('app.developerDemo', [
+
+    ])
+    .config(function($stateProvider, $urlRouterProvider) {
+      $urlRouterProvider.otherwise('/');
+      $stateProvider
+        .state('developer-demo', {
+          url: '/developer-demo',
+          controller: "SimpleDemoCtrl",
+          templateUrl: 'views/developer-demo/demo-form.html',
+          data: {
+            requireLogin: true
+          }
+        });
+    });
+})();
+
+String.prototype.endsWith = function(suffix) {
+  return this.indexOf(suffix, this.length - suffix.length) !== -1;
+};
+
+/*jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLinesBeforeLineComments, requireTrailingComma*/
+(function() {
+  'use strict';
+
+  angular
+        .module('openmrs.RestServices', [
+            'ngResource',
+            'openmrs-ngresource.models',
+            'openmrs-ngresource.restServices'
+        ]);
+})();
+
+(function() {
+  'use strict';
+
+  angular
+    .module('app.formDesigner', [
+
+    ])
+    .config(function($stateProvider, $urlRouterProvider) {
+      $urlRouterProvider.otherwise('/');
+      $stateProvider
+        .state('form-designer', {
+          url: '/form-designer',
+          controller: "FormDesignerCtrl",
+          templateUrl: 'views/form-designer/form-designer.html',
+          data: {
+            requireLogin: true
+          }
+        });
+    });
+})();
+
 /*
 jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106
 */
@@ -57,17 +115,139 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
     });
 })();
 
-/*jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLinesBeforeLineComments, requireTrailingComma*/
 (function() {
   'use strict';
 
   angular
-        .module('openmrs.RestServices', [
-            'ngResource',
-            'openmrs-ngresource.models',
-            'openmrs-ngresource.restServices'
-        ]);
+    .module('app.openmrsFormManager', [
+      'openmrs.RestServices'
+    ])
+    .run(function(formlyConfig) {
+      formlyConfig.setType({
+        name:'aceJsonEditor',
+        template: '<div ui-ace="{'
+                      + 'mode: \'json\''
+                    +'}" ng-model="model[options.key]"></div>'
+      });
+      
+      formlyConfig.setType({
+        name: 'fileUpload',
+        template: '<input type="file" file-model="model[options.key]"/>'
+      });
+    });
 })();
+
+/*
+jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106
+*/
+/*jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLinesBeforeLineComments, requireTrailingComma*/
+'use strict';
+
+/**
+ * @ngdoc overview
+ * @name angularFormentryApp
+ * @description
+ * # angularFormentryApp
+ *
+ * Main module of the application.
+ */
+angular
+  .module('angularFormentry', [
+    'ngAnimate',
+    'ngSanitize',
+    'ngTouch',
+    'ui.router',
+    'ngResource',
+    'openmrs-ngresource.models',
+    'openmrs-ngresource.restServices',
+    'openmrs.angularFormentry',
+    'ui.ace',
+    'openmrs.RestServices',
+    'app.openmrsFormManager',
+    'app.formDesigner',
+    'app.developerDemo',
+    'ui.bootstrap',
+    'dialogs.main',
+    'pascalprecht.translate'
+  ])
+  .config(function ($provide) {
+    $provide.decorator('$q', function ($delegate) {
+      function allSettled(promises) {
+        var deferred = $delegate.defer(),
+          counter = 0,
+          results = angular.isArray(promises) ? [] : {};
+
+        angular.forEach(promises, function (promise, key) {
+          counter++;
+          $delegate.when(promise).then(function (value) {
+            if (results.hasOwnProperty(key)) return;
+            results[key] = { status: "fulfilled", value: value };
+            if (!(--counter)) deferred.resolve(results);
+          }, function (reason) {
+            if (results.hasOwnProperty(key)) return;
+            results[key] = { status: "rejected", reason: reason };
+            if (!(--counter)) deferred.resolve(results);
+          });
+        });
+
+        if (counter === 0) {
+          deferred.resolve(results);
+        }
+
+        return deferred.promise;
+      }
+      $delegate.allSettled = allSettled;
+      return $delegate;
+    });
+  })
+  .config(function($stateProvider, $translateProvider, dialogsProvider) {
+    dialogsProvider.useBackdrop('static');
+    dialogsProvider.useEscClose(false);
+    dialogsProvider.useCopy(false);
+    dialogsProvider.setSize('sm');
+
+    $translateProvider.translations('en-US', {
+        DIALOGS_ERROR: 'Error',
+        DIALOGS_OK: 'Ok',
+        DIALOGS_YES: 'Yes',
+        DIALOGS_NO: 'No',
+        DIALOGS_CLOSE: 'Close'
+    });
+
+    $translateProvider.preferredLanguage('en-US');
+    
+    $stateProvider
+        .state('form-management', {
+          url: '/',
+          templateUrl: 'views/openmrs-form-manager/openmrs-form-manager.htm',
+          controller: 'OpenmrsFormManagerCtrl'
+        })
+        .state('about', {
+          url: '/about',
+          templateUrl: 'views/about.html',
+          controller: 'AboutCtrl'
+        })
+        .state('recursive-test', {
+          url: '/recursive-test',
+          templateUrl: 'views/form-editor.html',
+          controller: 'EditorCtrl'
+        })
+        .state('form-create', {
+          url: '/form/create',
+          templateUrl: 'views/openmrs-form-manager/create-form.htm',
+          controller: 'CreateFormCtrl'
+        })
+        .state('form-view', {
+          url: '/form/view/:formUuid',
+          templateUrl: 'views/openmrs-form-manager/view-form.htm',
+          controller: 'ViewEditFormCtrl'
+        })
+        .state('form-edit', {
+          url: '/form/edit/:formUuid',
+          templateUrl: 'views/openmrs-form-manager/edit-form.htm',
+          controller: 'ViewEditFormCtrl'
+        });
+  });
 
 /*
  jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106, -W026
@@ -4969,7 +5149,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             console.error('Form compile: Unsupported reference type', referenceData.reference);
         }
 
-        function getReferencedForms(formSchema, formSchemasLookupArray) {
+        function getReferencedForms(formSchema, formSchemaLookup) {
             var referencedForms = formSchema.referencedForms;
 
             if (_.isEmpty(referencedForms)) {
@@ -4977,19 +5157,139 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             }
 
             var keyValReferencedForms = {};
-
-            _.each(referencedForms, function (reference) {
-                var referencedFormSchema =
-                    findSchemaByName(formSchemasLookupArray, reference.formName);
-                keyValReferencedForms[reference.alias] = referencedFormSchema;
-            });
+            if(Array.isArray(formSchemaLookup)) {
+              _.each(referencedForms, function (reference) {
+                  var referencedFormSchema =
+                      findSchemaByName(formSchemaLookup, reference.formName);
+                  keyValReferencedForms[reference.alias] = referencedFormSchema;
+              });
+            } else {
+              // Assume it is a key value pair of uuid:schema //i.e this is from
+              // openmrs backend
+              _.each(referencedForms, function (reference) {
+                keyValReferencedForms[reference.alias] = 
+                                        formSchemaLookup[reference.ref.uuid];
+              })
+            }
 
             return keyValReferencedForms;
         }
 
+    }
+})();
 
+(function(){
+  'use strict';
+  
+  angular
+    .module('angularFormentry')
+      .service('AuthService', AuthService);
+    
+    AuthService.$inject = [
+      '$rootScope'
+    ];
+    
+    function AuthService($rootScope) {
+      var _this = this;
+      var authData = {
+        user: {
+          name: null,
+        },
+        authenticated: false,
+        sessionId: null,
+      };
+      
+      _this.authenticated = function(value) {
+        if(angular.isDefined(value)) {
+          authData.authenticated = value;
+        } else {
+          return authData.authenticated;
+        }
+      }
+      
+      $rootScope.$on('authenticated', function(event, data) {
+        if(data.user) {
+          if(data.user.name) {
+            authData.user.name = data.user.name;
+          }
+        }
+        authData.authenticated = true;
+      });
+      
+      $rootScope.$on('deauthenticated', function() {
+        authData.authenticated = false;
+      });
+    }
+})();
 
+(function() {
+  'use strict';
+  
+  angular
+    .module('angularFormentry')
+      .service('CacheService', CacheService);
+      
+    CacheService.$inject = [];
+    
+    function CacheService() {
+      var _this = this;
+      var cache = {
+        forms: []
+      };
+      
+      // will replace already existing value
+      _this.put = function(name, value) {
+        cache[name] = value;
+      };
+      
+      _this.get = function(name) {
+        if(cache.hasOwnProperty(name)) {
+          return cache[name];
+        }
+        return undefined;
+      }
+      
+    }
+})();
 
+(function(){
+  'use strict';
+  
+  angular
+    .module('app.openmrsFormManager')
+      .factory('FormManagerUtil', FormManagerUtil);
+    
+    FormManagerUtil.$inject = [];
+    
+    function FormManagerUtil() {
+      var service = {
+        findResource: findResource
+      };
+      
+      return service;
+      
+      /**
+       * Takes an array of form resources and a needle which can be dataType
+       * or name
+       * 
+       */
+      function findResource(formResources, needle) {
+        var needle = needle || 'AmpathJsonSchema';
+        if(_.isUndefined(formResources) || !Array.isArray(formResources)) {
+          throw new Error('Argument should be array of form resources');
+        }
+        
+        needle = needle.toLowerCase();
+        return _.find(formResources, function(resource) {
+          if(resource.dataType) {
+            resource.dataType = resource.dataType.toLowerCase();
+          }
+          if(resource.name) {
+            resource.name = resource.name.toLowerCase();
+          }
+          return (resource.dataType === needle || resource.name === needle);
+        });
+      }
     }
 })();
 
@@ -5997,7 +6297,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             // 'model="element" bind-name="\'formly_ng_repeat\' + index + $parent.$index"> ' +
             // '</formly-form> ' +
             '<p > ' +
-            '<button ng-hide="element.orderNumber" type="button" class="btn btn-sm btn-danger" ng-click="deleteField($index)"> ' +
+            '<button type="button" class="btn btn-sm btn-danger" ng-click="deleteField($index)"> ' +
             'Remove' +
             '</button> ' +
             '</p> ' +
@@ -6226,4 +6526,1975 @@ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069
             $rootScope.$broadcast("navigateToQuestion", { tabTitle: tabTitle, questionKey: questionKey });
         }
     }
+})();
+
+/*
+jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106
+*/
+/*jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLinesBeforeLineComments, requireTrailingComma*/
+(function() {
+  'use strict';
+
+  /**
+   * @ngdoc function
+   * @name angularFormentryApp.controller:MainCtrl
+   * @description
+   * # MainCtrl
+   * Controller of the angularFormentryApp
+   */
+  angular.module('angularFormentry')
+    .controller('MainCtrl', MainCtrl);
+  MainCtrl.$inject = ['$scope', 'FormentryUtilService', 'FormEntry', '$log'];
+  function MainCtrl($scope, FormentryUtilService, FormEntry, $log) {
+      $scope.awesomeThings = [
+        'HTML5 Boilerplate',
+        'AngularJS',
+        'Karma'
+      ];
+      FormEntry.createForm({}, {}, function(schema) {
+        $log.info('loaded as expected');
+      });
+
+      function otherHandler() {
+        $log.log('cheers');
+      }
+    }
+})();
+
+/*
+ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106
+ */
+/*jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLinesBeforeLineComments, requireTrailingComma*/
+(function () {
+    'use strict';
+    /**
+     * @ngdoc function
+     * @name angularFormentryApp.controller:AboutCtrl
+     * @description
+     * # AboutCtrl
+     * Controller of the angularFormentryApp
+     */
+    angular
+        .module('angularFormentry')
+        .controller('AboutCtrl', AboutCtrl);
+
+  AboutCtrl.$inject = ['$log', '$location', '$scope','FormEntry', '$timeout',
+    '$filter','TestService', 'FormentryUtilService', '$rootScope', 'configService',
+     'SearchDataService', 'EncounterDataService'
+  ];
+
+    function AboutCtrl($log, $location, $scope, FormEntry,
+        $timeout, $filter, TestService, FormentryUtilService, $rootScope, configService,
+        SearchDataService, EncounterDataService) {
+        $scope.vm = {};
+        $scope.vm.model = {};
+        $scope.vm.questionMap = {};
+        $scope.vm.hasClickedSubmit = false;
+        var schema;
+        var newForm;
+        
+        var testSchema = 'schema_encounter';
+        //var testSchema = 'adult';
+
+        //connect to database
+        configService.addJsonSchema('hostServer', 'http://localhost:8080/amrs/ws/rest/v1/');
+
+        //broad cast server connection
+        $rootScope.$broadcast('hostServer', configService.getSchema('hostServer'));
+        var user = { username: 'akwatuha', password: 'ttt' };
+        // AuthService.isAuthenticated(user, function (authenticated) {
+        //     if (!authenticated) // check if user is authenticated
+        //     {
+        //         console.log('Invalid user name or password. Please try again');
+        //     } else {
+        //         console.log(authenticated);
+        //     }
+        //
+        // });
+
+        //testing search connections
+        SearchDataService.findLocation('abu', function (success) {
+            console.log(JSON.stringify(success));
+        },
+            function (error) {
+                console.log(JSON.stringify(error));
+            });
+            
+        var createForm = function() {
+            //set up historical data for triage form
+            setUpHistoricalData();
+
+            $log.info('Schema Controller', schema);
+            var formObject = FormEntry.createForm(schema, $scope.vm.model);
+            newForm = formObject.formlyForm;
+            $log.debug('schema xxx', newForm);
+            $scope.vm.tabs = newForm;
+            $scope.vm.questionMap = formObject.questionMap;
+            console.log('final question map', $scope.vm.questionMap);
+            FormEntry.updateFormWithExistingObs($scope.vm.model,restObs);
+        };
+
+
+        FormentryUtilService.getFormSchema(testSchema, function (data) {
+            schema = data;
+            
+            if(_.isEmpty(schema.referencedForms)) {
+                createForm();
+            } else {
+                var referencedFormNames = [];
+                _.each(schema.referencedForms, function(reference) {
+                    referencedFormNames.push(reference.formName);
+                });
+                
+                FormentryUtilService.getFormSchemaReferences(referencedFormNames, function(formSchemas) {
+                    FormEntry.compileFormSchema(schema, formSchemas);
+                    createForm();
+                }, function(error) {
+                    console.error('Could not load referenced forms', error);
+                });
+            }
+            
+        });
+
+
+        var restObs = {
+            uuid: "test-uuid",
+            encounterDatetime: "2015-11-30T14:44:38.000+0300",
+            form: {
+                uuid: "a2b811ed-6942-405a-b7f8-e7ad6143966c",
+                name: "Triage Encounter Form v0.01"
+            },
+            location: {
+                uuid: "08fec056-1352-11df-a1f1-0026b9348838",
+                display: "Location-13"
+            },
+            encounterType: {
+                uuid: "a44ad5e2-b3ec-42e7-8cfa-8ba3dbcf5ed7",
+                display: "TRIAGE"
+            },
+            provider: {
+                uuid: "5b6e31da-1359-11df-a1f1-0026b9348838",
+                display: "Giniton Giniton Giniton"
+            },
+            obs: [
+                {
+                    uuid: "655fb051-499f-4240-9a1d-0dff5f8b5730",
+                    obsDatetime: "2015-11-30T14:44:38.000+0300",
+                    concept: {
+                        uuid: "9ce5dbf0-a141-4ad8-8c9d-cd2bf84fe72b"
+                    },
+                    value: {
+                        uuid: "a89ad3a4-1350-11df-a1f1-0026b9348838",
+                        display: "NOT APPLICABLE"
+                    },
+                    groupMembers: null
+                },
+                {
+                    uuid: "655fb051-499f-4240-9a1d-0dff5f8b5730",
+                    obsDatetime: "2015-11-30T14:44:38.000+0300",
+                    concept: {
+                        uuid: "a894b1cc-1350-11df-a1f1-0026b9348838"
+                    },
+                    value: {
+                        uuid: "a893516a-1350-11df-a1f1-0026b9348838",
+                        display: "CONDOMS"
+                    },
+                    groupMembers: null
+                },
+                {
+                    uuid: "655fb051-499f-4240-9a1d-0dff5f8b5731",
+                    obsDatetime: "2015-11-30T14:44:38.000+0300",
+                    concept: {
+                        uuid: "a894b1cc-1350-11df-a1f1-0026b9348838"
+                    },
+                    value: {
+                        uuid: "b75702a6-908d-491b-9399-6495712c81cc",
+                        display: "EMERGENCY OCP"
+                    },
+                    groupMembers: null
+                },
+                {
+                    uuid: "655fb051-499f-4240-9a1d-0dff5f8b5730",
+                    obsDatetime: "2015-11-30T14:44:38.000+0300",
+                    concept: {
+                        uuid: "a899e6d8-1350-11df-a1f1-0026b9348838"
+                    },
+                    value: null,
+                    groupMembers: [
+                        {
+                            uuid: "d168285f-636b-4558-aaf1-7036e4a49f80",
+                            obsDatetime: "2015-11-30T14:44:38.000+0300",
+                            concept: {
+                                uuid: "a8a65e36-1350-11df-a1f1-0026b9348838"
+                            },
+                            value: 80,
+                            groupMembers: null
+                        },
+                        {
+                            uuid: "fcf67bd7-612a-48a3-9e8d-5097af648c05",
+                            obsDatetime: "2015-11-30T14:44:38.000+0300",
+                            concept: {
+                                uuid: "a8a65fee-1350-11df-a1f1-0026b9348838"
+                            },
+                            value: 35,
+                            groupMembers: null
+                        }
+                    ]
+                },
+                {
+                    uuid: "655fb051-499f-4240-9a1d-0dff5f8b5730",
+                    obsDatetime: "2015-11-30T14:44:38.000+0300",
+                    concept: {
+                        uuid: "a8a003a6y1350y11dfya1f1y0026b9348838"
+                    },
+                    value: null,
+                    groupMembers: [
+                        {
+                            uuid: "d168285f-636b-4558-aaf1-7036e4a49f80",
+                            obsDatetime: "2015-11-30T14:44:38.000+0300",
+                            concept: {
+                                uuid: "a8a07a48x1350x11dfxa1f1-0026b9348838"
+                            },
+                            value: 'testing repeating',
+                            groupMembers: null
+                        },
+                        {
+                            uuid: "fcf67bd7-612a-48a3-9e8d-5097af648c05",
+                            obsDatetime: "2015-11-30T14:44:38.000+0300",
+                            concept: {
+                                uuid: "made-up-concept-4"
+                            },
+                            value: null,
+                            groupMembers: [
+                                {
+                                    uuid: "d168285f-636b-4558-aaf1-7036e4a49f80",
+                                    obsDatetime: "2015-11-30T14:44:38.000+0300",
+                                    concept: {
+                                        uuid: "made-up-concept-5"
+                                    },
+                                    value: "2015-11-30T14:44:38.000+0300",
+                                    groupMembers: null
+                                },
+                                {
+                                    uuid: "fcf67bd7-612a-48a3-9e8d-5097af648c05",
+                                    obsDatetime: "2015-11-30T14:44:38.000+0300",
+                                    concept: {
+                                        uuid: "made-up-concept-6"
+                                    },
+                                    value: "2015-12-30T14:44:38.000+0300",
+                                    groupMembers: null
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    uuid: "655fb051-499f-4240-9a1d-0dff5f8b5730",
+                    obsDatetime: "2015-11-30T14:44:38.000+0300",
+                    concept: {
+                        uuid: "a8a003a6y1350y11dfya1f1y0026b9348838"
+                    },
+                    value: null,
+                    groupMembers: [
+                        {
+                            uuid: "d168285f-636b-4558-aaf1-7036e4a49f80",
+                            obsDatetime: "2015-11-30T14:44:38.000+0300",
+                            concept: {
+                                uuid: "a8a07a48x1350x11dfxa1f1-0026b9348838"
+                            },
+                            value: 'testing repeating 2 now',
+                            groupMembers: null
+                        },
+                        {
+                            uuid: "fcf67bd7-612a-48a3-9e8d-5097af648c05",
+                            obsDatetime: "2015-11-30T14:44:38.000+0300",
+                            concept: {
+                                uuid: "made-up-concept-4"
+                            },
+                            value: null,
+                            groupMembers: [
+                                {
+                                    uuid: "d168285f-636b-4558-aaf1-7036e4a49f80",
+                                    obsDatetime: "2015-11-30T14:44:38.000+0300",
+                                    concept: {
+                                        uuid: "made-up-concept-5"
+                                    },
+                                    value: "2015-04-30T14:44:38.000+0300",
+                                    groupMembers: null
+                                },
+                                {
+                                    uuid: "fcf67bd7-612a-48a3-9e8d-5097af648c05",
+                                    obsDatetime: "2015-11-30T14:44:38.000+0300",
+                                    concept: {
+                                        uuid: "made-up-concept-6"
+                                    },
+                                    value: "2015-05-30T14:44:38.000+0300",
+                                    groupMembers: null
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    uuid: "d168285f-636b-4558-aaf1-7036e4a49f80",
+                    obsDatetime: "2015-11-30T14:44:38.000+0300",
+                    concept: {
+                        uuid: "a8a65e36-1350-11df-a1f1-0026b9348838"
+                    },
+                    value: 80,
+                    groupMembers: null
+                },
+                {
+                    uuid: "fcf67bd7-612a-48a3-9e8d-5097af648c05",
+                    obsDatetime: "2015-11-30T14:44:38.000+0300",
+                    concept: {
+                        uuid: "a8a65fee-1350-11df-a1f1-0026b9348838"
+                    },
+                    value: 35,
+                    groupMembers: null
+                },
+                {
+                    uuid: "29953cdb-d4e3-4024-9bb1-e1c0a7fca6ce",
+                    obsDatetime: "2015-11-30T14:44:38.000+0300",
+                    concept: {
+                        uuid: "a8b02524-1350-11df-a1f1-0026b9348838"
+                    },
+                    value: {
+                        uuid: "8b715fed-97f6-4e38-8f6a-c167a42f8923",
+                        display: "KENYA NATIONAL HEALTH INSURANCE FUND"
+                    },
+                    groupMembers: null
+                },
+                {
+                    uuid: "5e12a2f5-678b-4b1e-a646-23221bad8797",
+                    obsDatetime: "2015-11-30T14:44:38.000+0300",
+                    concept: {
+                        uuid: "a8a65f12-1350-11df-a1f1-0026b9348838"
+                    },
+                    value: 50,
+                    groupMembers: null
+                },
+                {
+                    uuid: "51e18815-8032-4cb4-b2e8-8c561ee53093",
+                    obsDatetime: "2015-11-30T14:44:38.000+0300",
+                    concept: {
+                        uuid: "a8a6619c-1350-11df-a1f1-0026b9348838"
+                    },
+                    value: 180,
+                    groupMembers: null
+                },
+                {
+                    uuid: "f26402b1-5226-4afd-a60c-c2ea096783c1",
+                    obsDatetime: "2015-11-30T14:44:38.000+0300",
+                    concept: {
+                        uuid: "93aa3f1d-1c39-4196-b5e6-8adc916cd5d6"
+                    },
+                    value: {
+                        uuid: "a89ad3a4-1350-11df-a1f1-0026b9348838",
+                        display: "NOT APPLICABLE"
+                    },
+                    groupMembers: null
+                },
+                {
+                    uuid: "aaaf883b-ba97-45ef-8b32-d37a48bb2342",
+                    obsDatetime: "2015-11-30T14:44:38.000+0300",
+                    concept: {
+                        uuid: "a899a9f2-1350-11df-a1f1-0026b9348838"
+                    },
+                    value: {
+                        uuid: "a899ac7c-1350-11df-a1f1-0026b9348838",
+                        display: "NEVER MARRIED"
+                    },
+                    groupMembers: null
+                },
+                {
+                    uuid: "2cc74686-92ba-49cc-af49-6f1a02e608ba",
+                    obsDatetime: "2015-11-30T14:44:38.000+0300",
+                    concept: {
+                        uuid: "a8a65d5a-1350-11df-a1f1-0026b9348838"
+                    },
+                    value: 120,
+                    groupMembers: null
+                },
+                {
+                    uuid: "5d268f3a-a6c9-495a-bf15-605e94a7eb08",
+                    obsDatetime: "2015-11-30T14:44:38.000+0300",
+                    concept: {
+                        uuid: "a89ff9a6-1350-11df-a1f1-0026b9348838"
+                    },
+                    value: {
+                        uuid: "a89b6440-1350-11df-a1f1-0026b9348838",
+                        display: "SCHEDULED VISIT"
+                    },
+                    groupMembers: null
+                },
+                {
+                    uuid: "557a1246-b3a7-49d2-9f27-e1a6c1059496",
+                    obsDatetime: "2015-11-30T14:44:38.000+0300",
+                    concept: {
+                        uuid: "a8a660ca-1350-11df-a1f1-0026b9348838"
+                    },
+                    value: 65,
+                    groupMembers: null
+                },
+                {
+                    uuid: "ccfba5fc-8202-4506-a2ab-7a9dd04569bb",
+                    obsDatetime: "2015-11-30T14:44:38.000+0300",
+                    concept: {
+                        uuid: "a8af49d8-1350-11df-a1f1-0026b9348838"
+                    },
+                    value: {
+                        uuid: "a899b42e-1350-11df-a1f1-0026b9348838",
+                        display: "NO"
+                    },
+                    groupMembers: null
+                }
+            ]
+        };
+
+
+        FormentryUtilService.getTestEncounterData('xx', function(data) {
+          restObs = data;
+        },
+
+        function(error) {
+          $log.error(error);
+        }
+        );
+
+        $scope.vm.anyFieldsInError = function (fields) {
+            if (fields && fields.length !== 0) {
+                var hasError = false;
+                _.each(fields, function (field) {
+                    if (field.formControl && field.formControl.$error && Object.keys(field.formControl.$error).length > 0) {
+                        hasError = true;
+                    }
+                });
+                return hasError;
+            }
+            return false;
+        };
+
+        $scope.vm.onSubmit = function () {
+            $scope.vm.hasClickedSubmit = true;
+            var obsPayload = FormEntry.getFormPayload($scope.vm.model);
+            $log.debug('test payload', JSON.stringify(obsPayload));
+
+            var personAttributePayload = FormEntry.getPersonAttributesPayload($scope.vm.model);
+            $log.debug('test person attribute payload', JSON.stringify(personAttributePayload));
+            var personAttributes=getMockPersonAttribute();
+            FormEntry.updateExistingPersonAttributeToForm(personAttributes,$scope.vm.model);
+        };
+        //addExistingPersonAttributesToForm
+        // var form = TestService.getCompiledForm();
+        // $scope.vm.model = form.compiledSchema[0].compiledPage[0].sectionModel;
+
+        $scope.vm.submitLabel = 'Save';
+
+        _activate();
+        function parseDate(value) {
+            return $filter('date')(value || new Date(), 'yyyy-MM-dd HH:mm:ss', '+0300');
+        }
+
+        function setUpHistoricalData() {
+             EncounterDataService.registerPreviousEncounters('prevEnc', restObs);
+        }
+
+        function _activate() {
+            // $scope.vm.tabs =
+            // [
+            //   {
+            //     title: 'Tab 1',
+            //     active: true,
+            //     form: {
+            //       options: {},
+            //       model: $scope.vm.model,
+            //       fields: [
+            //       {
+            //         key: 'section_1',
+            //         type: 'section',
+            //         templateOptions: {
+            //           label: 'Tarehe'
+            //         },
+            //         data: {
+            //           fields: [
+            //             {
+            //                 key: 'encounterDate',
+            //                 type: 'datetimepicker',
+            //                 defaultValue: parseDate(new Date()),
+            //                 templateOptions: {
+            //                     type: 'text',
+            //                     label: 'Tarehe',
+            //                     // datepickerPopup: 'dd-MMM-yyyy HH:mm:ss'
+            //                   }
+            //               },
+            //               {
+            //                 key: 'email',
+            //                 type: 'input',
+            //                 templateOptions: {
+            //                   label: 'Username',
+            //                   type: 'email',
+            //                   placeholder: 'Email address'
+            //                 },
+            //                 expressionProperties: {
+            //                   'templateOptions.required': 'true'
+            //                 },
+            //               },
+            //               {
+            //                 key: 'marvel1',
+            //                 type: 'select',
+            //                 data:{concept:'a899e444-1350-11df-a1f1-0026b9348838'},
+            //                 templateOptions: {
+            //                   required:true,
+            //                   label: 'Normal Select',
+            //                   options: [
+            //                     {name: 'Iron Man', value: 'iron_man'},
+            //                     {name: 'Captain America', value: 'captain_america'},
+            //                     {name: 'Black Widow', value: 'black_widow'},
+            //                     {name: 'Hulk', value: 'hulk'},
+            //                     {name: 'Captain Marvel', value: 'captain_marvel'}
+            //                   ]
+            //                 }
+            //               }
+            //             ]
+            //         }
+            //       },
+            //       {
+            //         key: 'other_Fields',
+            //         type: 'section',
+            //         templateOptions: {
+            //           label: 'Other Fields'
+            //         },
+            //         data: {
+            //           fields: [
+            //             {
+            //               key: 'town2',
+            //               type: 'input',
+            //               templateOptions: {
+            //                 required: true,
+            //                 type: 'text',
+            //                 label: 'Test Town'
+            //               }
+            //             },
+            //             {
+            //               key: 'country2',
+            //               type: 'input',
+            //               templateOptions: {
+            //                 required: true,
+            //                 type: 'text',
+            //                 label: 'Test Country'
+            //               }
+            //             }
+            //           ]
+            //         }
+            //       }
+            //     ]
+            //     }
+            //   },
+            //   {
+            //     title: 'Tab 2',
+            //     form: {
+            //       options: {},
+            //       model: $scope.vm.model,
+            //       fields: [
+            //         {
+            //           key: 'address',
+            //           type: 'section',
+            //           templateOptions: {
+            //             label: 'Address'
+            //           },
+            //           data: {
+            //             fields: [
+            //               {
+            //                 key: 'town',
+            //                 type: 'input',
+            //                 templateOptions: {
+            //                   required: true,
+            //                   type: 'text',
+            //                   label: 'Town'
+            //                 }
+            //               },
+            //               {
+            //                 key: 'country',
+            //                 type: 'input',
+            //                 templateOptions: {
+            //                   required: true,
+            //                   type: 'text',
+            //                   label: 'Country'
+            //                 }
+            //               }
+            //             ]
+            //           }
+            //         }
+            //       ]
+            //     }
+            //   },
+            //   {
+            //     "title": "Example From JJ",
+            //     options: {},
+            //     form: {
+            //       model: $scope.vm.model,
+            //       fields: form.compiledSchema[0].compiledPage[0].formlyFields
+            //     }
+            //   }
+            // ];
+
+        }
+
+        function getMockPersonAttribute() {
+            return [
+                {
+                    "uuid": "32c0399f-aa1f-48c0-99d8-9dbf691ed30e",
+                    "attributeType": "8d87236c-c2cc-11de-8d13-0010c6dffd0f",
+                    "name": "Health Center",
+                    "value": {
+                        "uuid": "08feb6b0-1352-11df-a1f1-0026b9348838",
+                        "display": "Location-6",
+                        "links": [
+                            {
+                                "uri": "NEED-TO-CONFIGURE/ws/rest/v1/location/08feb6b0-1352-11df-a1f1-0026b9348838",
+                                "rel": "self"
+                            }
+                        ]
+                    },
+                    "size": 2
+                },
+                {
+                    "uuid": "1ea516d7-95d2-4d24-9218-514e110c2ba6",
+                    "attributeType": "72a76074-1359-11df-a1f1-0026b9348838",
+                    "name": "Point of HIV Testing",
+                    "value": {
+                        "uuid": "a8a359a2-1350-11df-a1f1-0026b9348838",
+                        "display": "PROVIDER INITIATED TESTING AND COUNSELING",
+                        "links": [
+                            {
+                                "uri": "NEED-TO-CONFIGURE/ws/rest/v1/concept/a8a359a2-1350-11df-a1f1-0026b9348838",
+                                "rel": "self"
+                            }
+                        ]
+                    },
+                    "size": 2
+                }
+            ];
+        }
+    }
+
+
+}
+    )();
+
+/*
+jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106
+*/
+/*jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLinesBeforeLineComments, requireTrailingComma*/
+(function() {
+  'use strict';
+  /**
+   * @ngdoc function
+   * @name angularFormentryApp.controller:AboutCtrl
+   * @description
+   * # AboutCtrl
+   * Controller of the angularFormentryApp
+   */
+  angular
+        .module('angularFormentry')
+        .controller('EditorCtrl', RecursiveTestCtrl);
+
+  RecursiveTestCtrl.$inject = ['$log', '$location', '$scope','FormEntry', '$timeout',
+    '$filter','TestService', 'FormentryUtilService', '$rootScope', 'configService',
+     'SearchDataService', 'EncounterDataService'
+  ];
+
+  function RecursiveTestCtrl($log, $location, $scope, FormEntry,
+      $timeout, $filter, TestService, FormentryUtilService, $rootScope, configService,
+      SearchDataService, EncounterDataService) {
+    $scope.vm = {};
+    $scope.vm.model = {};
+    $scope.vm.questionMap = {};
+    $scope.vm.hasClickedSubmit = false;
+    $scope.vm.errors = [];
+    var schema;
+    var newForm;
+    //  var testSchema = 'schema_encounter';
+    var testSchema = 'editor';
+
+    FormentryUtilService.getFormSchema(testSchema, function (data) {
+        schema = data;
+
+        //set up historical data for triage form
+        // setUpHistoricalData();
+
+        $log.info('Schema Controller', schema);
+        var formObject = FormEntry.createForm(schema, $scope.vm.model);
+        newForm = formObject.formlyForm;
+        $log.debug('schema xxx', newForm);
+        $scope.vm.tabs = newForm;
+        $scope.vm.questionMap = formObject.questionMap;
+        console.log('final question map', $scope.vm.questionMap);
+        $scope.schema = angular.toJson(schema,true);
+        $scope.vm.errors = formObject.error;
+    });
+
+    $scope.renderForm = function() {
+      var schema = angular.fromJson($scope.schema);
+      var payload = angular.fromJson($scope.payload);
+      console.log(payload);
+      var formObject = FormEntry.createForm(schema, $scope.vm.model);
+      newForm = formObject.formlyForm;
+      $log.debug('schema xxx', newForm);
+      $scope.vm.tabs = newForm;
+      $scope.vm.questionMap = formObject.questionMap;
+      $log.log('Form Errors:', formObject.error);
+      $scope.vm.errors = formObject.error;
+    }
+
+    $scope.updatePayload = function() {
+
+
+    }
+
+    function parseDate(value) {
+      return $filter('date')(value || new Date(), 'yyyy-MM-dd HH:mm:ss', '+0300');
+    }
+  }
+})();
+
+/*
+ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106
+ */
+/*jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLinesBeforeLineComments, requireTrailingComma*/
+(function () {
+  'use strict';
+  /**
+   * @ngdoc function
+   * @name angularFormentryApp.controller:SimpleDemoCtrl
+   * @module angularFormentry
+   * @description
+   * # SimpleDemoCtrl: has only 3 main fx : setAuthenticationHeaders, renderFormSchema and savePayload
+   * Controller of the angularFormentry Developer DemoApp
+   * This is a simple demo containing basic OpenMRS Angular Formentry Functionalities
+   * We want you to have an easy time while you start consuming/using  OpenMRS Angular Formentry.
+   * It contains basic feature --> for advanced features like field-handlers, historical auto-population see AdvancedDemoCtrl
+   * Note that all logic have been implemented in one controller (for simplicity purposes): angular best practice guides in
+   * development of real-world app requires these logic to be refactored to services/factories and directives
+   */
+  angular
+    .module('angularFormentry')
+    .controller('SimpleDemoCtrl', SimpleDemoCtrl);
+
+  SimpleDemoCtrl.$inject = [
+    '$log', '$scope', 'FormentryUtilService', 'FormEntry', '$resource', '$http', '$base64'
+  ];
+
+  function SimpleDemoCtrl($log, $scope, FormentryUtilService, FormEntry, $resource, $http, base64) {
+    //form properties
+    $scope.model = {};
+    $scope.questionMap = {};
+    $scope.selectedSchema = 'demo-triage'; //schema :: see openmrs-angularFormentry/app/scripts/formentry/schema/demo-triage.json
+
+    //openMrs rest service base Url for ref app demo.openmrs.org
+    $scope.openMrsRestServiceBaseUrl = 'http://demo.openmrs.org/openmrs/ws/rest/v1/'; //url
+
+    //UX control flags
+    $scope.showSuccessMsg = false; //flag to show/hide "form saved successfully" message --> replace it with angular-dialog-service
+    $scope.errors = [];
+    $scope.isBusy = false; //busy indicator flag -->replace it with (bower install angular-loading)
+
+    //member functions
+    $scope.setAuthenticationHeaders = setAuthenticationHeaders; //this method implements user authentication
+    $scope.renderFormSchema = renderFormSchema; //this method  renders  form schema to the view
+    $scope.submitForm = submitForm; //submits payload to the rest server *only creates encounter/obs
+    $scope.savePayload = savePayload; //method that hits the rest api: returns a callback or fallback;
+    $scope.init = init; //initializes the controller
+
+    $scope.init(); //run the app
+
+    /**
+     * @ngdoc function init
+     * @name init
+     * @description
+     * this function initializes the controller by calling authentication method and form schema rendering fx
+     */
+    function init() {
+      //authenticate user
+      $scope.setAuthenticationHeaders('admin', 'Admin123'); //-->replace this with a login page
+      //render schema
+      $scope.renderFormSchema();
+
+    }
+
+    /**
+     * @ngdoc function
+     * @name setAuthenticationHeaders
+     * @param password
+     * @param userName
+     * @todo handle move this to a service or create login page
+     * @description
+     * function do do basic authentication: takes in userName, password
+     */
+    function setAuthenticationHeaders(userName, password) {
+      //authenticate
+      $log.log('authenticating user...');
+      $http.defaults.headers.common.Authorization = 'Basic ' + base64.encode(userName + ':' + password);
+    }
+
+    /**
+     * @ngdoc function
+     * @name renderFormSchema
+     * @description
+     * this function renders form schema on the view
+     */
+    function renderFormSchema() {
+      FormentryUtilService.getFormSchema($scope.selectedSchema, function (schema) {
+        $scope.schema = angular.toJson(schema, true); //bind schema to scope
+        var _schema = angular.fromJson(schema); //Deserializes form schema (JSON).
+        var model = {};
+        var formObject = FormEntry.createForm(_schema, model);
+        var newForm = formObject.formlyForm;
+        $scope.result = {
+          "formObject": formObject,
+          "newForm": newForm,
+          "model": model
+        };
+        $scope.tabs = newForm;
+        $scope.questionMap = formObject.questionMap;
+        $scope.model = model;
+        $scope.errors = formObject.error;
+        $log.debug('schema --->', newForm);
+
+      });
+    }
+
+    /**
+     * @ngdoc function
+     * @name submitForm
+     * @todo handle provider, patient, location --> this should be moved to a service
+     * @description
+     * this function listens to save button --> it calls save payload function
+     */
+    function submitForm() {
+      $scope.errors = []; //clear all errors
+      $scope.isBusy = true; //busy indicator
+      $scope.showSuccessMsg = false; //clear all success msg
+      try {
+        var payload = FormEntry.getFormPayload($scope.model);
+        payload.provider = "fdf2bba3-ee9e-11e4-8e55-52540016b979"; //admin Admin123 (demo.openmrs.org)
+        payload.encounterType = "67a71486-1a54-468f-ac3e-7091a9a79584"; //Vitals (demo.openmrs.org)
+        payload.patient = "deb0905c-3b82-4631-88b2-b71425755cdf"; //Elizabeth Johnson (demo.openmrs.org)
+        payload.location = "b1a8b05e-3542-4037-bbd3-998ee9c40574"; //Inpatient Ward (demo.openmrs.org)
+
+        $log.debug('payload ---->', JSON.stringify(payload));
+        $log.debug('model ---->', $scope.model);
+
+        //hit the server
+        savePayload(JSON.stringify(payload),
+          onSuccessCallback, onErrorFailback);
+      } catch (ex) {
+        $scope.errors.push(ex);
+      }
+    };
+
+    /**
+     * @ngdoc function
+     * @name onSuccessCallback
+     * @param encounter
+     * @callback successCallback
+     * @callback errorCallback
+     * @description
+     * this functions hits the openMrs rest service: has a 2 callbacks (error and success)
+     */
+    function savePayload(encounter, successCallback, errorCallback) {
+      $log.log('Submitting new obs...');
+
+      var v = 'custom:(uuid,encounterDatetime,' +
+        'patient:(uuid,uuid),form:(uuid,name),' +
+        'location:ref,encounterType:ref,provider:ref,' +
+        'obs:(uuid,obsDatetime,concept:(uuid,uuid),value:ref,groupMembers))';
+      var encounterResource = $resource($scope.openMrsRestServiceBaseUrl + 'encounter/:uuid',
+        {uuid: '@uuid', v: v},
+        {query: {method: 'GET', isArray: false, cache: false}});
+
+      encounterResource.save(encounter).$promise
+        .then(function (data) {
+          console.log('Encounter saved successfully');
+          if (typeof successCallback === 'function')
+            successCallback(data);
+        })
+        .catch(function (error) {
+          console.log('Error saving encounter');
+          if (typeof errorCallback === 'function')
+            errorCallback(error);
+        });
+    }
+
+    /**
+     * @ngdoc function
+     * @name onSuccessCallback
+     * @params data
+     * @description
+     * this a success callback function for the savePayload function
+     */
+    function onSuccessCallback(data) {
+      $log.log('Submitting new obs successful', data);
+      $scope.showSuccessMsg = true;
+      $scope.isBusy = false;
+      //TODO: Display success popup
+    }
+
+    /**
+     * @ngdoc function
+     * @name onErrorFailback
+     * @param error
+     * @description
+     * this an error callback function for the savePayload function
+     */
+    function onErrorFailback(error) {
+      $log.error('Submitting new obs failed', error);
+      //TODO: Handle errors
+      $scope.errors.unshift(error);
+      $scope.isBusy = false;
+
+    }
+
+
+  }
+})();
+
+/*
+ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106
+ */
+/*jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLinesBeforeLineComments, requireTrailingComma*/
+(function() {
+    'use strict';
+    /**
+     * @ngdoc function
+     * @name angularFormentryApp.controller:AboutCtrl
+     * @description
+     * # AboutCtrl
+     * Controller of the angularFormentryApp
+     */
+    angular
+        .module('angularFormentry')
+        .controller('FormDesignerCtrl', FormDesignerCtrl);
+
+    FormDesignerCtrl.$inject = [
+        '$log', '$location', '$scope', '$rootScope',
+        'CreateFormService',
+        'FormDesignerService', 'FormentryUtilService', 'FormEntry'
+    ];
+
+    function FormDesignerCtrl($log, $location, $scope, $rootScope,
+        CreateFormService, FormDesignerService, FormentryUtilService, FormEntry) {
+
+        $scope.vm = {};
+        //window.vm = $scope.vm;
+        $scope.vm.model = {};
+        $scope.vm.questionMap = {};
+        $scope.vm.hasClickedSubmit = false;
+        $scope.vm.errors = [];
+        $scope.vm.existingForms = ["adult", "triage", "pedreturn"];
+        $scope.vm.existingComponents = ["art","diagnosis","familyinformation","Feeding", "hivstatus", "hospitalization", 
+        "immunization","intervalcomplaints","lab-results", "laborders", "labresults", "pcp-prophy", "pcpprop", 
+        "pedsphysicalexam", "preclinicreview", "referral", "relationship", "sideeffect", "tb-prophy", 
+        "tb-treatment", "tbproph", "tbtreatment", "vitals", "whostaging"];
+        $scope.vm.selectedForm = "";
+
+        $scope.renderExistingFormSchema = function() {
+            FormentryUtilService.getFormSchema($scope.vm.selectedForm, function(schema) {
+                $scope.schema =schema;
+                
+                if (_.isEmpty(schema.referencedForms)) {
+                    $scope.renderForm();
+                } else {
+                    var referencedFormNames = [];
+                    _.each(schema.referencedForms, function(reference) {
+                        referencedFormNames.push(reference.formName);
+                    });
+
+                    FormentryUtilService.getFormSchemaReferences(referencedFormNames, function(formSchemas) {
+                        FormEntry.compileFormSchema($scope.schema, formSchemas);
+                        $scope.renderForm();
+                    }, function(error) {
+                        console.error('Could not load referenced forms', error);
+                    });
+                }
+                // $scope.schema = angular.toJson(schema, true);
+                // $scope.renderForm();
+            });
+        }
+
+        $scope.renderExistingComponentSchema = function() {
+            FormentryUtilService.getFormSchema("component_" + $scope.vm.selectedComponent,
+                function(schema) {
+                    $scope.schema = angular.toJson(schema, true);
+                    $scope.renderForm();
+                })
+
+        }
+
+        $scope.renderForm = function() {
+            var schema = angular.fromJson($scope.schema);
+            var payload = angular.fromJson($scope.payload);
+            var result = FormDesignerService.renderForm(schema, payload);
+            $scope.vm.result = result;
+            $scope.vm.tabs = result.newForm;
+            $scope.vm.questionMap = result.formObject.questionMap;
+            $scope.vm.model = result.model;
+            $scope.vm.errors = result.formObject.error;
+        }
+
+        $scope.updatePayload = function() {
+
+
+        }
+
+        function parseDate(value) {
+            return $filter('date')(value || new Date(), 'yyyy-MM-dd HH:mm:ss', '+0300');
+        }
+    }
+})();
+
+/*
+ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106, -W026
+ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation
+ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
+ */
+(function () {
+  'use strict';
+
+  angular
+    .module('app.formDesigner')
+    .factory('FormDesignerService', FormDesignerService);
+
+  FormDesignerService.$inject = ["$log","FormEntry"];
+  //FormDesignerService.$inject = ["EncounterDataService"];
+
+  function FormDesignerService($log,FormEntry) {
+  //function FormDesignerService() {
+
+    var service = {
+      renderForm: renderForm
+    };
+
+    //schema: json object converted from string
+    //payload: json object converted from string
+    function renderForm(schema,payload) {
+      console.log(payload);
+      var model = {};
+      var formObject = FormEntry.createForm(schema, model);
+      var newForm = formObject.formlyForm;
+      $log.debug('schema xxx', newForm);
+      return {
+          "formObject":formObject,
+          "newForm":newForm,
+          "model":model
+      };
+    }
+
+
+    return service;
+  }
+})();
+
+(function() {
+    'use strict';
+    /**
+     * @ngdoc function
+     * @name app.openmrsFormManager.controller:OpenmrsFormManagerCtrl
+     * @description
+     * # OpenmrsFormManagerCtrl
+     * Controller of the app.openmrsFormManager
+     */
+    
+    angular
+      .module('app.openmrsFormManager')
+        .controller('OpenmrsFormManagerCtrl', OpenmrsFormManagerCtrl);
+
+    OpenmrsFormManagerCtrl.$inject = [
+        '$log',
+        '$scope',
+        '$rootScope',
+        '$q',
+        'FormResService',
+        'dialogs',
+        '$state',
+        'AuthService',
+        'CacheService'
+    ];
+
+    function OpenmrsFormManagerCtrl($log,$scope, $rootScope, $q, FormResService,
+      dialogs, $state, AuthService, CacheService) {
+        
+        $scope.vm = {};
+        $scope.vm.query = '';
+        $scope.vm.busy = true;
+        
+        $scope.vm.maxSize = 2;
+        
+        $scope.vm.errors = [];
+        $scope.vm.existingForms = null;
+        $scope.vm.errorFetchingForms = false;
+        $scope.vm.authenticated = AuthService.authenticated();
+        
+        if(AuthService.authenticated()) {
+          $scope.vm.existingForms = _formatForms(CacheService.get('forms'));
+          if(!$scope.vm.existingForms) {
+            $rootScope.$broadcast('authenticated');
+          } else {
+            $scope.vm.busy = false;
+          }
+        }
+        
+        $scope.findDesiredForms = function() {
+          $scope.vm.busy = true;
+          var desired = {
+            pocForms: FormResService.findPocForms('POC'),
+            components: FormResService.findPocForms('Component')
+          };
+          
+          $q.allSettled(desired).then(function(values) {
+            var forms = values.pocForms.value;
+            Array.prototype.push.apply(forms, values.components.value);
+            CacheService.put('forms', forms);
+            $scope.vm.existingForms = _formatForms(forms);
+            $scope.vm.busy = false;
+          })
+          .catch(function(err) {
+            $scope.vm.errorFetchingForms = err;
+            $scope.vm.busy = false;
+          });
+        };
+        
+        $scope.$on('deauthenticated', function() {
+          $scope.existingForms = null;
+          $scope.vm.authenticated = false;
+        });
+        
+        $scope.$on('authenticated', function(event, args) {
+          $scope.findDesiredForms();
+          $scope.vm.authenticated = true;
+        }); 
+        
+        $scope.updateSchema = function(form) {
+          var dialog = dialogs.confirm('Schema Exists', 'Schema already exists for ' 
+            + form.name + '. Are you sure you want to upload a new one?');
+          
+          dialog.result.then(function(btn) {
+            // User said Yes
+            $scope.uploadSchema(form);
+          });
+        }
+        
+        $scope.uploadSchema = function(form) {
+          form.busy = true;
+          $log.debug(form.schema);
+          
+          var __saveFormResource = function(newResource) {
+            FormResService.saveFormResource(form.uuid, newResource)
+            .then(function(resource) {
+              $log.debug('Resource updated successfully');
+              newResource.uuid = resource.uuid;
+              form.resources.push(newResource);
+                              
+              // Call format
+              _formatSingleForm(form);
+              form.busy = false;
+              dialogs.notify('Success', 'Hooorah, it worked!');
+            })
+            .catch(function(err) {
+              form.busy = false;
+              $log.error('An error has occured', err);
+              dialogs.error('Error!', 'Ooops! Troubles ' + err.message);
+            });
+          };
+          
+          FormResService.uploadFormResource(form.schema).then(function(data) {
+            $log.debug('Returned from server:', data.data);
+            
+            // Upload resource info
+            var existing = _findResource(form.resources, 'AmpathJsonSchema');
+            if(existing !== null) {
+              // Delete the existing resource
+              FormResService.deleteFormResource(form.uuid, existing.uuid)
+              .then(function() {
+                $log.debug('Resource deleted, deleting schema');
+                
+                __saveFormResource({
+                  name: existing.name || 'JSON schema',
+                  dataType: existing.dataType || 'AmpathJsonSchema',
+                  valueReference: data.data
+                });
+                
+                FormResService.deleteFormSchemaByUuid(existing.valueReference)
+                .then(function() {
+                  $log.debug('Schema deleted, updating the form now');
+                })
+                .catch(function(err) {
+                  $log.error('Error deleting schema ', err);
+                });
+              })
+              .catch(function(err) {
+                $log.error('Error deleting form resource with '
+                        + 'uuid ' + existing.uuid, err);
+              });
+            } else {
+              __saveFormResource({
+                name: 'JSON schema',
+                dataType: 'AmpathJsonSchema',
+                valueReference: data.data
+              }); 
+            }
+          })
+          .catch(function(err) {
+            form.busy = false;
+            $log.error('didn\'t go well', err);
+            dialogs.error('Error!', 'Oops! Could not upload schema');
+          });
+        }
+        
+        $scope.createForm = function() {
+          $state.go('form-create', {relative:false});
+        };
+
+        $scope.viewForm = function(form) {
+          $state.go('form-view', {formUuid: form.uuid,relative:false});
+        }
+        
+        $scope.editForm = function(form) {
+          $state.go('form-edit', {formUuid: form.uuid,relative: false});
+        }
+        
+        function _formatForms(forms) {
+          _.each(forms, function(form) {
+            _formatSingleForm(form);
+          });
+          return forms;
+        }
+        
+        function _formatSingleForm(form) {
+          form.publishedText = form.published ? 'Yes' : 'No';
+          form.publishedCssClass = form.published ? 'success': 'danger';
+          form.schema = null;
+          // Check whether it has resources
+          if(form.resources && _findResource(form.resources)) {
+            form.hasSchema = true;
+            if(!form.published) {
+              form.schemaAction = 'Update';
+            }
+          } else {
+            form.hasSchema = false;
+            form.schemaAction = 'Upload';
+          }
+          return form;
+        }
+        
+        /**
+         * Find a resource of a particular type in an array of resources.
+         */
+        function _findResource(formResources, resourceType) {
+          var resourceType = resourceType || 'AmpathJsonSchema';
+          if(_.isUndefined(formResources) || !Array.isArray(formResources)) {
+            throw new Error('Argument should be array of form resources');
+          }
+          
+          var found = _.find(formResources, function(resource) {
+            return resource.dataType === resourceType;
+          });
+          
+          if(found === undefined) return null;
+          return found;
+        }
+    }
+})();
+
+(function() {
+    'use strict';
+    /**
+     * @ngdoc function
+     * @name angularFormentryApp.controller:CreateFormCtrl
+     * @description
+     * # CreateFormCtrl
+     * Controller for creating a new form/form component
+     */
+    angular
+        .module('app.openmrsFormManager')
+        .controller('CreateFormCtrl', CreateFormCtrl);
+
+    CreateFormCtrl.$inject = [
+      '$scope',
+      '$rootScope',
+      'FormResService',
+      'AuthService',
+      'EncounterResService',
+      '$log',
+      'dialogs'
+    ];
+    
+    function CreateFormCtrl($scope, $rootScope, FormResService, AuthService,
+      encService, $log, dialogs) {
+            
+      $scope.$on('authenticated', function() {
+        $scope.authenticated = true;
+        $scope.busy = true;
+        _addEncounterTypesOptionIfFound();
+      });
+      
+      $scope.$on('deauthenticated', function() {
+        $scope.authenticated = false;
+      });
+      
+      $scope.options = {
+        resetModel: function() {
+          $scope.model = {};
+        }
+      };
+      
+      $scope.authenticated = AuthService.authenticated();
+      
+      $scope.model = {};
+      
+      // Fields 
+      $scope.fields = [{
+        key: 'name',
+        type: 'input',
+        templateOptions: {
+          label: 'Form Name',
+          required: true
+        }
+      }, {
+        key: 'description',
+        type: 'textarea',
+        templateOptions: {
+          label: 'Description'
+        }
+      }, {
+        key: 'version',
+        type: 'input',
+        templateOptions: {
+          label: 'Version',
+          required: true
+        }
+      }, {
+        key: 'published',
+        type: 'checkbox',
+        templateOptions: {
+          label: 'Published'
+        }
+      }, {
+        key: 'uploadFile',
+        type: 'checkbox',
+        templateOptions: {
+          label: 'I want to upload schema file'
+        }
+      }, {
+        key: 'jsonSchema',
+        type: 'aceJsonEditor',
+        hideExpression: 'model.uploadFile',
+        templateOptions: {
+          label: 'JSON Schema'
+        }
+      }, {
+        key: 'fileSchema',
+        type: 'fileUpload',
+        hideExpression: '!model.uploadFile',
+        templateOptions: {
+          label: 'Schema file',
+          required: true
+        }
+      }];
+    
+    $scope.busy = true;
+    _addEncounterTypesOptionIfFound();
+      
+    $scope.create = function() {
+      // check if schema is empty
+      $scope.busySaving = true;
+      if(($scope.model.uploadFile && !$scope.model.fileSchema) || 
+              (!$scope.model.uploadFile && !$scope.model.jsonSchema)) {
+        dialogs.notify('JSON Schema', 'You need either to choose a json '
+         + 'schema file to upload or define the json schema in the editor '
+         + 'provided');
+         $scope.busySaving = false;
+      } else {
+        if($scope.model.uploadFile) {
+          var schemaBlob = $scope.model.fileSchema;
+        } else {
+          //Entered as text
+          var schemaBlob = new Blob($scope.model.jsonSchema, {type:'application/json'});
+        }
+        
+        //Upload the schema file
+        // TODO: Validate json schema
+        $log.debug('Uploading schema: ', schemaBlob);
+        FormResService.uploadFormResource(schemaBlob).then(function(response) {
+          $log.debug('uuid of newly created json schema resource: ', response.data);
+          var newForm = {
+            name: $scope.model.name,
+            version: $scope.model.version,
+            published: $scope.model.published || false,
+            description: $scope.model.description || ''
+          };
+          
+          if($scope.model.encounterType) {
+            newForm.encounterType = $scope.model.encounterType;
+          }
+          
+          $log.debug('Now uploading the form details: ', newForm);
+          FormResService.saveForm(newForm).then(function(createdForm) {
+            $log.debug('Form created successfully', createdForm);
+            
+            var resource = {
+              name: 'JSON schema',
+              dataType: 'AmpathJsonSchema',
+              valueReference: response.data
+            }
+            // Now saving the resource: This really sucks,
+            $log.debug('Creating a resource for newly created form', resource);
+            FormResService.saveFormResource(createdForm.uuid, resource)
+            .then(function(resource) {
+              $log.debug('clobdata, form and resource all created successfully');
+              dialogs.notify('New Form', 'You got this! done successfully!');
+              $scope.busySaving = false;
+            })
+            .catch(function(err) {
+              $log.error('resource could not be created, this sucks because '
+                        + 'the other two went through aaargh!');
+              dialogs.error('Resource Creation Error',JSON.stringify(err,null,2));
+              $scope.busySaving = false;
+            });
+          })
+          .catch(function(err) {
+            $log.error('Form details could not be posted, the resource has'
+            + ' been posted though!', err);
+            dialogs.error('Form Creation Error',JSON.stringify(err,null,2));
+            $scope.busySaving = false;
+          });
+        })
+        .catch(function(err) {
+          $log.error('Error uploading file, form creation failed', err);
+          dialogs.error('File Upload Error', JSON.stringify(err,null,2));
+          $scope.busySaving = false;
+        });
+      }
+    }
+    
+    function _addEncounterTypesOptionIfFound() {
+      encService.getEncounterTypes().then(function(data) {
+        $log.debug('Loaded types', data.results);
+        var types = [{
+          value:null,
+          name: '--'
+        }];
+        _.each(data.results, function(type) {
+          types.push({
+            value: type.uuid,
+            name: type.display
+          });
+        });
+        
+        var typesField = {
+          key: 'encounterType',
+          type: 'select',
+          defaultValue: null,
+          templateOptions: {
+            label: 'Encounter Type',
+            options: types
+          }
+        };
+        $scope.fields.splice(3, 0, typesField);
+        $scope.busy = false;
+      })
+      .catch(function(err) {
+        $log.error('Error fetching encounter types ',err);
+        $scope.busy = false;
+      });
+    }
+      
+  }
+})();
+
+(function(){
+  'use strict';
+  
+  angular
+    .module('app.openmrsFormManager')
+      .controller('ViewEditFormCtrl', ViewEditFormCtrl);
+  
+  ViewEditFormCtrl.$inject = [
+    '$scope',
+    '$log',
+    '$state',
+    '$stateParams',
+    '$q',
+    'FormResService',
+    'FormManagerUtil',
+    'EncounterResService',
+    'AuthService',
+    'dialogs'
+  ];
+  
+  function ViewEditFormCtrl($scope, $log, $state, $stateParams, $q, FormResService,
+    FormManagerUtil, encService, AuthService, dialogs) {
+    $log.debug('Loading form from openmrs for form uuid: ' + $stateParams.formUuid);
+    
+    $scope.authenticated = AuthService.authenticated();
+    
+    $scope.$on('authenticated', function() {
+      $scope.authenticated = true;
+      $scope.busy = true;
+      _loadEncounterTypes();
+    });
+    
+    $scope.$on('deauthenticated', function() {
+      $scope.authenticated = false;
+    });
+    
+    $scope.busy = true;
+    $scope.hasError = false;
+    $scope.errors = [];
+    // Edit variables
+    $scope.editForm = {};
+    $scope.editForm.encounterTypes = [];
+    $scope.editForm.uploadFile = false;
+    
+    // Load the form to be edited
+    _initializeErrorAndBusyVariables();
+    _loadForm($stateParams.formUuid);
+    
+    $scope.busy = true;
+    //Load encounter types [Leave error details intact]
+    _loadEncounterTypes();
+    
+    $scope.aceLoadedView = function(_editor) {
+      _editor.setReadOnly(true);
+    };  
+    
+    $scope.publishedChanged = function() {
+      if($scope.editForm.published) {
+        var title = 'Publishing';
+        var message = 'Publishing the form will prevent any modifications '
+                      + 'except for name & description.'
+                      + ' Do you want to proceed?';
+        
+      } else {
+        var title = 'Unpublishing';
+        var message = 'Unpublished a form/component may introduce changes '
+                    + 'that may screw the data collected using it.'
+                    + ' Do you want to proceed?';
+      }
+      
+      dialogs.confirm('Confirm ' + title, message).result.then(null, function(btn) {
+        $scope.editForm.published = !$scope.editForm.published;
+      });
+    };
+    
+    $scope.saveChanges = function() {
+      _initializeErrorAndBusyVariables();
+      if($scope.editForm.schema.file) {
+        var reader = new FileReader();
+        reader.onload = function(event) {
+          var fileContent = event.target.result;
+          $log.debug('Done reading file: ', angular.fromJson(fileContent));
+          __handleUpdates(_createPayloads(fileContent));
+        };
+        reader.readAsText($scope.editForm.schema.file);
+      } else if($scope.editForm.schema.json) {
+        $log.debug('Updating using schema entered as text in editor');
+        __handleUpdates(_createPayloads($scope.editForm.schema.json));
+      } else {
+        // No schema business
+        __handleUpdates(_createPayloads(null));
+      }
+      
+      function __handleUpdates(payload) {
+        if(payload.hasChanges) {
+          _updateForm(payload);
+        } else {
+          $scope.busy = false;
+          dialogs.notify('Updates', 'Nothing to update');
+        }
+      }
+    };  
+    
+    $scope.changeViewToEdit = function() {
+      $state.go('form-edit', {formUuid: $stateParams.formUuid,relative: false});
+    };
+    
+    function _createPayloads(newJsonSchema) {
+      var ret = {
+        hasChanges: false,
+        someFormFieldChanged: false,
+        formPayload: {},
+        schema: {
+          action: false
+        }
+      };
+      
+      if($scope.form.name !== $scope.editForm.name) {
+        ret.formPayload.name = $scope.editForm.name;
+        ret.hasChanges = ret.someFormFieldChanged = true;
+        
+      }
+      
+      if($scope.form.description !== $scope.editForm.description) {
+        ret.formPayload.description = $scope.editForm.description;
+        ret.hasChanges = ret.someFormFieldChanged = true;
+      }
+      
+      if($scope.form.published !== $scope.editForm.published) {
+        ret.formPayload.published = $scope.editForm.published;
+        ret.hasChanges = ret.someFormFieldChanged = true;
+      }
+      
+      if(!$scope.form.published) {
+        if($scope.form.version !== $scope.editForm.version) {
+          ret.formPayload.version = $scope.editForm.version;
+          ret.hasChanges = ret.someFormFieldChanged = true;
+        }
+        
+        if($scope.form.encounterTypeUuid !== $scope.editForm.encounterTypeUuid) {
+          ret.formPayload.encounterType = $scope.editForm.encounterTypeUuid;
+          ret.hasChanges = ret.someFormFieldChanged = true;
+        }
+        
+        // Deal with resource if changed. (Make sure you compare apples to apples)
+        var ___updateSchemaStuff = function() {
+          ret.hasChanges = true;
+          if($scope.editForm.schema.file) {
+            ret.schema.file = $scope.editForm.schema.file;
+          } else {
+            // Text passed
+            ret.schema.file = new Blob([newJsonSchema], {type: 'application/json'});
+          }
+        }
+        if(newJsonSchema) {
+          if($scope.form.hasJsonSchema) {
+            var oldSchema = angular.fromJson($scope.form.schema.json);
+            var newSchema = angular.fromJson(newJsonSchema);
+            $log.debug('Old schema:', oldSchema);
+            $log.debug('New schema:', newSchema);
+            
+            if(!_.isEqual(oldSchema, newSchema)) {
+              ___updateSchemaStuff.call(this);
+              ret.schema.action = 'update';
+              ret.jsonSchemaResource = {
+                name: $scope.form.jsonSchemaResource.name || 'JSON schema',
+                dataType: $scope.form.jsonSchemaResource.dataType || 'AmpathJsonSchema'
+              }
+            }
+          } else {
+            if($scope.editForm.schema.file || $scope.editForm.schema.json) {
+              ___updateSchemaStuff.call(this);
+              ret.schema.action = 'create';
+              ret.jsonSchemaResource = {
+                name: 'JSON schema',
+                dataType: 'AmpathJsonSchema',
+              };
+            }
+          }
+        }
+      }  
+      return ret;
+    }
+    
+    function _updateForm(payLoadData) {
+      if(!payLoadData.hasChanges) return;
+      
+      var __updateResourceAndForm = function() {
+        FormResService.uploadFormResource(payLoadData.schema.file)
+        .then(function(response) {
+          $log.debug('New new schema uploaded, now creating resource '
+              + 'and uploading the updated form');
+          payLoadData.jsonSchemaResource.valueReference = response.data;
+          var promises = {};
+          if(payLoadData.someFormFieldChanged) {
+            $log.info('Form has some of fields modified');
+            promises.form = FormResService.updateForm($scope.form.uuid,
+                                                payLoadData.formPayload);
+          }
+          promises.formResource = FormResService.saveFormResource($scope.form.uuid,
+                payLoadData.jsonSchemaResource);
+          $q.allSettled(promises).then(function(values) {
+            $log.debug('Reloading form after editing');
+            _loadForm($scope.form.uuid);
+          });
+        })
+        .catch(function(err) {
+          $log.error('Error while updating form', err);
+          $scope.hasError = true;
+          $scope.errors.push = 'Error updating form, check the logs for details';
+          $scope.busy = false;
+        });
+      };
+      
+      if(payLoadData.schema.action === 'update') {
+        // Note: Because AmpathJsonSchema is not recognized as a valid dataType
+        // in openmrs we have to remove the existing resource and create a new one
+        $log.debug('Sending a request to delete schema with uuid ',
+                            $scope.form.jsonSchemaResource.valueReference);
+        FormResService.deleteFormSchemaByUuid($scope.form.jsonSchemaResource.valueReference)
+        .finally(function() {
+          $log.debug('We don\'t care about the outcome, now deleting '
+            + 'form resource with uuid', $scope.form.jsonSchemaResource.uuid);
+          FormResService.deleteFormResource($scope.form.uuid, $scope.form.jsonSchemaResource.uuid)
+          .then(function(response) {
+            // Upload new file
+            $log.debug('Resource deleted, now uploading new schema: ',
+              payLoadData.schema.file);
+            __updateResourceAndForm();
+          });
+        })
+        .catch(function(err) {
+          $log.error('Error while updating form', err);
+          $scope.hasError = true;
+          $scope.errors.push = 'Error updating form, check the logs for details';
+          $scope.busy = false;
+        });
+      } else if(payLoadData.schema.action === 'create') {
+        __updateResourceAndForm();
+      } else {
+        //no action for schema
+        FormResService.updateForm($scope.form.uuid, payLoadData.formPayload)
+        .then(function(updatedForm) {
+          $log.debug('Reloading form after editing');
+          _loadForm($scope.form.uuid).then(function() {
+            _displayUpdateSuccessDialog();
+          });
+        })
+        .catch(function(err) {
+          $log.error('Error while updating form', err);
+          $scope.hasError = true;
+          $scope.errors.push = 'Error updating form, check the logs for details';
+          $scope.busy = false;
+        });
+      }
+    }
+    
+    function _initializeErrorAndBusyVariables() {
+      $scope.busy = true;
+      $scope.hasError = false;
+      $scope.errors = [];
+    }
+    
+    function _loadForm(formUuid) {
+      var __noFormResource = function() {
+        $scope.form.schema.json = '';
+        //Create a deep copy first
+        var formCopy = angular.copy($scope.form);
+        $scope.editForm = _.extend($scope.editForm, formCopy);
+        formCopy = null;
+        $scope.busy = false;
+      }
+      return FormResService.getFormByUuid({
+        uuid: formUuid,
+        v: 'full',
+        caching: false
+      }).then(function(form) {
+        $log.debug('Fetched form: ', form);
+        $scope.form = form;
+        $scope.form.schema = null;
+        if(form.published) {
+          form.publishedText = 'Yes';
+          form.publishedCssClass = 'success';
+        } else {
+          form.publishedText = 'No';
+          form.publishedCssClass = 'danger';
+        }
+        if(form.resources) {
+          $scope.form.schema = {};
+          $log.debug('Finding json schema for form ' + form.name);
+          var resource = FormManagerUtil.findResource(form.resources);
+          if(resource === undefined) {
+            $log.debug('Resource not found using "AmpathJsonSchema" dataType,'
+             + ' trying name "JSON Schema" ');
+             resource = FormManagerUtil.findResource(form.resources, 'JSON schema');
+          }
+          
+          if(resource !== undefined) {
+            $log.debug('Fetching the associated json schema with valueReference'
+                   + resource.valueReference);
+            $scope.form.schema = {
+              uuid: resource.valueReference
+            };
+            $scope.form.hasJsonSchema = true;
+            $scope.form.jsonSchemaResource = resource;
+            FormResService.getFormSchemaByUuid(resource.valueReference)
+            .then(function(schema) {
+              $log.debug('Loaded schema', schema);
+              $scope.form.schema.json = JSON.stringify(schema, null, 2);
+              
+              // Trying to get a deep copy from angular without its limitations
+              var formCopy = angular.copy($scope.form);
+              $scope.editForm = _.extend($scope.editForm, formCopy);
+              formCopy = null;
+              $scope.busy = false;
+              return true;
+            })
+            .catch(function(err) {
+              $log.error('Error occured while fetching schema with uuid ' 
+                        + resource.valueReference, err);
+              $scope.errors.push('Error fetching schema with uuid ' 
+              + resource.valueReference);
+              $scope.busy = false;
+              $scope.hasError = true;
+              throw err;
+            })       
+          } else {
+            __noFormResource();
+            return true;
+          }
+        } else {
+          // No resources anyway
+          __noFormResource()
+          return true;
+        } 
+      })
+      .catch(function(err) {
+        $log.error('Error occured while fetching form uuid ' + formUuid);
+        $scope.errors.push('Could not load form with uuid ' + formUuid);
+        $scope.busy = false;
+        $scope.hasError = true;
+        throw err;
+      });
+    }
+    
+    function _loadEncounterTypes() {
+      encService.getEncounterTypes().then(function(data) {
+        $log.debug('Loaded types', data.results);
+        $scope.editForm.encounterTypes = data.results;
+        $scope.busy = false;
+      })
+      .catch(function(err) {
+        $log.error('Error fetching encounter types ',err);
+        $scope.busy = false;
+      });
+    }
+    
+    function _displayUpdateSuccessDialog() {
+      dialogs.notify('Form Edits', 'Hoorraa! Form successfully updated');
+    }
+  }
+})();
+
+(function() {
+  'use strict';
+  
+  angular
+    .module('app.openmrsFormManager')
+      .directive('serverUrlConfig', ServerUrlConfig);
+  
+  ServerUrlConfig.$inject = [
+    '$window'
+  ];
+      
+  function ServerUrlConfig($window) {
+    return {
+      restrict: 'E',
+      controller: UrlConfigController,
+      templateUrl: 'views/openmrs-form-manager/server-url-config.htm',
+    }  
+  }
+  
+  UrlConfigController.$inject = [
+    '$rootScope',
+    '$scope',
+    '$http',
+    '$base64',
+    '$cookies',
+    'OpenmrsSettings',
+    'SessionResService',
+    '$log',
+    'AuthService',
+    '$window'
+  ]
+  
+  function UrlConfigController($rootScope, $scope, $http, $base64, $cookies,
+    OpenmrsSettings, sessionService, $log, AuthService, $window) {
+    var restSuffix = 'ws/rest/v1/';
+    
+    $scope.openmrsUrl = $window.localStorage.getItem('openmrsUrl');
+    if($scope.openmrsUrl === null || $scope.openmrsUrl == undefined || 
+       $scope.openmrsUrl === 'undefined') {
+      $scope.openmrsUrl = '';
+    }
+    
+    $scope.authResult = {
+      authenticated: AuthService.authenticated(),
+      hasError: false,
+    }
+    
+    $scope.busy = false;
+    
+    // Enable/Disable authenticate button
+    $scope.enableAuthButton = function() {
+      return $scope.openmrsUrl && $scope.username && $scope.password;
+    };
+    
+    $scope.authenticate = function() {
+      $scope.busy = true;
+      
+      if($scope.openmrsUrl === null || $scope.openmrsUrl === 'undefined' || 
+        $scope.openmrsUrl === '') {
+        _setError(true, 'Please provide Openmrs server base URL');
+        $scope.busy = false;
+      } else {
+        
+        // Set credos
+        _setCredentials($scope.username, $scope.password);
+        
+        // Store the passed url to localStorage
+        $window.localStorage.setItem('openmrsUrl', $scope.openmrsUrl);
+        
+        // Set the passed in openmrs server Url
+        if(!$scope.openmrsUrl.endsWith('/')) {
+          var openmrsUrl = $scope.openmrsUrl + '/';
+        } else {
+          var openmrsUrl = $scope.openmrsUrl;
+        }
+        
+        OpenmrsSettings.setCurrentRestUrlBase(openmrsUrl + restSuffix);
+        // Try to get session
+        sessionService.getSession(function(data) {
+          $scope.authResult.authenticated = data.authenticated;
+          AuthService.authenticated(data.authenticated);
+          $cookies.put('sessionId',data.sessionId);
+          
+          // in case not authenticated
+          if(!data.authenticated) {
+            _setError(true, 'Invalid username and/or password')
+          } else {
+            // broadcast authentication event
+            $rootScope.$broadcast('authenticated', data);
+          }
+          $scope.busy = false;
+        }, function(err) {
+          $scope.busy = false;
+          _setError(true, 'Something went wrong, Check the logs for details')
+          $scope.authResult.error = err;
+          $log.error(err);
+        });
+      }  
+    }; 
+    
+    $scope.logout = function() {
+      sessionService.deleteSession(function(response) {
+        $http.defaults.headers.common.Authorization = null;
+        $scope.authResult.authenticated = false;
+        $scope.authResult.hasError = false;
+        AuthService.authenticated(false);
+        $rootScope.$broadcast('deauthenticated');
+      });
+    }
+    
+    function _setCredentials(username, password) {
+      $http.defaults.headers.common.Authorization = 'Basic ' + 
+        $base64.encode(username + ':' + password);
+    }
+    
+    function _setError(status, message) {
+      $scope.authResult.hasError = status;
+      $scope.authResult.message = message;
+    }
+    
+  }
 })();

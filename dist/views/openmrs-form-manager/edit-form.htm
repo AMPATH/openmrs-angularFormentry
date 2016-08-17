@@ -1,0 +1,89 @@
+<div class="panel-group" id="accordion" ng-show="!authenticated">
+  <div class="panel panel-default">
+      <div class="panel-heading" data-toggle="collapse" data-parent="#accordion" href="#collapseOne">
+          <h4 class="panel-title">
+              OpenMRS Server Configurations
+          </h4>
+      </div>
+      <div id="collapseOne" class="panel-collapse collapse in">
+          <div class="panel-body">
+              <server-url-config></server-url-config>
+          </div>
+      </div>
+  </div>
+</div>   
+
+<div ng-show="authenticated">
+<div ng-if="hasError && !busy" class="alert alert-danger">
+  <strong>Warning: There were errors loading this page!</strong>
+  <p ng-repeat="error in errors"> {{error}}</p>
+</div>
+
+<div ng-if="form.published && !busy && !hasError" class="alert alert-warning">
+  <strong>Warning: Published Form!</strong>
+  <p>You can only modify name and/or description. To do more you need
+    to unpublish and save changes</p>
+</div>
+
+<span ng-show="busy">Loading...<img src="images/ajax-loader.gif"/></span>
+<div class="panel-group" id="accordion" ng-if="!busy && !hasError">
+  <div class="panel panel-info">
+    <div class="panel-heading">
+      Form Details
+      <a ng-href="#/"><button class="btn btn-xs btn-primary pull-right">Go to Manage Forms</button></a>
+    </div>
+    <div class="panel-body">
+      <table class="table table-striped table-bordered" id="form-details-table">
+        <tr><th>UUID</th><td>{{::form.uuid}}</td></tr>
+        <tr><th>Name</th><td><input type="text" ng-model="editForm.name" size="50"/></td></tr>
+        <tr><th>Version</th><td><input type="text" ng-model="editForm.version" size="6" ng-readonly="editForm.published"/></td></tr>
+        <tr><th>Description</th><td><textarea rows="4" cols="50" ng-model="editForm.description"></textarea></td></tr>
+        <tr>
+          <th>Published</th>
+          <td>
+            <input type="checkbox" ng-model="editForm.published" ng-change="publishedChanged();"/>
+          </td>
+      </tr>
+      <tr>
+        <th>Encounter Type</th>
+        <td>
+          <input type="text" ng-readonly="true" ng-model="editForm.encounterTypeName" size="20"/>
+          <span ng-if="editForm.encounterTypes.length>0 && !form.published">
+            change to <select ng-model="editForm.encounterTypeUuid">
+              <option ng-repeat="type in editForm.encounterTypes" value="{{type.uuid}}">{{type.display}}</option>
+            </select>
+          </span>
+        </td>
+      </tr>
+      <tr><th>Created By</th><td>{{::form.auditInfo.creator.display}}</td></tr>
+      <tr><th>Date Created</th><td>{{::form.auditInfo.dateCreated | date: "dd-MM-yyyy"}}</td></tr>
+      <tr ng-if="form.auditInfo.changedBy">
+        <th>Changed By</th><td>{{::form.auditInfo.changedBy.display}}</td>
+      </tr>
+      <tr ng-if="form.auditInfo.dateChanged">
+        <th>Date Changed</th><td>{{::form.auditInfo.dateChanged | date: "dd-MM-yyyy"}}</td>
+      </tr>
+    </table>
+    </div>
+  </div>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      Schema <span ng-if="form.schema">(uuid = {{form.schema.uuid}})</span>
+      <span ng-if="!form.published"><input type="checkbox" ng-model="editForm.uploadFile"/>Upload File Instead
+        <span ng-if="form.published">: Read Only (form published)</span>
+    </div>
+    <div class="panel-body">
+      <div ng-if="!editForm.schema.json && !editForm.schema.file">
+        <p class="alert alert-warning">No schema associated with this form yet. Upload file or paste below</p>
+      </div>
+      <div ng-if="!editForm.uploadFile" ui-ace="{mode:'json'}" ng-readonly="form.published" ng-model="editForm.schema.json"></div>
+      <div ng-if="editForm.uploadFile">
+        <input type="file" file-model="editForm.schema.file"/>
+      </div>
+    </div>
+  </div>
+  <div class="panel panel-default">
+  <button ng-click="saveChanges();" class="btn btn-default">Save Changes</button>
+</div>
+</div>
+</div>

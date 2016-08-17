@@ -1,0 +1,43 @@
+<div class="panel-group" id="accordion" ng-show="!authenticated">
+  <div class="panel panel-default">
+      <div class="panel-heading" data-toggle="collapse" data-parent="#accordion" href="#collapseOne">
+          <h4 class="panel-title">
+              OpenMRS Server Configurations
+          </h4>
+      </div>
+      <div id="collapseOne" class="panel-collapse collapse in">
+          <div class="panel-body">
+              <server-url-config></server-url-config>
+          </div>
+      </div>
+  </div>
+</div>   
+
+<span ng-show="(busy || busySaving) && authenticated">Loading...<img src="images/ajax-loader.gif"/></span>
+
+<div ng-show="authenticated && !busy">
+  <h2> Create New Form/Component </h2>
+  <div class="panel panel-default">
+  <div class="panel-heading">Form Details (Metadata)</div>
+  <div class="panel-body">
+    <form ng-submit="create();" name="form" novalidate>
+      <formly-form model="model" fields="fields">
+        <button type="submit" class="btn btn-primary submit-button" ng-disabled="form.$invalid">
+          Create
+        </button>
+        <button type="button" class="btn btn-default" ng-click="options.resetModel()">
+          Reset
+        </button>
+      </formly-form>
+    </form>
+  </div>
+</div>
+<!--div>{{model | json}}</div-->
+<script type="text/ng-template" id="error-messages.html">
+    <formly-transclude></formly-transclude>
+    <div class="error-messages" ng-messages="fc.$error" ng-if="form.$submitted || options.formControl.$touched">
+      <div class="message" ng-message="{{::name}}" ng-repeat="(name, message) in ::options.validation.messages" style="color:red;">
+        {{message(fc.$viewValue, fc.$modelValue, this)}}
+      </div>
+    </div>
+</script>
