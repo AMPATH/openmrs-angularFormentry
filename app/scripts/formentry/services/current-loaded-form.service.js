@@ -103,9 +103,24 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
                 hasOwnProperty(lastFound[key], 'schemaQuestion')) {
                     return lastFound[key].value;
                 }
+
+                if (typeof lastFound[key] === 'object' &&
+                 hasOwnProperty(lastFound[key], 'orders') && 
+               angular.isArray(lastFound[key].orders)) {
+                    return getSelectedOrders(lastFound[key]);
+                }
+
                 return lastFound[key];
             }
             return undefined;
+        }
+
+        function getSelectedOrders(orderSectionModel) {
+            var orderConcepts = [];
+            _.each(orderSectionModel.orders, function(order){
+                orderConcepts.push(order.concept)
+            });
+            return orderConcepts;
         }
 
         function getContainingObjectForQuestionKey(formlyModel, key) {
