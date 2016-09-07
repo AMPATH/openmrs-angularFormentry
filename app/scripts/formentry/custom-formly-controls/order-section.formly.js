@@ -39,9 +39,12 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             '<button type="button" class="btn btn-primary" ng-click="addingNew = true" >+ Order Test</button> ' +
             '</p> ' +
             '<div ng-show="addingNew">' +
-            '<select kendo-drop-down-list k-options="selectOptions"' +
-            'ng-model="$scope.selectedOrder" style="width: 100%;"></select>' +
-            '<button style="margin-top:4px;" type="button" class="btn btn-success" ng-click="addNew($scope.selectedOrder)" >Ok</button> ' +
+            'Choose test to order from the drop-down:' +
+            '<select kendo-drop-down-list k-select="onOrderSelected" k-data-value-field="selectOptions.dataValueField" ' +
+            'k-value-primitive="selectOptions.valuePrimitive" k-data-source="itemSource" k-data-text-field="selectOptions.dataTextField"' +
+            'ng-model="$scope.selectedOrder" style="width: 100%;">' +
+            '</select>' +
+            // '<button style="margin-top:4px;" type="button" class="btn btn-success" ng-click="addNew($scope.selectedOrder)" >Ok</button> ' +
             '<button style="margin-top:4px;" type="button" class="btn btn-default" ng-click="addingNew = false" >Cancel</button> ' +
             '</div>' +
             '</div> ' +
@@ -56,15 +59,24 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
                 $scope.selectedOrder = undefined;
 
+                $scope.itemSource = $scope.options.data.selectableOrders;
+
                 $scope.selectOptions = {
                     dataTextField: 'label',
                     dataValueField: 'concept',
-                    valuePrimitive: true,
-                    dataSource: $scope.options.data.selectableOrders
+                    valuePrimitive: true
+                };
+
+                $scope.onOrderSelected = function (e) {
+                    var val = this.dataItem(e.item);
+                    if (val)
+                        addNew(val.concept);
                 };
 
                 $scope.copyFields = copyFields;
                 $scope.getDisplayValue = getDisplayValue;
+
+                filterOutSelectedItems();
 
                 function getDisplayValue(orderConcept) {
                     var orders = $scope.options.data.selectableOrders;
@@ -101,6 +113,8 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
                     $log.log('order section');
                     var orderSectionModel = $scope.model[$scope.options.key].orders;
                     orderSectionModel.push($scope.to.createChildFieldModel(orderConcept));
+
+                    filterOutSelectedItems();
                     $scope.addingNew = false;
                 }
 
@@ -110,6 +124,30 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
                         $scope.model[$scope.options.key].orders.deletedOrders = [];
                     $scope.model[$scope.options.key].orders.deletedOrders.push(deletedOrder);
                     $scope.model[$scope.options.key].orders.splice($index, 1);
+                    filterOutSelectedItems();
+                }
+
+                function filterOutSelectedItems() {
+
+                    if (!Array.isArray($scope.model[$scope.options.key].orders) || $scope.model[$scope.options.key].orders.length === 0) {
+                        $scope.itemSource = $scope.options.data.selectableOrders;
+                        return;
+                    }
+
+                    var newItemSource = [];
+                    _.each($scope.options.data.selectableOrders, function (order) {
+                        var foundSelectedOrder;
+                        _.each($scope.model[$scope.options.key].orders, function (selectedOrder) {
+                            if (selectedOrder.concept === order.concept)
+                                foundSelectedOrder = selectedOrder;
+                        });
+
+                        if (foundSelectedOrder === undefined || foundSelectedOrder === null) {
+                            newItemSource.push(order);
+                        }
+                    });
+
+                    $scope.itemSource = newItemSource;
                 }
             }
         });

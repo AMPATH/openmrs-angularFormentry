@@ -41,8 +41,18 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                     }
                 }
             };
-
+            _addToQuestionMap(question, orderField,  questionMap);
             return orderField;
+        }
+
+        function _addToQuestionMap(_question, _field, questionMap) {
+            if ('id' in _question) {
+                if (_question.id in questionMap) {
+                    questionMap[_question.id].push(_field);
+                } else {
+                    questionMap[_question.id] = [_field];
+                }
+            }
         }
 
         function initializeOrderGroupModel(orderModel, question) {
