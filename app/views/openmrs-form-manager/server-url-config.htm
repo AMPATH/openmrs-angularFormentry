@@ -3,10 +3,6 @@
     <span ng-show="authResult.authenticated && !busy" class="alert alert-success">
       <strong>Looks Good:</strong> {{username}} is authenticated with {{openmrsUrl}}
     </span>
-    <span ng-show="!authResult.authenticated && !busy" class="alert alert-warning">
-      Warning!: You won't be able to save your forms. Authenticate with valid Openmrs
-      server below.
-    </span>
     <span ng-show="busy">Bear with us please...<img src="images/ajax-loader.gif"/></span>
   </div>
   <div class="form-group">

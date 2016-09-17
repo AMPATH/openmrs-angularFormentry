@@ -59,6 +59,7 @@
             Array.prototype.push.apply(forms, values.components.value);
             CacheService.put('forms', forms);
             $scope.vm.existingForms = _formatForms(forms);
+            $scope.vm.errorFetchingForms = false;
             $scope.vm.busy = false;
           })
           .catch(function(err) {
