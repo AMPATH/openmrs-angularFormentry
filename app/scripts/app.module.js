@@ -78,11 +78,6 @@ angular
     $translateProvider.preferredLanguage('en-US');
     
     $stateProvider
-        .state('form-management', {
-          url: '/',
-          templateUrl: 'views/openmrs-form-manager/openmrs-form-manager.htm',
-          controller: 'OpenmrsFormManagerCtrl'
-        })
         .state('about', {
           url: '/about',
           templateUrl: 'views/about.html',
@@ -92,20 +87,5 @@ angular
           url: '/recursive-test',
           templateUrl: 'views/form-editor.html',
           controller: 'EditorCtrl'
-        })
-        .state('form-create', {
-          url: '/form/create',
-          templateUrl: 'views/openmrs-form-manager/create-form.htm',
-          controller: 'CreateFormCtrl'
-        })
-        .state('form-view', {
-          url: '/form/view/:formUuid',
-          templateUrl: 'views/openmrs-form-manager/view-form.htm',
-          controller: 'ViewEditFormCtrl'
-        })
-        .state('form-edit', {
-          url: '/form/edit/:formUuid',
-          templateUrl: 'views/openmrs-form-manager/edit-form.htm',
-          controller: 'ViewEditFormCtrl'
         });
   });

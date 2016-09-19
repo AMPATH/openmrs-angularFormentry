@@ -9,9 +9,7 @@
     
     function CacheService() {
       var _this = this;
-      var cache = {
-        forms: []
-      };
+      var cache = {};
       
       // will replace already existing value
       _this.put = function(name, value) {

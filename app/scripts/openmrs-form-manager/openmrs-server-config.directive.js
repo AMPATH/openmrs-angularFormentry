@@ -29,12 +29,15 @@
     'AuthService',
     '$window',
     'dialogs',
-    '$timeout'
-  ]
+    '$timeout',
+    '$state',
+    '$stateParams',
+    'FormentryUtilService'
+  ];
   
   function UrlConfigController($rootScope, $scope, $http, $base64, $cookies,
     OpenmrsSettings, sessionService, $log, AuthService, $window, dialogs,
-    $timeout) {
+    $timeout, $state, $stateParams, utilService) {
     var restSuffix = 'ws/rest/v1/';
     var SESSION_TTL_MIN = 10;
     
@@ -66,7 +69,7 @@
       } else {
         
         // Set credos
-        _setCredentials($scope.username, $scope.password);
+        AuthService.setCredentials($scope.username, $scope.password);
         
         // Store the passed url to localStorage
         $window.localStorage.setItem('openmrsUrl', $scope.openmrsUrl);
@@ -84,9 +87,10 @@
           if(data.authenticated) {
             data.token = $base64.encode($scope.username + ':' + $scope.password);
             $cookies.putObject('userSession', data, {
-              expires: _getSessionExpiryDate(SESSION_TTL_MIN),
+              expires: utilService.getSessionExpiryDate(SESSION_TTL_MIN),
             });
             $rootScope.$broadcast('authenticated', data);
+            _redirectToCorrectView();
           } else {
             _setError(true, 'Invalid username and/or password');
           }
@@ -101,28 +105,7 @@
     }; 
     
     $scope.logout = function() {
-      sessionService.deleteSession(function(response) {
-        _clearCredentials();
-        $scope.authResult.authenticated = false;
-        $scope.authResult.hasError = false;
-        AuthService.clearAuthentication();
-        $cookies.remove('userSession')
-        $rootScope.$broadcast('deauthenticated');
-      });
-    }
-    
-    function _setCredentials(username, password) {
-      if(arguments.length == 1) {
-        var base64Credos = username;
-      } else {
-        var base64Credos = $base64.encode(username + ':' + password);
-      }
-      $http.defaults.headers.common.Authorization = 'Basic ' + base64Credos;
-      base64Credos = null;
-    }
-    
-    function _clearCredentials() {
-      $http.defaults.headers.common.Authorization = null;
+      AuthService.logout();
     }
 
     function _setError(status, message) {
@@ -131,26 +114,23 @@
     }
     
     function _checkIfSessionActive() {
-      var authData = $cookies.getObject('userSession');
-      if(authData) {
-        _setCredentials(authData.token);
-        $log.log('Credentials are set here');
-        $rootScope.$broadcast('authenticated', authData);
+      var userSessionData = $cookies.getObject('userSession');
+      if(userSessionData && userSessionData.authenticated) {
+        AuthService.setCredentials(userSessionData.token);
+        $rootScope.$broadcast('authenticated', userSessionData);
+        _redirectToCorrectView();
       }
     }
     
-    function _getSessionExpiryDate(minutes) {
-      var d = new Date();
-
-      var minutesToSet = d.getMinutes() + minutes;
-      if(minutesToSet>59) {
-        d.setHours(d.getHours() + Math.floor(minutesToSet/60));
-        d.setMinutes(minutesToSet%60);
+    function _redirectToCorrectView() {
+      if($stateParams.redirectTo) {
+        $state.go($stateParams.redirectTo.state, $stateParams.redirectTo.stateParams);
       } else {
-        d.setMinutes(minutesToSet);
+        $state.go('form.manage');
       }
-      return d;
     }
+    
+    
 
     function _sessionTimeout(timeout, prevTimeoutPromise) {
       var canceledSuccessfully = true;
@@ -191,13 +171,18 @@
       document.addEventListener('mousemove', function(event) {
         var obj = $cookies.getObject('userSession') || data;
         $cookies.putObject('userSession', obj, {
-          expires: _getSessionExpiryDate(SESSION_TTL_MIN),
+          expires: utilService.getSessionExpiryDate(SESSION_TTL_MIN),
         });
 
         prevTimeoutPromise = _sessionTimeout(timeout, prevTimeoutPromise);
       }, true);
     });
-
+    
+    $scope.$on('deauthenticated', function() {
+      $scope.authResult.authenticated = false;
+      $scope.authResult.hasError = false;
+    });
+    
     if(!AuthService.authenticated()) {
       _checkIfSessionActive();
     }

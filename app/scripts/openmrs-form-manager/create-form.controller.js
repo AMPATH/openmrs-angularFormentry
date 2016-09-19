@@ -23,24 +23,12 @@
     
     function CreateFormCtrl($scope, $rootScope, FormResService, AuthService,
       encService, $log, dialogs) {
-            
-      $scope.$on('authenticated', function() {
-        $scope.authenticated = true;
-        $scope.busy = true;
-        _addEncounterTypesOptionIfFound();
-      });
-      
-      $scope.$on('deauthenticated', function() {
-        $scope.authenticated = false;
-      });
       
       $scope.options = {
         resetModel: function() {
           $scope.model = {};
         }
       };
-      
-      $scope.authenticated = AuthService.authenticated();
       
       $scope.model = {};
       

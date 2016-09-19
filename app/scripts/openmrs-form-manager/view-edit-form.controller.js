@@ -22,18 +22,6 @@
     FormManagerUtil, encService, AuthService, dialogs) {
     $log.debug('Loading form from openmrs for form uuid: ' + $stateParams.formUuid);
     
-    $scope.authenticated = AuthService.authenticated();
-    
-    $scope.$on('authenticated', function() {
-      $scope.authenticated = true;
-      $scope.busy = true;
-      _loadEncounterTypes();
-    });
-    
-    $scope.$on('deauthenticated', function() {
-      $scope.authenticated = false;
-    });
-    
     $scope.busy = true;
     $scope.hasError = false;
     $scope.errors = [];

@@ -1,24 +1,12 @@
-<div class="panel-group" id="accordion" ng-show="!authenticated">
-  <div class="panel panel-default">
-      <div class="panel-heading" data-toggle="collapse" data-parent="#accordion" href="#collapseOne">
-          <h4 class="panel-title">
-              OpenMRS Server Configurations
-          </h4>
-      </div>
-      <div id="collapseOne" class="panel-collapse collapse in">
-          <div class="panel-body">
-              <server-url-config></server-url-config>
-          </div>
-      </div>
-  </div>
-</div>   
+<span ng-show="(busy || busySaving)">Loading...<img src="images/ajax-loader.gif"/></span>
 
-<span ng-show="(busy || busySaving) && authenticated">Loading...<img src="images/ajax-loader.gif"/></span>
-
-<div ng-show="authenticated && !busy">
+<div ng-show="!busy">
   <h2> Create New Form/Component </h2>
   <div class="panel panel-default">
-  <div class="panel-heading">Form Details (Metadata)</div>
+  <div class="panel-heading">
+    Form Details (Metadata)
+    <a ng-href="#/form/manage"><button class="btn btn-xs btn-primary pull-right">Go to Manage Forms</button></a>
+  </div>
   <div class="panel-body">
     <form ng-submit="create();" name="form" novalidate>
       <formly-form model="model" fields="fields">

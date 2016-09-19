@@ -20,7 +20,8 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             getFormSchema: getFormSchema,
             getTestEncounterData: getTestEncounterData,
             getServerUrl: getServerUrl,
-            getFormSchemaReferences: getFormSchemaReferences
+            getFormSchemaReferences: getFormSchemaReferences,
+            getSessionExpiryDate: getSessionExpiryDate
         };
 
         return service;
@@ -159,6 +160,19 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             console.log('converted', momented);
             console.log('converted formatted', momented.format(format));
             return momented.format(format);
+        }
+        
+        function getSessionExpiryDate(minutes) {
+          var d = new Date();
+
+          var minutesToSet = d.getMinutes() + minutes;
+          if(minutesToSet>59) {
+            d.setHours(d.getHours() + Math.floor(minutesToSet/60));
+            d.setMinutes(minutesToSet%60);
+          } else {
+            d.setMinutes(minutesToSet);
+          }
+          return d;
         }
     }
 })();
