@@ -36,18 +36,10 @@
         $scope.vm.errors = [];
         $scope.vm.existingForms = null;
         $scope.vm.errorFetchingForms = false;
-        $scope.vm.authenticated = AuthService.authenticated();
         
-        if(AuthService.authenticated()) {
-          $scope.vm.existingForms = _formatForms(CacheService.get('forms'));
-          if(!$scope.vm.existingForms) {
-            $rootScope.$broadcast('authenticated');
-          } else {
-            $scope.vm.busy = false;
-          }
-        }
+        _findDesiredForms();
         
-        $scope.findDesiredForms = function() {
+        function _findDesiredForms() {
           $scope.vm.busy = true;
           var desired = {
             pocForms: FormResService.findPocForms('POC'),
@@ -66,17 +58,7 @@
             $scope.vm.errorFetchingForms = err;
             $scope.vm.busy = false;
           });
-        };
-        
-        $scope.$on('deauthenticated', function() {
-          $scope.existingForms = null;
-          $scope.vm.authenticated = false;
-        });
-        
-        $scope.$on('authenticated', function(event, args) {
-          $scope.findDesiredForms();
-          $scope.vm.authenticated = true;
-        }); 
+        };      
         
         $scope.updateSchema = function(form) {
           var dialog = dialogs.confirm('Schema Exists', 'Schema already exists for ' 
@@ -156,15 +138,15 @@
         }
         
         $scope.createForm = function() {
-          $state.go('form-create', {relative:false});
+          $state.go('form.create', {relative:false});
         };
 
         $scope.viewForm = function(form) {
-          $state.go('form-view', {formUuid: form.uuid,relative:false});
+          $state.go('form.view', {formUuid: form.uuid,relative:false});
         }
         
         $scope.editForm = function(form) {
-          $state.go('form-edit', {formUuid: form.uuid,relative: false});
+          $state.go('form.edit', {formUuid: form.uuid,relative: false});
         }
         
         function _formatForms(forms) {
