@@ -1872,8 +1872,18 @@ jscs:requirePaddingNewLinesBeforeLineComments, requireTrailingComma
                     }
                 }
             };
-
+            _addToQuestionMap(question, orderField,  questionMap);
             return orderField;
+        }
+
+        function _addToQuestionMap(_question, _field, questionMap) {
+            if ('id' in _question) {
+                if (_question.id in questionMap) {
+                    questionMap[_question.id].push(_field);
+                } else {
+                    questionMap[_question.id] = [_field];
+                }
+            }
         }
 
         function initializeOrderGroupModel(orderModel, question) {
@@ -2811,9 +2821,24 @@ jshint -W106, -W052, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W0
                 hasOwnProperty(lastFound[key], 'schemaQuestion')) {
                     return lastFound[key].value;
                 }
+
+                if (typeof lastFound[key] === 'object' &&
+                 hasOwnProperty(lastFound[key], 'orders') && 
+               angular.isArray(lastFound[key].orders)) {
+                    return getSelectedOrders(lastFound[key]);
+                }
+
                 return lastFound[key];
             }
             return undefined;
+        }
+
+        function getSelectedOrders(orderSectionModel) {
+            var orderConcepts = [];
+            _.each(orderSectionModel.orders, function(order){
+                orderConcepts.push(order.concept)
+            });
+            return orderConcepts;
         }
 
         function getContainingObjectForQuestionKey(formlyModel, key) {
@@ -5201,24 +5226,25 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       
       _this.authenticated = function(value) {
         if(angular.isDefined(value)) {
-          authData.authenticated = value;
+          if(typeof value != 'boolean') {
+            authData = value;
+          } else {
+            authData.authenticated = value;
+          }
         } else {
           return authData.authenticated;
         }
       }
       
-      $rootScope.$on('authenticated', function(event, data) {
-        if(data.user) {
-          if(data.user.name) {
-            authData.user.name = data.user.name;
-          }
-        }
-        authData.authenticated = true;
-      });
-      
-      $rootScope.$on('deauthenticated', function() {
-        authData.authenticated = false;
-      });
+      _this.clearAuthentication = function() {
+        authData = {
+          user: {
+            name: null,
+          },
+          authenticated: false,
+          sessionId: null,
+        };
+      }
     }
 })();
 
@@ -6307,9 +6333,12 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             '<button type="button" class="btn btn-primary" ng-click="addingNew = true" >+ Order Test</button> ' +
             '</p> ' +
             '<div ng-show="addingNew">' +
-            '<select kendo-drop-down-list k-options="selectOptions"' +
-            'ng-model="$scope.selectedOrder" style="width: 100%;"></select>' +
-            '<button style="margin-top:4px;" type="button" class="btn btn-success" ng-click="addNew($scope.selectedOrder)" >Ok</button> ' +
+            'Choose test to order from the drop-down:' +
+            '<select kendo-drop-down-list k-select="onOrderSelected" k-data-value-field="selectOptions.dataValueField" ' +
+            'k-value-primitive="selectOptions.valuePrimitive" k-data-source="itemSource" k-data-text-field="selectOptions.dataTextField"' +
+            'ng-model="$scope.selectedOrder" style="width: 100%;">' +
+            '</select>' +
+            // '<button style="margin-top:4px;" type="button" class="btn btn-success" ng-click="addNew($scope.selectedOrder)" >Ok</button> ' +
             '<button style="margin-top:4px;" type="button" class="btn btn-default" ng-click="addingNew = false" >Cancel</button> ' +
             '</div>' +
             '</div> ' +
@@ -6324,15 +6353,24 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
 
                 $scope.selectedOrder = undefined;
 
+                $scope.itemSource = $scope.options.data.selectableOrders;
+
                 $scope.selectOptions = {
                     dataTextField: 'label',
                     dataValueField: 'concept',
-                    valuePrimitive: true,
-                    dataSource: $scope.options.data.selectableOrders
+                    valuePrimitive: true
+                };
+
+                $scope.onOrderSelected = function (e) {
+                    var val = this.dataItem(e.item);
+                    if (val)
+                        addNew(val.concept);
                 };
 
                 $scope.copyFields = copyFields;
                 $scope.getDisplayValue = getDisplayValue;
+
+                filterOutSelectedItems();
 
                 function getDisplayValue(orderConcept) {
                     var orders = $scope.options.data.selectableOrders;
@@ -6369,6 +6407,8 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
                     $log.log('order section');
                     var orderSectionModel = $scope.model[$scope.options.key].orders;
                     orderSectionModel.push($scope.to.createChildFieldModel(orderConcept));
+
+                    filterOutSelectedItems();
                     $scope.addingNew = false;
                 }
 
@@ -6378,6 +6418,30 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
                         $scope.model[$scope.options.key].orders.deletedOrders = [];
                     $scope.model[$scope.options.key].orders.deletedOrders.push(deletedOrder);
                     $scope.model[$scope.options.key].orders.splice($index, 1);
+                    filterOutSelectedItems();
+                }
+
+                function filterOutSelectedItems() {
+
+                    if (!Array.isArray($scope.model[$scope.options.key].orders) || $scope.model[$scope.options.key].orders.length === 0) {
+                        $scope.itemSource = $scope.options.data.selectableOrders;
+                        return;
+                    }
+
+                    var newItemSource = [];
+                    _.each($scope.options.data.selectableOrders, function (order) {
+                        var foundSelectedOrder;
+                        _.each($scope.model[$scope.options.key].orders, function (selectedOrder) {
+                            if (selectedOrder.concept === order.concept)
+                                foundSelectedOrder = selectedOrder;
+                        });
+
+                        if (foundSelectedOrder === undefined || foundSelectedOrder === null) {
+                            newItemSource.push(order);
+                        }
+                    });
+
+                    $scope.itemSource = newItemSource;
                 }
             }
         });
@@ -7657,6 +7721,7 @@ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106
             Array.prototype.push.apply(forms, values.components.value);
             CacheService.put('forms', forms);
             $scope.vm.existingForms = _formatForms(forms);
+            $scope.vm.errorFetchingForms = false;
             $scope.vm.busy = false;
           })
           .catch(function(err) {
@@ -8405,12 +8470,16 @@ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106
     'SessionResService',
     '$log',
     'AuthService',
-    '$window'
+    '$window',
+    'dialogs',
+    '$timeout'
   ]
   
   function UrlConfigController($rootScope, $scope, $http, $base64, $cookies,
-    OpenmrsSettings, sessionService, $log, AuthService, $window) {
+    OpenmrsSettings, sessionService, $log, AuthService, $window, dialogs,
+    $timeout) {
     var restSuffix = 'ws/rest/v1/';
+    var SESSION_TTL_MIN = 10;
     
     $scope.openmrsUrl = $window.localStorage.getItem('openmrsUrl');
     if($scope.openmrsUrl === null || $scope.openmrsUrl == undefined || 
@@ -8455,16 +8524,14 @@ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106
         OpenmrsSettings.setCurrentRestUrlBase(openmrsUrl + restSuffix);
         // Try to get session
         sessionService.getSession(function(data) {
-          $scope.authResult.authenticated = data.authenticated;
-          AuthService.authenticated(data.authenticated);
-          $cookies.put('sessionId',data.sessionId);
-          
-          // in case not authenticated
-          if(!data.authenticated) {
-            _setError(true, 'Invalid username and/or password')
-          } else {
-            // broadcast authentication event
+          if(data.authenticated) {
+            data.token = $base64.encode($scope.username + ':' + $scope.password);
+            $cookies.putObject('userSession', data, {
+              expires: _getSessionExpiryDate(SESSION_TTL_MIN),
+            });
             $rootScope.$broadcast('authenticated', data);
+          } else {
+            _setError(true, 'Invalid username and/or password');
           }
           $scope.busy = false;
         }, function(err) {
@@ -8478,23 +8545,104 @@ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106
     
     $scope.logout = function() {
       sessionService.deleteSession(function(response) {
-        $http.defaults.headers.common.Authorization = null;
+        _clearCredentials();
         $scope.authResult.authenticated = false;
         $scope.authResult.hasError = false;
-        AuthService.authenticated(false);
+        AuthService.clearAuthentication();
+        $cookies.remove('userSession')
         $rootScope.$broadcast('deauthenticated');
       });
     }
     
     function _setCredentials(username, password) {
-      $http.defaults.headers.common.Authorization = 'Basic ' + 
-        $base64.encode(username + ':' + password);
+      if(arguments.length == 1) {
+        var base64Credos = username;
+      } else {
+        var base64Credos = $base64.encode(username + ':' + password);
+      }
+      $http.defaults.headers.common.Authorization = 'Basic ' + base64Credos;
+      base64Credos = null;
     }
     
+    function _clearCredentials() {
+      $http.defaults.headers.common.Authorization = null;
+    }
+
     function _setError(status, message) {
       $scope.authResult.hasError = status;
       $scope.authResult.message = message;
     }
     
+    function _checkIfSessionActive() {
+      var authData = $cookies.getObject('userSession');
+      if(authData) {
+        _setCredentials(authData.token);
+        $log.log('Credentials are set here');
+        $rootScope.$broadcast('authenticated', authData);
+      }
+    }
+    
+    function _getSessionExpiryDate(minutes) {
+      var d = new Date();
+
+      var minutesToSet = d.getMinutes() + minutes;
+      if(minutesToSet>59) {
+        d.setHours(d.getHours() + Math.floor(minutesToSet/60));
+        d.setMinutes(minutesToSet%60);
+      } else {
+        d.setMinutes(minutesToSet);
+      }
+      return d;
+    }
+
+    function _sessionTimeout(timeout, prevTimeoutPromise) {
+      var canceledSuccessfully = true;
+      if(prevTimeoutPromise) {
+        canceledSuccessfully = $timeout.cancel(prevTimeoutPromise);
+      }
+      if(!AuthService.authenticated()) return;
+      if(canceledSuccessfully) {
+        return $timeout(function(){
+          var TIME_WARNING_ACTIVE = 15; //seconds
+          var message = 'Your session will expire in ' + TIME_WARNING_ACTIVE
+                      + ' seconds, Stay in?'
+
+          var dlg = dialogs.confirm('Session Timeout', message);
+          var start = new Date();
+          dlg.result.then(function(btn) {
+            var end = new Date();
+            var elapsed = Math.floor((end.getTime() - start.getTime())/1000);
+            $log.debug('Time elapsed ' + elapsed);
+            if(elapsed > 15) {
+              $scope.logout();
+              dialogs.error('Session Expired!', 'Login to proceed');
+            }
+          }, function(btn) {
+            $scope.logout();
+          });
+        }, timeout, false);
+      }
+    }
+
+    $scope.$on('authenticated', function(event, data) {
+      $scope.authResult.authenticated = data.authenticated;
+      AuthService.authenticated(data);
+
+      var timeout = SESSION_TTL_MIN * 60 * 1000;    // to ms
+      var prevTimeoutPromise = _sessionTimeout(timeout);
+
+      document.addEventListener('mousemove', function(event) {
+        var obj = $cookies.getObject('userSession') || data;
+        $cookies.putObject('userSession', obj, {
+          expires: _getSessionExpiryDate(SESSION_TTL_MIN),
+        });
+
+        prevTimeoutPromise = _sessionTimeout(timeout, prevTimeoutPromise);
+      }, true);
+    });
+
+    if(!AuthService.authenticated()) {
+      _checkIfSessionActive();
+    }
   }
 })();
