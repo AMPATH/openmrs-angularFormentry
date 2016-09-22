@@ -6,9 +6,10 @@
 <div class="panel-group" id="accordion">
   <div class="panel panel-default">
       <div class="panel-heading" data-toggle="collapse" data-parent="#accordion" href="#collapseOne">
-          <h4 class="panel-title">
-              OpenMRS Server Configurations
-          </h4>
+          OpenMRS Server Configurations
+          <span class="pull-right" ng-if="authenticated;">
+            <a ng-href="#/form/manage"><button class="btn btn-xs btn-primary">Go to Manage Forms</button></a> 
+          </span>
       </div>
       <div id="collapseOne" class="panel-collapse collapse in">
           <div class="panel-body">

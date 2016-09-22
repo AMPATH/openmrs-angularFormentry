@@ -24,6 +24,7 @@
     
     $scope.busy = true;
     $scope.hasError = false;
+    $scope.preSaveErrors = [];
     $scope.errors = [];
     // Edit variables
     $scope.editForm = {};
@@ -33,66 +34,120 @@
     // Load the form to be edited
     _initializeErrorAndBusyVariables();
     _loadForm($stateParams.formUuid);
-    
+
     $scope.busy = true;
     //Load encounter types [Leave error details intact]
     _loadEncounterTypes();
     
+    $scope.saveButtonText = 'Save Changes';
+
     $scope.aceLoadedView = function(_editor) {
       _editor.setReadOnly(true);
     };  
-    
+
+    $scope.$watch('editForm.retiredReason', function(newValue, oldValue) {
+      if(angular.isDefined(newValue) && newValue.length > 0) {
+        _removeRetiredReasonError();
+      }
+      else if ($scope.editForm.retired == true){
+        _addRetiredReasonError();
+      }
+    });
+
+    $scope.retiredChanged = function() {
+      if($scope.editForm.retired == true) {
+        $scope.saveButtonText = 'Retire Form/Component'
+        if(!$scope.editForm.retiredReason || $scope.editForm.retiredReason.length==0){
+            _addRetiredReasonError();
+        }
+      }
+      else {
+        $scope.editForm.retiredReason = '';
+        _removeRetiredReasonError();
+        if($scope.form.retired) {
+          $scope.saveButtonText = 'Unretire Form/Component';
+        }
+      }
+    };
+
     $scope.publishedChanged = function() {
       if($scope.editForm.published) {
         var title = 'Publishing';
         var message = 'Publishing the form will prevent any modifications '
                       + 'except for name & description.'
                       + ' Do you want to proceed?';
-        
+
       } else {
         var title = 'Unpublishing';
         var message = 'Unpublished a form/component may introduce changes '
                     + 'that may screw the data collected using it.'
                     + ' Do you want to proceed?';
       }
-      
+
       dialogs.confirm('Confirm ' + title, message).result.then(null, function(btn) {
         $scope.editForm.published = !$scope.editForm.published;
       });
     };
-    
+
     $scope.saveChanges = function() {
       _initializeErrorAndBusyVariables();
-      if($scope.editForm.schema.file) {
-        var reader = new FileReader();
-        reader.onload = function(event) {
-          var fileContent = event.target.result;
-          $log.debug('Done reading file: ', angular.fromJson(fileContent));
-          __handleUpdates(_createPayloads(fileContent));
-        };
-        reader.readAsText($scope.editForm.schema.file);
-      } else if($scope.editForm.schema.json) {
-        $log.debug('Updating using schema entered as text in editor');
-        __handleUpdates(_createPayloads($scope.editForm.schema.json));
-      } else {
-        // No schema business
-        __handleUpdates(_createPayloads(null));
+      if($scope.form.retired !== $scope.editForm.retired) {
+        if($scope.editForm.retired) {
+          var title = 'Retiring';
+          var message = 'You are about to retire this form. Retired '
+                        + 'form/component can not be edited. Are you sure '
+                        + 'you want to proceed?';
+          dialogs.confirm('Confirm ' + title, message).result.then(function(btn) {
+            FormResService.retireForm($scope.form.uuid, $scope.editForm.retiredReason)
+            .then(function(response) {
+              $log.debug('form ' + $scope.form.name + ' retired successfully');
+              $scope.busy = false;
+              $state.go('form.view', {formUuid: $scope.form.uuid, relative:false});
+            })
+            .catch(function(err) {
+              $log.error('Error Retiring form with uuid ' + $scope.form.uuid);
+              $log.error(err);
+              $scope.hasError = true;
+              $scope.error.push('An error occured while attempting to retire form');
+              $scope.busy = false;
+            });
+          }, function(btn) {
+            $scope.busy = false;
+          });
+        }
       }
-      
-      function __handleUpdates(payload) {
-        if(payload.hasChanges) {
-          _updateForm(payload);
+      else {
+        var __handleUpdates = function(payload) {
+          if(payload.hasChanges) {
+            _updateForm(payload);
+          } else {
+            $scope.busy = false;
+            dialogs.notify('Updates', 'Nothing to update');
+          }
+        };
+        
+        if($scope.editForm.schema.file) {
+          var reader = new FileReader();
+          reader.onload = function(event) {
+            var fileContent = event.target.result;
+            $log.debug('Done reading file: ', angular.fromJson(fileContent));
+            __handleUpdates(_createPayloads(fileContent));
+          };
+          reader.readAsText($scope.editForm.schema.file);
+        } else if($scope.editForm.schema.json) {
+          $log.debug('Updating using schema entered as text in editor');
+          __handleUpdates(_createPayloads($scope.editForm.schema.json));
         } else {
-          $scope.busy = false;
-          dialogs.notify('Updates', 'Nothing to update');
+          // No schema business
+          __handleUpdates(_createPayloads(null));
         }
       }
     };  
-    
+
     $scope.changeViewToEdit = function() {
-      $state.go('form-edit', {formUuid: $stateParams.formUuid,relative: false});
+      $state.go('form.edit', {formUuid: $stateParams.formUuid,relative: false});
     };
-    
+
     function _createPayloads(newJsonSchema) {
       var ret = {
         hasChanges: false,
@@ -102,34 +157,41 @@
           action: false
         }
       };
-      
+
       if($scope.form.name !== $scope.editForm.name) {
         ret.formPayload.name = $scope.editForm.name;
         ret.hasChanges = ret.someFormFieldChanged = true;
         
       }
-      
+
       if($scope.form.description !== $scope.editForm.description) {
         ret.formPayload.description = $scope.editForm.description;
         ret.hasChanges = ret.someFormFieldChanged = true;
       }
-      
+
       if($scope.form.published !== $scope.editForm.published) {
         ret.formPayload.published = $scope.editForm.published;
         ret.hasChanges = ret.someFormFieldChanged = true;
       }
-      
+
+      if($scope.form.retired !== $scope.editForm.retired) {
+        if($scope.editForm.retired == false) {
+          ret.formPayload.retired = $scope.editForm.retired;
+          ret.hasChanges = ret.someFormFieldChanged = true;
+        }
+      }
+
       if(!$scope.form.published) {
         if($scope.form.version !== $scope.editForm.version) {
           ret.formPayload.version = $scope.editForm.version;
           ret.hasChanges = ret.someFormFieldChanged = true;
         }
-        
+
         if($scope.form.encounterTypeUuid !== $scope.editForm.encounterTypeUuid) {
           ret.formPayload.encounterType = $scope.editForm.encounterTypeUuid;
           ret.hasChanges = ret.someFormFieldChanged = true;
         }
-        
+
         // Deal with resource if changed. (Make sure you compare apples to apples)
         var ___updateSchemaStuff = function() {
           ret.hasChanges = true;
@@ -172,7 +234,7 @@
     
     function _updateForm(payLoadData) {
       if(!payLoadData.hasChanges) return;
-      
+
       var __updateResourceAndForm = function() {
         FormResService.uploadFormResource(payLoadData.schema.file)
         .then(function(response) {
@@ -227,6 +289,7 @@
         __updateResourceAndForm();
       } else {
         //no action for schema
+        $log.debug('Form payload ', payLoadData.formPayload);
         FormResService.updateForm($scope.form.uuid, payLoadData.formPayload)
         .then(function(updatedForm) {
           $log.debug('Reloading form after editing');
@@ -266,21 +329,37 @@
         $log.debug('Fetched form: ', form);
         $scope.form = form;
         $scope.form.schema = null;
-        if(form.published) {
-          form.publishedText = 'Yes';
-          form.publishedCssClass = 'success';
-        } else {
-          form.publishedText = 'No';
-          form.publishedCssClass = 'danger';
+        if($scope.form.published) {
+          $scope.form.publishedText = 'Yes';
+          $scope.form.publishedCssClass = 'success';
         }
-        if(form.resources) {
+        else {
+          $scope.form.publishedText = 'No';
+          $scope.form.publishedCssClass = 'danger';
+        }
+        $log.debug('Retired value: ', $scope.form.retired);
+        if($scope.form.retired) {
+          $scope.form.retiredText = 'Yes';
+          $scope.form.retiredCssClass = 'warning';
+          if($scope.form.retiredReason == undefined) {
+            if($scope.form.auditInfo.retireReason) {
+              $scope.form.retiredReason = $scope.form.auditInfo.retireReason;
+            }
+          }
+        }
+        else {
+          $scope.form.retiredText = 'No';
+          $scope.form.retiredCssClass = 'success';
+        }
+        
+        if($scope.form.resources) {
           $scope.form.schema = {};
-          $log.debug('Finding json schema for form ' + form.name);
-          var resource = FormManagerUtil.findResource(form.resources);
+          $log.debug('Finding json schema for form ' + $scope.form.name);
+          var resource = FormManagerUtil.findResource($scope.form.resources);
           if(resource === undefined) {
             $log.debug('Resource not found using "AmpathJsonSchema" dataType,'
              + ' trying name "JSON Schema" ');
-             resource = FormManagerUtil.findResource(form.resources, 'JSON schema');
+             resource = FormManagerUtil.findResource($scope.form.resources, 'JSON schema');
           }
           
           if(resource !== undefined) {
@@ -346,5 +425,24 @@
     function _displayUpdateSuccessDialog() {
       dialogs.notify('Form Edits', 'Hoorraa! Form successfully updated');
     }
+    
+    function _addRetiredReasonError() {
+      $scope.preSaveErrors.push({
+        name: 'retiredReasonError',
+        error: 'Provide reason for retiring!'
+      });
+    }
+    
+    function _removeRetiredReasonError() {
+      do {
+        var index = _.findIndex($scope.preSaveErrors, function(error) {
+          return error.name === 'retiredReasonError';
+        });
+        
+        if(index != -1) {
+          $scope.preSaveErrors.splice(index, 1);
+        }
+      } while (index != -1);
+    } 
   }
 })();

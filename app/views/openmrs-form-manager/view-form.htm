@@ -2,7 +2,12 @@
   <strong>Warning: There were errors loading this page!</strong>
   <p ng-repeat="error in errors"> {{error}}</p>
 </div>
-
+<div ng-if="form.retired && !busy && !hasError" class="alert alert-danger">
+  <strong>Retired Form/Component</strong>
+  <p>It is retained for historical/reporting/analysis purposes. As a result
+  editing is purposely disabled</p>
+</div>
+  
 <span ng-show="busy">Loading...<img src="images/ajax-loader.gif"/></span>
 
 <div class="panel-group" id="accordion" ng-if="!busy && !hasError">
@@ -10,7 +15,9 @@
     <div class="panel-heading">
       Form Details
       <span class="pull-right">
-        <a ng-href="#/form/edit/{{::form.uuid}}"><button class="btn btn-xs btn-primary">Edit</button></a>
+        <a ng-href="#/form/edit/{{::form.uuid}}" ng-if="!form.retired">
+          <button class="btn btn-xs btn-primary">Edit</button>
+        </a>
         <a ng-href="#/form/manage"><button class="btn btn-xs btn-primary">Go to Manage Forms</button></a> 
       </span>
     </div>
@@ -24,9 +31,30 @@
           <th>Published</th>
           <td>
             <span class="label label-{{::form.publishedCssClass}}">
-            {{::form.publishedText}}
-          </span>
-        </td>
+              {{::form.publishedText}}
+            </span>
+          </td>
+        </tr>
+        <tr>
+          <th>Retired</th>
+          <td>
+            <span class="label label-{{::form.retiredCssClass}}">
+              {{::form.retiredText}}
+            </span>
+          </td>
+        </tr>
+        <tr ng-if="form.retired">
+          <th>Reason Retired</th>
+          <td>{{::form.retiredReason}}</td>
+        </tr>
+        <tr ng-if="form.retired">
+          <th>Date Retired</th>
+          <td>{{::form.auditInfo.dateChanged | date: "dd-MM-yyyy"}}</td>
+        </tr>
+        <tr ng-if="form.retired">
+          <th>Retired By</th>
+          <td>{{::form.auditInfo.retiredBy.display}}</td>
+        </tr>
         <tr>
           <th>Encounter Type</th>
           <td>{{::form.encounterTypeName}}</td>
