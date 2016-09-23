@@ -18,6 +18,17 @@
               },
               squash: true
             }
+          },
+          controller: function($scope, AuthService) {
+            $scope.authenticated = AuthService.authenticated();
+              
+            $scope.$on('authenticated', function() {
+              $scope.authenticated = true;
+            });
+            
+            $scope.$on('deauthenticated', function() {
+              $scope.authenticated = false;
+            });
           }
         })
         .state('form', {
