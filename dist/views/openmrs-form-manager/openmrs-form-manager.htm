@@ -1,36 +1,9 @@
-<div class="breadcrumb">
-  <h3>OpenMRS Form Manamegement Tool</h3>
-  <p>Lets you do all cool stuff, but you will need access to openmrs backend.
-  If you just want to play with forms, go to Form Editor</p>
-</div>
-<div class="panel-group" id="accordion">
-  <div class="panel panel-default">
-      <div class="panel-heading" data-toggle="collapse" data-parent="#accordion" href="#collapseOne">
-          <h4 class="panel-title">
-              OpenMRS Server Configurations
-          </h4>
-      </div>
-      <div id="collapseOne" class="panel-collapse collapse in">
-          <div class="panel-body">
-              <server-url-config></server-url-config>
-          </div>
-      </div>
+<div class="panel panel-info" style="padding:4px;" data-ng-if="!vm.errorFetchingForms && !vm.busy">
+  <div class="panel panel-heading">
+    Forms List <input type="checkbox" ng-model="vm.excludeRetired"> Exclude Retired
+    <a ng-href="#/form/create"><button class="btn btn-xs btn-primary pull-right">Create Form/Component</button></a>
   </div>
-</div>   
- 
-<div class="panel panel-info" style="padding:4px;" data-ng-if="!vm.errorFetchingForms && !vm.busy && vm.authenticated">
-  <div class="panel panel-danger" data-ng-show="vm.errors.length>0">
-    <div><h3 style="margin-left:4px; margin-top: 0px" class="text-danger">LIST OF FIELDS WITH ERRORS</h3></div>
-    <div style="margin-left:4px; margin-top: 0px" data-ng-repeat="e in vm.errors" data-ng-show="vm.errors.length>0">
-      <span class="text-primary"><i class="glyphicon glyphicon-zoom-in"></i> {{e.id}} </span>
-      <br/>
-        <span >
-          {{e.error}}
-        </span>
-    </div>
-  </div>
-  
-  <div class="table-responsive">
+  <div class="table-responsive" ng-if="vm.existingForms.length>0">
   <input ng-model="vm.query" id="search" class="form-control" placeholder="Filter"/>
   <table id="form-table" class="table table-bordered table-striped">
     <thead>
@@ -44,7 +17,9 @@
       </tr>
     </thead>
     <tbody>
-      <tr data-ng-repeat="form in vm.existingForms | filter:vm.query" data-ng-click="setSelected(form);">
+      <tr data-ng-repeat="form in vm.existingForms | filter:vm.query" 
+        data-ng-click="setSelected(form);"
+        ng-class="{retired: form.retired}" ng-hide="vm.excludeRetired && form.retired">
         <td>
           {{form.name}}
         </td>
@@ -53,23 +28,28 @@
           <span class="label label-{{form.publishedCssClass}}">{{form.publishedText}}</span>
         </td>
         <td>
-          <p ng-show="form.published">None (Published)</p>
-          <input ng-show="!form.published" type="file" file-model="form.schema"/>
+          <p ng-show="form.published && !form.retired">None (Published)</p>
+          <p ng-show="form.retired" style="color:red;">Retired</p>
+          <input ng-hide="form.published || form.retired" type="file" file-model="form.schema"/>
           <button class="btn btn-default" ng-disable="form.schema == null" 
-          ng-show="!form.published && !form.hasSchema" ng-click="uploadSchema(form);">
+          ng-if="!form.published && !form.hasSchema && !form.retired" ng-click="uploadSchema(form);">
           Upload
           </button>
           <button class="btn btn-warning" ng-disable="form.schema == null" 
-          ng-show="!form.published && form.hasSchema" ng-click="updateSchema(form);">
+          ng-if="!form.published && form.hasSchema && !form.retired" ng-click="updateSchema(form);">
           Update
           </button>
           <img ng-show="form.busy && !form.published" src="images/ajax-loader.gif"/>
         </td>
         <td>
-          <button class="btn btn-primary" ng-click="viewForm(form);">View</button>
+          <button class="btn btn-primary" ng-click="viewForm(form);">
+            <span class="glyphicon glyphicon-eye-open"></span>
+          </button>
         </td>
         <td>
-          <button class="btn btn-warning" ng-click="editForm(form);">Edit</button>
+          <button class="btn btn-warning" ng-click="editForm(form);" ng-if="!form.retired">
+            <span class="glyphicon glyphicon-edit"></span>
+          </button>
         </td>
       </tr>
     </tbody>
@@ -77,8 +57,8 @@
   </div>
 </div>
 
-<div ng-show="vm.authenticated">
-  <button class="btn btn-default" ng-click="createForm();">Create Form/Component</button>
+<div>
+  <a ng-href="#/form/create"><button class="btn btn-default">Create Form/Component</button></a>
 </div>
 <script>
  $(document).ready(function() {
