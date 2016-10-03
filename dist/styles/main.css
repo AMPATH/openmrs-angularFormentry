@@ -83,3 +83,15 @@ body {
     border-bottom: 0;
   }
 }
+
+/* This are for form list table*/
+.retired {
+  background-color: #ff6633;
+  border-style: dashed;
+  border-color: black;
+  border-width: thick;
+}
+.error_border {
+  border-color: red;
+  border-width: medium;
+}

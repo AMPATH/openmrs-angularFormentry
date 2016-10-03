@@ -122,6 +122,96 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
     .module('app.openmrsFormManager', [
       'openmrs.RestServices'
     ])
+    .config(function($stateProvider) {
+      $stateProvider
+        .state('openmrs-authenticate', {
+          url: '/openmrs/authenticate',
+          templateUrl: 'views/openmrs-form-manager/authentication.htm',
+          params: {
+            redirectTo: {
+              value: {
+                state: 'form.manage',
+                stateParams: null,
+              },
+              squash: true
+            }
+          },
+          controller: function($scope, AuthService) {
+            $scope.authenticated = AuthService.authenticated();
+              
+            $scope.$on('authenticated', function() {
+              $scope.authenticated = true;
+            });
+            
+            $scope.$on('deauthenticated', function() {
+              $scope.authenticated = false;
+            });
+          }
+        })
+        .state('form', {
+          abstract: true,
+          templateUrl: 'views/openmrs-form-manager/header.htm',
+          data: {
+            requireLogin: true
+          }
+        })
+        .state('form.manage', {
+          url: '/form/manage',
+          views: {
+            'form-content@form': {
+              templateUrl: 'views/openmrs-form-manager/openmrs-form-manager.htm',
+              controller: 'OpenmrsFormManagerCtrl'
+            }
+          }
+        })
+        .state('form.create', {
+          url: '/form/create',
+          views: {
+            'form-content@form': {
+              templateUrl: 'views/openmrs-form-manager/create-form.htm',
+              controller: 'CreateFormCtrl'
+            }
+          }
+        })
+        .state('form.view', {
+          url: '/form/view/:formUuid',
+          views: {
+            'form-content@form': {
+              templateUrl: 'views/openmrs-form-manager/view-form.htm',
+              controller: 'ViewEditFormCtrl'
+            }
+          }
+        })
+        .state('form.edit', {
+          url: '/form/edit/:formUuid',
+          views: {
+            'form-content@form': {
+              templateUrl: 'views/openmrs-form-manager/edit-form.htm',
+              controller: 'ViewEditFormCtrl',
+            }
+          }
+        });
+    })
+    .run(function($rootScope, $state, AuthService) {
+      $rootScope.$on('$stateChangeStart', function(event, toState, toParams) {
+        if(toState.data && toState.data.requireLogin) {
+          if(!AuthService.authenticated()) {
+            event.preventDefault();
+            if(toState) {
+              var params = {
+                redirectTo: {
+                  state: toState.name,
+                  stateParams:toParams,
+                }
+              };
+              $state.go('openmrs-authenticate', params);
+            } else {
+              $state.go('openmrs-authenticate');
+            }
+          }
+        }
+      })
+    })
     .run(function(formlyConfig) {
       formlyConfig.setType({
         name:'aceJsonEditor',
@@ -217,11 +307,6 @@ angular
     $translateProvider.preferredLanguage('en-US');
     
     $stateProvider
-        .state('form-management', {
-          url: '/',
-          templateUrl: 'views/openmrs-form-manager/openmrs-form-manager.htm',
-          controller: 'OpenmrsFormManagerCtrl'
-        })
         .state('about', {
           url: '/about',
           templateUrl: 'views/about.html',
@@ -231,21 +316,6 @@ angular
           url: '/recursive-test',
           templateUrl: 'views/form-editor.html',
           controller: 'EditorCtrl'
-        })
-        .state('form-create', {
-          url: '/form/create',
-          templateUrl: 'views/openmrs-form-manager/create-form.htm',
-          controller: 'CreateFormCtrl'
-        })
-        .state('form-view', {
-          url: '/form/view/:formUuid',
-          templateUrl: 'views/openmrs-form-manager/view-form.htm',
-          controller: 'ViewEditFormCtrl'
-        })
-        .state('form-edit', {
-          url: '/form/edit/:formUuid',
-          templateUrl: 'views/openmrs-form-manager/edit-form.htm',
-          controller: 'ViewEditFormCtrl'
         });
   });
 
@@ -4368,7 +4438,8 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             getFormSchema: getFormSchema,
             getTestEncounterData: getTestEncounterData,
             getServerUrl: getServerUrl,
-            getFormSchemaReferences: getFormSchemaReferences
+            getFormSchemaReferences: getFormSchemaReferences,
+            getSessionExpiryDate: getSessionExpiryDate
         };
 
         return service;
@@ -4507,6 +4578,19 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
             console.log('converted', momented);
             console.log('converted formatted', momented.format(format));
             return momented.format(format);
+        }
+        
+        function getSessionExpiryDate(minutes) {
+          var d = new Date();
+
+          var minutesToSet = d.getMinutes() + minutes;
+          if(minutesToSet>59) {
+            d.setHours(d.getHours() + Math.floor(minutesToSet/60));
+            d.setMinutes(minutesToSet%60);
+          } else {
+            d.setMinutes(minutesToSet);
+          }
+          return d;
         }
     }
 })();
@@ -5211,10 +5295,18 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
       .service('AuthService', AuthService);
     
     AuthService.$inject = [
-      '$rootScope'
+      '$rootScope',
+      '$http',
+      '$base64',
+      '$cookies',
+      '$state',
+      'SessionResService',
+      'FormentryUtilService'
     ];
     
-    function AuthService($rootScope) {
+    function AuthService($rootScope, $http, $base64, $cookies, $state,
+      sessionService, utilService) {
+
       var _this = this;
       var authData = {
         user: {
@@ -5223,7 +5315,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
         authenticated: false,
         sessionId: null,
       };
-      
+
       _this.authenticated = function(value) {
         if(angular.isDefined(value)) {
           if(typeof value != 'boolean') {
@@ -5235,7 +5327,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
           return authData.authenticated;
         }
       }
-      
+
       _this.clearAuthentication = function() {
         authData = {
           user: {
@@ -5244,7 +5336,34 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
           authenticated: false,
           sessionId: null,
         };
-      }
+      };
+
+      _this.setCredentials = function(username, password) {
+        if(arguments.length == 1) {
+          var base64Credos = username;
+        } else {
+          var base64Credos = $base64.encode(username + ':' + password);
+        }
+        $http.defaults.headers.common.Authorization = 'Basic ' + base64Credos;
+        base64Credos = null;
+      };
+
+      _this.clearCredentials = function() {
+        $http.defaults.headers.common.Authorization = null;
+      };
+
+      _this.logout = function() {
+        $cookies.putObject('userSession', {authenticated:false}, { 
+          expires: utilService.getSessionExpiryDate(1),
+        });
+        sessionService.deleteSession(function(response) {
+          _this.clearCredentials();
+          _this.clearAuthentication();
+          $rootScope.$broadcast('deauthenticated');
+          $state.go('openmrs-authenticate');
+        });
+      };
+
     }
 })();
 
@@ -5259,9 +5378,7 @@ jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLi
     
     function CacheService() {
       var _this = this;
-      var cache = {
-        forms: []
-      };
+      var cache = {};
       
       // will replace already existing value
       _this.put = function(name, value) {
@@ -6298,154 +6415,156 @@ jshint -W106, -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W116, -W069, -W0
 /*
 jscs:disable disallowMixedSpacesAndTabs, requireDotNotation, requirePaddingNewLinesBeforeLineComments, requireTrailingComma
 */
-(function () {
-    'use strict';
+(function() {
+  'use strict';
 
-    var mod =
-        angular
-            .module('openmrs.angularFormentry');
+  var mod =
+    angular
+    .module('openmrs.angularFormentry');
 
-    mod.run(function config(formlyConfig) {
-        formlyConfig.setType({
-            name: 'orderSection',
-            template: '<div class="panel panel-default"> ' +
-            '<div class="panel-heading"> ' +
-            '{{to.label}}' +
-            '</div> ' +
-            '<div class="panel-body"> ' +
-            // <!--loop through each element in model array-->
-            '<div class="{{hideRepeat}}"> ' +
-            '<div class="repeatsection" ng-repeat="element in model[options.key].orders" ' +
-            'ng-init="fields = copyFields(to.fields)"> ' +
-            '<span>{{$parent.getDisplayValue(element.concept)}}</span></br>' +
-            '<span ng-if="element.orderNumber" class="text-success">{{"#: " + element.orderNumber}}</span>' +
-            // '<formly-form fields="fields" ' +
-            // 'model="element" bind-name="\'formly_ng_repeat\' + index + $parent.$index"> ' +
-            // '</formly-form> ' +
-            '<p ng-hide="element.orderNumber"> ' +
-            '<button type="button" class="btn btn-sm btn-danger" ng-hide="element.orderNumber" ng-click="deleteField($index)"> ' +
-            'Remove' +
-            '</button> ' +
-            '</p> ' +
-            '<hr> ' +
-            '</div> ' +
-            '<p class="AddNewButton" ng-hide="addingNew"> ' +
-            '<button type="button" class="btn btn-primary" ng-click="addingNew = true" >+ Order Test</button> ' +
-            '</p> ' +
-            '<div ng-show="addingNew">' +
-            'Choose test to order from the drop-down:' +
-            '<select kendo-drop-down-list k-select="onOrderSelected" k-data-value-field="selectOptions.dataValueField" ' +
-            'k-value-primitive="selectOptions.valuePrimitive" k-data-source="itemSource" k-data-text-field="selectOptions.dataTextField"' +
-            'ng-model="$scope.selectedOrder" style="width: 100%;">' +
-            '</select>' +
-            // '<button style="margin-top:4px;" type="button" class="btn btn-success" ng-click="addNew($scope.selectedOrder)" >Ok</button> ' +
-            '<button style="margin-top:4px;" type="button" class="btn btn-default" ng-click="addingNew = false" >Cancel</button> ' +
-            '</div>' +
-            '</div> ' +
-            '</div>',
-            controller: function ($scope, $log, CurrentLoadedFormService) {
-                //$scope.formOptions = { formState: $scope.formState };
+  mod.run(function config(formlyConfig) {
+    formlyConfig.setType({
+      name: 'orderSection',
+      template: '<div class="panel panel-default"> ' +
+        '<div class="panel-heading"> ' +
+        '{{to.label}}' +
+        '</div> ' +
+        '<div class="panel-body"> ' +
+        // <!--loop through each element in model array-->
+        '<div class="{{hideRepeat}}"> ' +
+        '<div class="repeatsection" ng-repeat="element in model[options.key].orders" ' +
+        'ng-init="fields = copyFields(to.fields)"> ' +
+        '<span>{{$parent.getDisplayValue(element.concept)}}</span></br>' +
+        '<span ng-if="element.orderNumber" class="text-success">{{"#: " + element.orderNumber}}</span>' +
+        // '<formly-form fields="fields" ' +
+        // 'model="element" bind-name="\'formly_ng_repeat\' + index + $parent.$index"> ' +
+        // '</formly-form> ' +
+        '<p ng-hide="element.orderNumber"> ' +
+        '<button type="button" class="btn btn-sm btn-danger" ng-hide="element.orderNumber" ng-click="deleteField($index)"> ' +
+        'Remove' +
+        '</button> ' +
+        '</p> ' +
+        '<hr> ' +
+        '</div> ' +
+        '<p class="AddNewButton" ng-hide="addingNew"> ' +
+        '<button type="button" class="btn btn-primary" ng-click="addingNew = true" >+ Order Test</button> ' +
+        '</p> ' +
+        '<div ng-show="addingNew">' +
+        'Choose test to order from the drop-down:' +
+        '<select kendo-drop-down-list k-select="onOrderSelected" k-data-value-field="selectOptions.dataValueField" ' +
+        'k-value-primitive="selectOptions.valuePrimitive" k-auto-bind="autoBind" k-filter="contains" k-data-source="itemSource" k-data-text-field="selectOptions.dataTextField"' +
+        'ng-model="$scope.selectedOrder" style="width: 100%;">' +
+        '</select>' +
+        // '<button style="margin-top:4px;" type="button" class="btn btn-success" ng-click="addNew($scope.selectedOrder)" >Ok</button> ' +
+        '<button style="margin-top:4px;" type="button" class="btn btn-default" ng-click="addingNew = false" >Cancel</button> ' +
+        '</div>' +
+        '</div> ' +
+        '</div>',
+      controller: function($scope, $log, CurrentLoadedFormService) {
+        //$scope.formOptions = { formState: $scope.formState };
 
-                $scope.addingNew = false;
+        $scope.addingNew = false;
 
-                $scope.addNew = addNew;
-                $scope.deleteField = deleteField;
+        $scope.addNew = addNew;
+        $scope.deleteField = deleteField;
+        $scope.autoBind = false;
 
-                $scope.selectedOrder = undefined;
+        $scope.contains = 'contains';
+        $scope.selectedOrder = undefined;
 
-                $scope.itemSource = $scope.options.data.selectableOrders;
+        $scope.itemSource = $scope.options.data.selectableOrders;
 
-                $scope.selectOptions = {
-                    dataTextField: 'label',
-                    dataValueField: 'concept',
-                    valuePrimitive: true
-                };
+        $scope.selectOptions = {
+          dataTextField: 'label',
+          dataValueField: 'concept',
+          valuePrimitive: true
+        };
 
-                $scope.onOrderSelected = function (e) {
-                    var val = this.dataItem(e.item);
-                    if (val)
-                        addNew(val.concept);
-                };
+        $scope.onOrderSelected = function(e) {
+          var val = this.dataItem(e.item);
+          if (val)
+            addNew(val.concept);
+        };
 
-                $scope.copyFields = copyFields;
-                $scope.getDisplayValue = getDisplayValue;
+        $scope.copyFields = copyFields;
+        $scope.getDisplayValue = getDisplayValue;
 
-                filterOutSelectedItems();
+        filterOutSelectedItems();
 
-                function getDisplayValue(orderConcept) {
-                    var orders = $scope.options.data.selectableOrders;
-                    for (var i = 0; i < orders.length; i++) {
-                        if (orders[i].concept === orderConcept)
-                            return orders[i].label;
-                    }
+        function getDisplayValue(orderConcept) {
+          var orders = $scope.options.data.selectableOrders;
+          for (var i = 0; i < orders.length; i++) {
+            if (orders[i].concept === orderConcept)
+              return orders[i].label;
+          }
+        }
+
+        function copyFields(fields) {
+          var copy = angular.copy(fields);
+          addFieldsToQuestionMap(copy);
+          return copy;
+        }
+
+        function addFieldsToQuestionMap(groups) {
+
+          _.each(groups, function(group) {
+            _.each(group.fieldGroup, function(field) {
+              var id = field.data.id;
+              if (!_.isEmpty(id)) {
+                if (id in CurrentLoadedFormService.questionMap) {
+                  CurrentLoadedFormService.questionMap[id].push(field);
+                } else {
+                  CurrentLoadedFormService.questionMap[id] = [field];
                 }
+              }
+            });
+          });
+        }
 
-                function copyFields(fields) {
-                    var copy = angular.copy(fields);
-                    addFieldsToQuestionMap(copy);
-                    return copy;
-                }
+        function addNew(orderConcept) {
+          //$scope.model[$scope.options.key] = $scope.model[$scope.options.key] || [];
+          $log.log('order section');
+          var orderSectionModel = $scope.model[$scope.options.key].orders;
+          orderSectionModel.push($scope.to.createChildFieldModel(orderConcept));
 
-                function addFieldsToQuestionMap(groups) {
+          filterOutSelectedItems();
+          $scope.addingNew = false;
+        }
 
-                    _.each(groups, function (group) {
-                        _.each(group.fieldGroup, function (field) {
-                            var id = field.data.id;
-                            if (!_.isEmpty(id)) {
-                                if (id in CurrentLoadedFormService.questionMap) {
-                                    CurrentLoadedFormService.questionMap[id].push(field);
-                                } else {
-                                    CurrentLoadedFormService.questionMap[id] = [field];
-                                }
-                            }
-                        });
-                    });
-                }
+        function deleteField($index) {
+          var deletedOrder = $scope.model[$scope.options.key].orders[$index];
+          if (!$scope.model[$scope.options.key].orders.deletedOrders)
+            $scope.model[$scope.options.key].orders.deletedOrders = [];
+          $scope.model[$scope.options.key].orders.deletedOrders.push(deletedOrder);
+          $scope.model[$scope.options.key].orders.splice($index, 1);
+          filterOutSelectedItems();
+        }
 
-                function addNew(orderConcept) {
-                    //$scope.model[$scope.options.key] = $scope.model[$scope.options.key] || [];
-                    $log.log('order section');
-                    var orderSectionModel = $scope.model[$scope.options.key].orders;
-                    orderSectionModel.push($scope.to.createChildFieldModel(orderConcept));
+        function filterOutSelectedItems() {
 
-                    filterOutSelectedItems();
-                    $scope.addingNew = false;
-                }
+          if (!Array.isArray($scope.model[$scope.options.key].orders) || $scope.model[$scope.options.key].orders.length === 0) {
+            $scope.itemSource = $scope.options.data.selectableOrders;
+            return;
+          }
 
-                function deleteField($index) {
-                    var deletedOrder = $scope.model[$scope.options.key].orders[$index];
-                    if (!$scope.model[$scope.options.key].orders.deletedOrders)
-                        $scope.model[$scope.options.key].orders.deletedOrders = [];
-                    $scope.model[$scope.options.key].orders.deletedOrders.push(deletedOrder);
-                    $scope.model[$scope.options.key].orders.splice($index, 1);
-                    filterOutSelectedItems();
-                }
+          var newItemSource = [];
+          _.each($scope.options.data.selectableOrders, function(order) {
+            var foundSelectedOrder;
+            _.each($scope.model[$scope.options.key].orders, function(selectedOrder) {
+              if (selectedOrder.concept === order.concept)
+                foundSelectedOrder = selectedOrder;
+            });
 
-                function filterOutSelectedItems() {
-
-                    if (!Array.isArray($scope.model[$scope.options.key].orders) || $scope.model[$scope.options.key].orders.length === 0) {
-                        $scope.itemSource = $scope.options.data.selectableOrders;
-                        return;
-                    }
-
-                    var newItemSource = [];
-                    _.each($scope.options.data.selectableOrders, function (order) {
-                        var foundSelectedOrder;
-                        _.each($scope.model[$scope.options.key].orders, function (selectedOrder) {
-                            if (selectedOrder.concept === order.concept)
-                                foundSelectedOrder = selectedOrder;
-                        });
-
-                        if (foundSelectedOrder === undefined || foundSelectedOrder === null) {
-                            newItemSource.push(order);
-                        }
-                    });
-
-                    $scope.itemSource = newItemSource;
-                }
+            if (foundSelectedOrder === undefined || foundSelectedOrder === null) {
+              newItemSource.push(order);
             }
-        });
+          });
+
+          $scope.itemSource = newItemSource;
+        }
+      }
     });
+  });
 })();
 
 /*
@@ -7698,18 +7817,10 @@ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106
         $scope.vm.errors = [];
         $scope.vm.existingForms = null;
         $scope.vm.errorFetchingForms = false;
-        $scope.vm.authenticated = AuthService.authenticated();
         
-        if(AuthService.authenticated()) {
-          $scope.vm.existingForms = _formatForms(CacheService.get('forms'));
-          if(!$scope.vm.existingForms) {
-            $rootScope.$broadcast('authenticated');
-          } else {
-            $scope.vm.busy = false;
-          }
-        }
+        _findDesiredForms();
         
-        $scope.findDesiredForms = function() {
+        function _findDesiredForms() {
           $scope.vm.busy = true;
           var desired = {
             pocForms: FormResService.findPocForms('POC'),
@@ -7728,17 +7839,7 @@ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106
             $scope.vm.errorFetchingForms = err;
             $scope.vm.busy = false;
           });
-        };
-        
-        $scope.$on('deauthenticated', function() {
-          $scope.existingForms = null;
-          $scope.vm.authenticated = false;
-        });
-        
-        $scope.$on('authenticated', function(event, args) {
-          $scope.findDesiredForms();
-          $scope.vm.authenticated = true;
-        }); 
+        };      
         
         $scope.updateSchema = function(form) {
           var dialog = dialogs.confirm('Schema Exists', 'Schema already exists for ' 
@@ -7818,15 +7919,15 @@ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106
         }
         
         $scope.createForm = function() {
-          $state.go('form-create', {relative:false});
+          $state.go('form.create', {relative:false});
         };
 
         $scope.viewForm = function(form) {
-          $state.go('form-view', {formUuid: form.uuid,relative:false});
+          $state.go('form.view', {formUuid: form.uuid,relative:false});
         }
         
         $scope.editForm = function(form) {
-          $state.go('form-edit', {formUuid: form.uuid,relative: false});
+          $state.go('form.edit', {formUuid: form.uuid,relative: false});
         }
         
         function _formatForms(forms) {
@@ -7897,24 +7998,12 @@ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106
     
     function CreateFormCtrl($scope, $rootScope, FormResService, AuthService,
       encService, $log, dialogs) {
-            
-      $scope.$on('authenticated', function() {
-        $scope.authenticated = true;
-        $scope.busy = true;
-        _addEncounterTypesOptionIfFound();
-      });
-      
-      $scope.$on('deauthenticated', function() {
-        $scope.authenticated = false;
-      });
       
       $scope.options = {
         resetModel: function() {
           $scope.model = {};
         }
       };
-      
-      $scope.authenticated = AuthService.authenticated();
       
       $scope.model = {};
       
@@ -8102,20 +8191,9 @@ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106
     FormManagerUtil, encService, AuthService, dialogs) {
     $log.debug('Loading form from openmrs for form uuid: ' + $stateParams.formUuid);
     
-    $scope.authenticated = AuthService.authenticated();
-    
-    $scope.$on('authenticated', function() {
-      $scope.authenticated = true;
-      $scope.busy = true;
-      _loadEncounterTypes();
-    });
-    
-    $scope.$on('deauthenticated', function() {
-      $scope.authenticated = false;
-    });
-    
     $scope.busy = true;
     $scope.hasError = false;
+    $scope.preSaveErrors = [];
     $scope.errors = [];
     // Edit variables
     $scope.editForm = {};
@@ -8125,66 +8203,120 @@ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106
     // Load the form to be edited
     _initializeErrorAndBusyVariables();
     _loadForm($stateParams.formUuid);
-    
+
     $scope.busy = true;
     //Load encounter types [Leave error details intact]
     _loadEncounterTypes();
     
+    $scope.saveButtonText = 'Save Changes';
+
     $scope.aceLoadedView = function(_editor) {
       _editor.setReadOnly(true);
     };  
-    
+
+    $scope.$watch('editForm.retiredReason', function(newValue, oldValue) {
+      if(angular.isDefined(newValue) && newValue.length > 0) {
+        _removeRetiredReasonError();
+      }
+      else if ($scope.editForm.retired == true){
+        _addRetiredReasonError();
+      }
+    });
+
+    $scope.retiredChanged = function() {
+      if($scope.editForm.retired == true) {
+        $scope.saveButtonText = 'Retire Form/Component'
+        if(!$scope.editForm.retiredReason || $scope.editForm.retiredReason.length==0){
+            _addRetiredReasonError();
+        }
+      }
+      else {
+        $scope.editForm.retiredReason = '';
+        _removeRetiredReasonError();
+        if($scope.form.retired) {
+          $scope.saveButtonText = 'Unretire Form/Component';
+        }
+      }
+    };
+
     $scope.publishedChanged = function() {
       if($scope.editForm.published) {
         var title = 'Publishing';
         var message = 'Publishing the form will prevent any modifications '
                       + 'except for name & description.'
                       + ' Do you want to proceed?';
-        
+
       } else {
         var title = 'Unpublishing';
         var message = 'Unpublished a form/component may introduce changes '
                     + 'that may screw the data collected using it.'
                     + ' Do you want to proceed?';
       }
-      
+
       dialogs.confirm('Confirm ' + title, message).result.then(null, function(btn) {
         $scope.editForm.published = !$scope.editForm.published;
       });
     };
-    
+
     $scope.saveChanges = function() {
       _initializeErrorAndBusyVariables();
-      if($scope.editForm.schema.file) {
-        var reader = new FileReader();
-        reader.onload = function(event) {
-          var fileContent = event.target.result;
-          $log.debug('Done reading file: ', angular.fromJson(fileContent));
-          __handleUpdates(_createPayloads(fileContent));
-        };
-        reader.readAsText($scope.editForm.schema.file);
-      } else if($scope.editForm.schema.json) {
-        $log.debug('Updating using schema entered as text in editor');
-        __handleUpdates(_createPayloads($scope.editForm.schema.json));
-      } else {
-        // No schema business
-        __handleUpdates(_createPayloads(null));
+      if($scope.form.retired !== $scope.editForm.retired) {
+        if($scope.editForm.retired) {
+          var title = 'Retiring';
+          var message = 'You are about to retire this form. Retired '
+                        + 'form/component can not be edited. Are you sure '
+                        + 'you want to proceed?';
+          dialogs.confirm('Confirm ' + title, message).result.then(function(btn) {
+            FormResService.retireForm($scope.form.uuid, $scope.editForm.retiredReason)
+            .then(function(response) {
+              $log.debug('form ' + $scope.form.name + ' retired successfully');
+              $scope.busy = false;
+              $state.go('form.view', {formUuid: $scope.form.uuid, relative:false});
+            })
+            .catch(function(err) {
+              $log.error('Error Retiring form with uuid ' + $scope.form.uuid);
+              $log.error(err);
+              $scope.hasError = true;
+              $scope.error.push('An error occured while attempting to retire form');
+              $scope.busy = false;
+            });
+          }, function(btn) {
+            $scope.busy = false;
+          });
+        }
       }
-      
-      function __handleUpdates(payload) {
-        if(payload.hasChanges) {
-          _updateForm(payload);
+      else {
+        var __handleUpdates = function(payload) {
+          if(payload.hasChanges) {
+            _updateForm(payload);
+          } else {
+            $scope.busy = false;
+            dialogs.notify('Updates', 'Nothing to update');
+          }
+        };
+        
+        if($scope.editForm.schema.file) {
+          var reader = new FileReader();
+          reader.onload = function(event) {
+            var fileContent = event.target.result;
+            $log.debug('Done reading file: ', angular.fromJson(fileContent));
+            __handleUpdates(_createPayloads(fileContent));
+          };
+          reader.readAsText($scope.editForm.schema.file);
+        } else if($scope.editForm.schema.json) {
+          $log.debug('Updating using schema entered as text in editor');
+          __handleUpdates(_createPayloads($scope.editForm.schema.json));
         } else {
-          $scope.busy = false;
-          dialogs.notify('Updates', 'Nothing to update');
+          // No schema business
+          __handleUpdates(_createPayloads(null));
         }
       }
     };  
-    
+
     $scope.changeViewToEdit = function() {
-      $state.go('form-edit', {formUuid: $stateParams.formUuid,relative: false});
+      $state.go('form.edit', {formUuid: $stateParams.formUuid,relative: false});
     };
-    
+
     function _createPayloads(newJsonSchema) {
       var ret = {
         hasChanges: false,
@@ -8194,34 +8326,41 @@ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106
           action: false
         }
       };
-      
+
       if($scope.form.name !== $scope.editForm.name) {
         ret.formPayload.name = $scope.editForm.name;
         ret.hasChanges = ret.someFormFieldChanged = true;
         
       }
-      
+
       if($scope.form.description !== $scope.editForm.description) {
         ret.formPayload.description = $scope.editForm.description;
         ret.hasChanges = ret.someFormFieldChanged = true;
       }
-      
+
       if($scope.form.published !== $scope.editForm.published) {
         ret.formPayload.published = $scope.editForm.published;
         ret.hasChanges = ret.someFormFieldChanged = true;
       }
-      
+
+      if($scope.form.retired !== $scope.editForm.retired) {
+        if($scope.editForm.retired == false) {
+          ret.formPayload.retired = $scope.editForm.retired;
+          ret.hasChanges = ret.someFormFieldChanged = true;
+        }
+      }
+
       if(!$scope.form.published) {
         if($scope.form.version !== $scope.editForm.version) {
           ret.formPayload.version = $scope.editForm.version;
           ret.hasChanges = ret.someFormFieldChanged = true;
         }
-        
+
         if($scope.form.encounterTypeUuid !== $scope.editForm.encounterTypeUuid) {
           ret.formPayload.encounterType = $scope.editForm.encounterTypeUuid;
           ret.hasChanges = ret.someFormFieldChanged = true;
         }
-        
+
         // Deal with resource if changed. (Make sure you compare apples to apples)
         var ___updateSchemaStuff = function() {
           ret.hasChanges = true;
@@ -8264,7 +8403,7 @@ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106
     
     function _updateForm(payLoadData) {
       if(!payLoadData.hasChanges) return;
-      
+
       var __updateResourceAndForm = function() {
         FormResService.uploadFormResource(payLoadData.schema.file)
         .then(function(response) {
@@ -8319,6 +8458,7 @@ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106
         __updateResourceAndForm();
       } else {
         //no action for schema
+        $log.debug('Form payload ', payLoadData.formPayload);
         FormResService.updateForm($scope.form.uuid, payLoadData.formPayload)
         .then(function(updatedForm) {
           $log.debug('Reloading form after editing');
@@ -8358,21 +8498,37 @@ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106
         $log.debug('Fetched form: ', form);
         $scope.form = form;
         $scope.form.schema = null;
-        if(form.published) {
-          form.publishedText = 'Yes';
-          form.publishedCssClass = 'success';
-        } else {
-          form.publishedText = 'No';
-          form.publishedCssClass = 'danger';
+        if($scope.form.published) {
+          $scope.form.publishedText = 'Yes';
+          $scope.form.publishedCssClass = 'success';
         }
-        if(form.resources) {
+        else {
+          $scope.form.publishedText = 'No';
+          $scope.form.publishedCssClass = 'danger';
+        }
+        $log.debug('Retired value: ', $scope.form.retired);
+        if($scope.form.retired) {
+          $scope.form.retiredText = 'Yes';
+          $scope.form.retiredCssClass = 'warning';
+          if($scope.form.retiredReason == undefined) {
+            if($scope.form.auditInfo.retireReason) {
+              $scope.form.retiredReason = $scope.form.auditInfo.retireReason;
+            }
+          }
+        }
+        else {
+          $scope.form.retiredText = 'No';
+          $scope.form.retiredCssClass = 'success';
+        }
+        
+        if($scope.form.resources) {
           $scope.form.schema = {};
-          $log.debug('Finding json schema for form ' + form.name);
-          var resource = FormManagerUtil.findResource(form.resources);
+          $log.debug('Finding json schema for form ' + $scope.form.name);
+          var resource = FormManagerUtil.findResource($scope.form.resources);
           if(resource === undefined) {
             $log.debug('Resource not found using "AmpathJsonSchema" dataType,'
              + ' trying name "JSON Schema" ');
-             resource = FormManagerUtil.findResource(form.resources, 'JSON schema');
+             resource = FormManagerUtil.findResource($scope.form.resources, 'JSON schema');
           }
           
           if(resource !== undefined) {
@@ -8438,6 +8594,25 @@ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106
     function _displayUpdateSuccessDialog() {
       dialogs.notify('Form Edits', 'Hoorraa! Form successfully updated');
     }
+    
+    function _addRetiredReasonError() {
+      $scope.preSaveErrors.push({
+        name: 'retiredReasonError',
+        error: 'Provide reason for retiring!'
+      });
+    }
+    
+    function _removeRetiredReasonError() {
+      do {
+        var index = _.findIndex($scope.preSaveErrors, function(error) {
+          return error.name === 'retiredReasonError';
+        });
+        
+        if(index != -1) {
+          $scope.preSaveErrors.splice(index, 1);
+        }
+      } while (index != -1);
+    } 
   }
 })();
 
@@ -8472,12 +8647,15 @@ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106
     'AuthService',
     '$window',
     'dialogs',
-    '$timeout'
-  ]
+    '$timeout',
+    '$state',
+    '$stateParams',
+    'FormentryUtilService'
+  ];
   
   function UrlConfigController($rootScope, $scope, $http, $base64, $cookies,
     OpenmrsSettings, sessionService, $log, AuthService, $window, dialogs,
-    $timeout) {
+    $timeout, $state, $stateParams, utilService) {
     var restSuffix = 'ws/rest/v1/';
     var SESSION_TTL_MIN = 10;
     
@@ -8509,7 +8687,7 @@ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106
       } else {
         
         // Set credos
-        _setCredentials($scope.username, $scope.password);
+        AuthService.setCredentials($scope.username, $scope.password);
         
         // Store the passed url to localStorage
         $window.localStorage.setItem('openmrsUrl', $scope.openmrsUrl);
@@ -8527,9 +8705,10 @@ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106
           if(data.authenticated) {
             data.token = $base64.encode($scope.username + ':' + $scope.password);
             $cookies.putObject('userSession', data, {
-              expires: _getSessionExpiryDate(SESSION_TTL_MIN),
+              expires: utilService.getSessionExpiryDate(SESSION_TTL_MIN),
             });
             $rootScope.$broadcast('authenticated', data);
+            _redirectToCorrectView();
           } else {
             _setError(true, 'Invalid username and/or password');
           }
@@ -8544,28 +8723,7 @@ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106
     }; 
     
     $scope.logout = function() {
-      sessionService.deleteSession(function(response) {
-        _clearCredentials();
-        $scope.authResult.authenticated = false;
-        $scope.authResult.hasError = false;
-        AuthService.clearAuthentication();
-        $cookies.remove('userSession')
-        $rootScope.$broadcast('deauthenticated');
-      });
-    }
-    
-    function _setCredentials(username, password) {
-      if(arguments.length == 1) {
-        var base64Credos = username;
-      } else {
-        var base64Credos = $base64.encode(username + ':' + password);
-      }
-      $http.defaults.headers.common.Authorization = 'Basic ' + base64Credos;
-      base64Credos = null;
-    }
-    
-    function _clearCredentials() {
-      $http.defaults.headers.common.Authorization = null;
+      AuthService.logout();
     }
 
     function _setError(status, message) {
@@ -8574,26 +8732,23 @@ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106
     }
     
     function _checkIfSessionActive() {
-      var authData = $cookies.getObject('userSession');
-      if(authData) {
-        _setCredentials(authData.token);
-        $log.log('Credentials are set here');
-        $rootScope.$broadcast('authenticated', authData);
+      var userSessionData = $cookies.getObject('userSession');
+      if(userSessionData && userSessionData.authenticated) {
+        AuthService.setCredentials(userSessionData.token);
+        $rootScope.$broadcast('authenticated', userSessionData);
+        _redirectToCorrectView();
       }
     }
     
-    function _getSessionExpiryDate(minutes) {
-      var d = new Date();
-
-      var minutesToSet = d.getMinutes() + minutes;
-      if(minutesToSet>59) {
-        d.setHours(d.getHours() + Math.floor(minutesToSet/60));
-        d.setMinutes(minutesToSet%60);
+    function _redirectToCorrectView() {
+      if($stateParams.redirectTo) {
+        $state.go($stateParams.redirectTo.state, $stateParams.redirectTo.stateParams);
       } else {
-        d.setMinutes(minutesToSet);
+        $state.go('form.manage');
       }
-      return d;
     }
+    
+    
 
     function _sessionTimeout(timeout, prevTimeoutPromise) {
       var canceledSuccessfully = true;
@@ -8634,15 +8789,50 @@ jshint -W098, -W003, -W068, -W004, -W033, -W030, -W117, -W069, -W106
       document.addEventListener('mousemove', function(event) {
         var obj = $cookies.getObject('userSession') || data;
         $cookies.putObject('userSession', obj, {
-          expires: _getSessionExpiryDate(SESSION_TTL_MIN),
+          expires: utilService.getSessionExpiryDate(SESSION_TTL_MIN),
         });
 
         prevTimeoutPromise = _sessionTimeout(timeout, prevTimeoutPromise);
       }, true);
     });
-
+    
+    $scope.$on('deauthenticated', function() {
+      $scope.authResult.authenticated = false;
+      $scope.authResult.hasError = false;
+    });
+    
     if(!AuthService.authenticated()) {
       _checkIfSessionActive();
     }
+  }
+})();
+
+(function() {
+  'use strict';
+  
+  angular
+    .module('app.openmrsFormManager')
+      .directive('header', header);
+      
+  function header() {
+    return {
+      restrict: 'E',
+      replace: true,
+      controller: headerController,
+      templateUrl: 'views/openmrs-form-manager/header.htm',
+    }  
+  }
+  
+  headerController.$inject = [
+    '$scope',
+    '$log',
+    'AuthService'
+  ];
+  
+  //This controller is not called for some reason
+  function headerController($scope, $log, AuthService) {
+    $scope.logout = function() {
+      AuthService.logout();
+    };
   }
 })();
